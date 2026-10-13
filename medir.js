@@ -14,7 +14,7 @@
 
   // Fuente: utm_source, ?ref= o el sitio de donde vino (se guarda para toda la visita)
   var q = new URLSearchParams(location.search);
-  var fuente = q.get('utm_source') || q.get('ref');
+  var fuente = q.get('utm_source') || (q.get('ref') ? 'referido' : null);
   if (!fuente && document.referrer) {
     try { var h = new URL(document.referrer).hostname; if (h !== location.hostname) fuente = h.replace(/^www\./, ''); } catch (e) {}
   }

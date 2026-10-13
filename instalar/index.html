@@ -75,7 +75,16 @@
     setTimeout(function(){ location.href = '../descargar/Checa.apk'; }, 400);
     track('descarga', { desde: decodeURIComponent(desde) });
   }
-  document.querySelectorAll('[data-ev]').forEach(function(a){ a.addEventListener('click', function(){ track(a.getAttribute('data-ev')); }); });
+  var ref = null; try { ref = localStorage.getItem('checa_ref'); } catch(e) {}
+  document.querySelectorAll('[data-ev]').forEach(function(a){ a.addEventListener('click', function(){
+    if (ref && navigator.clipboard && a.getAttribute('data-ev') === 'descarga_instalar') { try { navigator.clipboard.writeText('CHECA-REF:' + ref).catch(function(){}); } catch(e) {} }
+    track(a.getAttribute('data-ev'));
+  }); });
+  if (ref) {
+    var p = document.createElement('p'); p.className = 'note';
+    p.innerHTML = '<strong>Código de tu amigo: ' + ref.replace(/[^A-Z0-9-]/g, '') + '.</strong> Checa lo toma solo al abrirse. Si no, escríbelo en Cuenta → «¿Te invitó alguien?».';
+    var help = document.querySelector('.help'); help.parentNode.insertBefore(p, help);
+  }
   var m = document.querySelector('.dl-meta');
   if (m && window.fetch) fetch('../descargar/version.json',{cache:'no-store'}).then(function(r){ if(!r.ok) throw 0; return r.json(); })
     .then(function(v){ m.textContent = 'Versión ' + v.version + (v.tamano ? ' · ' + v.tamano : '') + ' · Android 8+'; }).catch(function(){});

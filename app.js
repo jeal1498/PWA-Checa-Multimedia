@@ -133,10 +133,28 @@
     track('video_play');
   });
 
+  // Invitación de un amigo: ?ref=CODIGO se guarda y se copia al tocar Descargar (la app lo lee al abrirse)
+  var ref = null;
+  try {
+    var m = location.search.match(/[?&]ref=([A-Za-z0-9]{4}-?[A-Za-z0-9]{3})(?:&|$)/);
+    if (m) localStorage.setItem('checa_ref', m[1].toUpperCase());
+    ref = localStorage.getItem('checa_ref');
+  } catch (e) {}
+  var refBox = document.getElementById('ref-note');
+  if (ref && refBox) {
+    refBox.innerHTML = 'Te invitó un amigo (código <b>' + ref.replace(/[^A-Z0-9-]/g, '') + '</b>). Si pagas cualquier paquete, <b>los dos ganan 1 mes gratis</b>.';
+    refBox.hidden = false;
+  }
+  function copiarRef() {
+    if (!ref || !navigator.clipboard) return;
+    try { navigator.clipboard.writeText('CHECA-REF:' + ref).catch(function () {}); } catch (e) {}
+  }
+
   // Descargar: baja el APK y lleva a la guía de instalación
   document.querySelectorAll('[data-dl]').forEach(function (a) {
     a.addEventListener('click', function () {
       var src = a.getAttribute('data-dl');
+      copiarRef();
       track('clic_descargar', { desde: src });
     });
   });
