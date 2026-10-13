@@ -172,17 +172,16 @@
     note.hidden = false;
   }
 
-  // Botón fijo en el teléfono: aparece al pasar el encabezado
-  var sticky = document.getElementById('sticky-cta'), hero = document.getElementById('inicio');
-  if (sticky && hero && 'IntersectionObserver' in window) {
-    new IntersectionObserver(function (e) {
-      sticky.classList.toggle('show', !e[0].isIntersecting && !nearEnd());
-    }).observe(hero);
-    var fin = document.querySelector('.final');
-    var nearEnd = function () { if (!fin) return false; var r = fin.getBoundingClientRect(); return r.top < innerHeight; };
-    addEventListener('scroll', function () {
-      if (hero.getBoundingClientRect().bottom < 0) sticky.classList.toggle('show', !nearEnd());
-    }, { passive: true });
+  // Botón fijo en el teléfono: visible mientras el botón principal no está en pantalla (y antes del cierre)
+  var sticky = document.getElementById('sticky-cta');
+  var heroCta = document.querySelector('#inicio .ctas');
+  var fin = document.querySelector('.final');
+  if (sticky && heroCta) {
+    var enPantalla = function (el) { var r = el.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; };
+    var pintar = function () { sticky.classList.toggle('show', !enPantalla(heroCta) && !(fin && enPantalla(fin))); };
+    addEventListener('scroll', pintar, { passive: true });
+    addEventListener('resize', pintar);
+    pintar();
   }
 
   var y = document.getElementById('year');

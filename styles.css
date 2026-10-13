@@ -259,3 +259,30 @@ h1,h2,h3{font-weight:800}
 .device-note{margin-top:12px;padding:12px 14px;border:1px solid var(--yellow);border-radius:12px;color:var(--fg);font-size:.95rem;background:rgba(250,204,21,.06)}
 .ref-note{margin:0 0 16px;padding:12px 14px;border:1px solid var(--gold);border-radius:12px;background:rgba(232,184,74,.08);font-size:.95rem}
 .ref-note b{color:var(--gold)}
+
+/* ===== VSL (oct 2026) ===== */
+.vsl{padding:32px 0 48px;text-align:center}
+.vsl .wrap{display:block;max-width:720px}
+.vsl h1{margin-inline:auto;max-width:13em}
+.vsl .vid-box{margin:20px auto;width:min(300px,78vw)}
+.vsl .lead{margin:0 auto 4px;max-width:34em}
+.vsl .ctas{justify-content:center}
+.vsl .pills{justify-content:center}
+.vsl .ref-note{text-align:left}
+.vid-play{flex-direction:column;gap:12px}
+.vid-play em{font-style:normal;font-weight:700;color:#fff;background:rgba(0,0,0,.6);padding:6px 12px;border-radius:999px;font-size:.9rem}
+.btn-big{min-height:56px;font-size:1.1rem;padding:14px 28px;width:min(100%,420px)}
+.como{display:grid;gap:32px;align-items:center}
+@media (min-width:860px){.como{grid-template-columns:1fr 320px}}
+.pasos{padding-left:1.3em;margin:0 0 18px;display:grid;gap:10px;font-size:1.05rem}
+.pasos b{color:var(--fg)}
+.trust-list li{color:var(--muted)}
+.trust-list b{color:var(--fg)}
+#precios .ctas{justify-content:center}
+.final .btn-big{width:auto}
+.beta-page h1{max-width:16em}
+.beta-grid{display:grid;gap:16px;margin-top:32px}
+@media (min-width:700px){.beta-grid{grid-template-columns:1fr 1fr}}
+.beta-grid h2{font-size:1.25rem;margin-bottom:.2em}
+.beta-grid .bul{margin:12px 0 0}
+.beta-page .btn-big{width:auto}

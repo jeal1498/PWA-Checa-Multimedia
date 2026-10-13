@@ -35,7 +35,6 @@
     </a>
     <nav class="nav" aria-label="Principal">
       <a href="#como">Cómo funciona</a>
-      <a href="#demo">Pruébalo</a>
       <a href="#precios">Precios</a>
       <a href="#faq">Preguntas</a>
       <a class="btn btn-primary btn-sm" href="instalar/?desde=nav" data-dl="nav">Descargar gratis</a>
@@ -45,29 +44,50 @@
 
 <main id="main">
 
-<!-- 1. ENCABEZADO -->
-<section class="hero" id="inicio">
+<!-- 1. VSL: título, video y botón -->
+<section class="hero vsl" id="inicio">
   <div class="wrap">
-    <div>
-      <p class="ref-note" id="ref-note" hidden></p>
-      <span class="kicker">Para conductores de Uber y DiDi</span>
-      <h1>Antes de aceptar, <span>checa cuánto te queda.</span></h1>
-      <p class="lead">Cuando te llega una oferta en Uber o DiDi, Checa te muestra encima tus <strong>netos después de gasolina</strong>, el pago por km y por hora. Te dice en voz alta si conviene: Aceptar, Considerar o Rechazar.</p>
-      <div class="ctas">
-        <a class="btn btn-primary" href="instalar/?desde=hero" data-dl="hero">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
-          Descargar gratis · 7 días
-        </a>
-      </div>
-      <ul class="pills">
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Sin tarjeta</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Pago único, nada se cobra solo</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Para Android</li>
-      </ul>
-      <p class="dl-meta">APK para Android 8 o superior</p>
-      <p class="device-note" id="device-note" hidden></p>
+    <p class="ref-note" id="ref-note" hidden></p>
+    <span class="kicker">Para conductores de Uber y DiDi</span>
+    <h1>Antes de aceptar, <span>checa cuánto te queda.</span></h1>
+    <div class="vid-box" id="vid-box">
+      <img src="media/sin-lana.jpg" alt="Video: 12 horas al volante y la lana no aparece" width="540" height="960" fetchpriority="high">
+      <button type="button" class="vid-play" id="vid-play" aria-label="Reproducir video de 36 segundos">
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></span>
+        <em>Mira el video · 36 s</em>
+      </button>
     </div>
-    <div aria-label="Ejemplo del pop-up de Checa sobre una oferta de viaje, con números de ejemplo">
+    <p class="lead">En cada oferta, Checa te muestra tus <strong>netos después de gasolina</strong>, el pago por km y por hora, y te dice en voz alta si conviene.</p>
+    <div class="ctas">
+      <a class="btn btn-primary btn-big" href="instalar/?desde=hero" data-dl="hero">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+        Descargar gratis · 7 días
+      </a>
+    </div>
+    <ul class="pills">
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Sin tarjeta</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Nada se cobra solo</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Garantía de lectura</li>
+    </ul>
+    <p class="dl-meta">APK para Android 8 o superior</p>
+    <p class="device-note" id="device-note" hidden></p>
+  </div>
+</section>
+
+<!-- 2. CÓMO FUNCIONA, con el pop-up de ejemplo -->
+<section class="section-alt" id="como">
+  <div class="wrap como">
+    <div>
+      <span class="kicker">Cómo funciona</span>
+      <h2>Funciona en tu próxima oferta</h2>
+      <ol class="pasos">
+        <li><b>Te llega la oferta</b> en Uber o DiDi, como siempre.</li>
+        <li><b>Checa la lee</b> y hace la cuenta con tu gasolina y tus metas.</li>
+        <li><b>Te avisa</b> con color, voz y vibración. Tú decides y tú tocas.</li>
+      </ol>
+      <div class="say"><span class="g">Aceptar</span><span class="y">Considerar</span><span class="r">Rechazar</span></div>
+    </div>
+    <div aria-label="Ejemplo del pop-up de Checa, con números de ejemplo">
       <div class="phone">
         <div class="map"></div>
         <div class="pop" id="hero-pop" role="img"></div>
@@ -77,213 +97,76 @@
   </div>
 </section>
 
-<!-- 2. VIDEO -->
-<section class="section-alt" id="video">
-  <div class="wrap vid">
-    <div>
-      <span class="kicker">36 segundos</span>
-      <h2>¿12 horas al volante y la lana no aparece?</h2>
-      <p class="lead">La gasolina y las recogidas se comen lo que ganas sin que lo veas en la oferta. Míralo con o sin sonido: trae subtítulos.</p>
-    </div>
-    <div class="vid-box" id="vid-box">
-      <img src="media/sin-lana.jpg" alt="Portada del video: trabajar mucho y no ver el dinero" width="540" height="960" loading="lazy">
-      <button type="button" class="vid-play" id="vid-play" aria-label="Reproducir video">
-        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></span>
-      </button>
-    </div>
-  </div>
-</section>
-
-<!-- 3. EL PROBLEMA -->
-<section id="problema">
-  <div class="wrap">
-    <span class="kicker">El problema</span>
-    <h2>La oferta dice cuánto pagan. Lo que te queda lo tienes que calcular tú.</h2>
-    <div class="prob-grid">
-      <div class="card"><h3>Gasolina</h3><p class="muted">Un viaje de $100 puede dejarte $70 después de gasolina. Ese descuento no sale en la oferta.</p></div>
-      <div class="card"><h3>Recogida</h3><p class="muted">Los 5 km para llegar al pasajero también gastan gasolina y tiempo, y nadie te los paga aparte.</p></div>
-      <div class="card"><h3>Pago por km</h3><p class="muted">Una tarifa alta en un viaje largo puede pagarte menos por km que uno corto.</p></div>
-    </div>
-    <p class="fine">Números de ejemplo.</p>
-    <p class="punch">Y tienes unos 15 segundos para decidir, manejando. <span>Checa hace la cuenta por ti.</span></p>
-  </div>
-</section>
-
-<!-- 4. CÓMO FUNCIONA -->
-<section class="section-alt" id="como">
-  <div class="wrap">
-    <span class="kicker">Cómo funciona</span>
-    <h2>Funciona en tu próxima oferta</h2>
-    <div class="grid g3">
-      <div class="card"><div class="step-n">1</div><h3>Te llega la oferta</h3><p class="muted">En Uber o DiDi, como siempre.</p></div>
-      <div class="card"><div class="step-n">2</div><h3>Checa la lee</h3><p class="muted">Hace la cuenta con tu gasolina y tus metas.</p></div>
-      <div class="card"><div class="step-n">3</div><h3>Te avisa</h3><p class="muted">Color, voz y vibración. Tú decides y tú tocas.</p>
-        <div class="say"><span class="g">Aceptar</span><span class="y">Considerar</span><span class="r">Rechazar</span></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- 5. DEMO -->
-<section id="demo">
-  <div class="wrap">
-    <span class="kicker">Pruébalo aquí</span>
-    <h2>Toca una oferta y mira qué te diría Checa</h2>
-    <p class="lead">Mueve tu meta por km, por hora y el precio de la gasolina. Son las mismas cuentas que hace la app.</p>
-    <div class="demo" style="margin-top:24px">
-      <div>
-        <div class="offers" role="group" aria-label="Ofertas de ejemplo">
-          <button type="button" class="offer-btn"></button>
-          <button type="button" class="offer-btn"></button>
-          <button type="button" class="offer-btn"></button>
-        </div>
-        <div class="controls card">
-          <div class="range"><label for="r-km">Tu meta por km <output id="r-km-out"></output></label><input type="range" id="r-km" min="5" max="12" step="0.5" value="8"></div>
-          <div class="range"><label for="r-h">Tu meta por hora <output id="r-h-out"></output></label><input type="range" id="r-h" min="80" max="250" step="10" value="150"></div>
-          <div class="range"><label for="r-gas">Precio de la gasolina <output id="r-gas-out"></output></label><input type="range" id="r-gas" min="20" max="30" step="0.5" value="24"></div>
-        </div>
-        <p class="formula">Los km y minutos incluyen la recogida. Gasolina = km ÷ 12 km/l × precio. Verde si cumple tus dos metas, amarillo si cumple una, rojo si ninguna.</p>
-        <div class="ctas"><a class="btn btn-primary" href="instalar/?desde=demo" data-dl="demo">Quiero esto en mi teléfono</a></div>
-      </div>
-      <div class="demo-pop"><div class="pop" id="demo-pop" role="status" aria-live="polite"></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- 6. CONFIANZA -->
-<section class="section-alt" id="confianza">
+<!-- 3. CONFIANZA -->
+<section id="confianza">
   <div class="wrap">
     <span class="kicker">Confianza</span>
     <h2>Tu cuenta y tus datos se quedan contigo</h2>
-    <div class="trust">
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
-        <div><h3>Solo lee la pantalla</h3><p>Checa nunca toca botones, acepta ni rechaza viajes. El toque siempre es tuyo.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div>
-        <div><h3>Todo pasa en tu teléfono</h3><p>Tus viajes se quedan ahí. Internet solo se usa para tu cuenta y tu pago.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-        <div><h3>Lee solo Uber y DiDi</h3><p>Si una app de banco se queja, pausas el lector con un toque.</p></div></div>
-      <div class="card guar"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div>
-        <div><h3>Garantía de lectura</h3><p>Si pagas y Checa no lee las ofertas en tu teléfono, escríbenos en los primeros 7 días y te devolvemos tu dinero.</p></div></div>
-    </div>
+    <ul class="bul trust-list">
+      <li><b>Solo lee la pantalla.</b> Nunca toca botones, acepta ni rechaza viajes.</li>
+      <li><b>Todo pasa en tu teléfono.</b> Tus viajes no se envían a ningún lado.</li>
+      <li><b>Lee solo Uber y DiDi.</b> Si tu banco se queja, pausas el lector con un toque.</li>
+      <li><b>Garantía de lectura.</b> Si pagas y no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días.</li>
+    </ul>
     <p class="fine">Checa es independiente y no está afiliada a Uber ni a DiDi.</p>
   </div>
 </section>
 
 <!-- testimonios reales de beta testers aquí (con su permiso) -->
 
-<!-- 7. HAZ TUS CUENTAS -->
-<section id="calculadora">
-  <div class="wrap">
-    <span class="kicker">Haz tus cuentas</span>
-    <h2>¿Cuánto pierdes al mes en viajes malos?</h2>
-    <p class="lead">Pon tus números. Si cambias 3 viajes malos al día por buenos, esta es la diferencia.</p>
-    <div class="calc" id="calc" style="margin-top:24px">
-      <div class="card">
-        <div class="fields">
-          <div class="field"><label for="c-n">Viajes malos evitados al día</label><input id="c-n" type="number" inputmode="decimal" min="0" value="3"></div>
-          <div class="field"><label for="c-km">Km promedio por viaje</label><input id="c-km" type="number" inputmode="decimal" min="0" value="10"></div>
-          <div class="field"><label for="c-bad">$ por km de un viaje malo</label><input id="c-bad" type="number" inputmode="decimal" min="0" step="0.5" value="5.5"></div>
-          <div class="field"><label for="c-good">$ por km de un viaje bueno</label><input id="c-good" type="number" inputmode="decimal" min="0" step="0.5" value="8"></div>
-          <div class="field"><label for="c-days">Días que trabajas al mes</label><input id="c-days" type="number" inputmode="decimal" min="0" max="31" value="24"></div>
-        </div>
-      </div>
-      <div class="card result" aria-live="polite">
-        <p class="muted">Diferencia estimada al mes</p>
-        <div class="big" id="c-month">$0</div>
-        <p class="muted small" id="c-detail"></p>
-        <p class="small">Es una estimación con tus números. Depende de tus horarios y de las ofertas que te lleguen.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 8. PRECIOS -->
+<!-- 4. PRECIOS -->
 <section class="section-alt" id="precios">
   <div class="wrap">
     <span class="kicker">Precios</span>
     <h2>Pruébala 7 días gratis. Luego eliges.</h2>
-    <p class="lead">Pagas una sola vez por el tiempo que elijas, con tarjeta, OXXO o saldo de Mercado Pago. Cuando se acaba, Checa se detiene hasta que tú decidas renovar.</p>
-    <div class="prices" style="margin-top:28px">
+    <p class="lead">Pago único con tarjeta, OXXO o saldo de Mercado Pago. Nada se cobra solo.</p>
+    <div class="prices" style="margin-top:24px">
       <div class="card price">
         <h3>Básico</h3>
         <div class="amount">$99 <small>· 1 mes</small></div>
         <div class="perday">$3.30 <small>al día</small></div>
-        <ul class="feat">
-          <li>Pop-up con netos y semáforo</li>
-          <li>Filtros, voz y vibración</li>
-          <li>1 equipo</li>
-        </ul>
-        <a class="btn btn-ghost" href="instalar/?desde=basico" data-dl="basico">Empezar mis 7 días gratis</a>
+        <ul class="feat"><li>Netos y semáforo, filtros y voz</li><li>1 equipo</li></ul>
       </div>
       <div class="card price hot">
         <span class="badge">Recomendado</span>
         <h3>Estratega</h3>
         <div class="amount">$399 <small>· 6 meses</small></div>
         <div class="perday">$2.20 <small>al día</small></div>
-        <ul class="feat">
-          <li>Todo lo del Básico</li>
-          <li>Uber y DiDi juntos, con ⭐ a la mejor</li>
-          <li>Mejores horas de toda la semana</li>
-          <li>2 equipos (teléfono y tablet)</li>
-        </ul>
-        <a class="btn btn-primary" href="instalar/?desde=estratega" data-dl="estratega">Empezar mis 7 días gratis</a>
+        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con ⭐ a la mejor</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
       </div>
       <div class="card price">
         <h3>Pro</h3>
         <div class="amount">$899 <small>· 1 año</small></div>
         <div class="perday">$2.46 <small>al día</small></div>
-        <ul class="feat">
-          <li>Todo lo del Estratega</li>
-          <li>Un año completo sin renovar</li>
-        </ul>
-        <a class="btn btn-ghost" href="instalar/?desde=pro" data-dl="pro">Empezar mis 7 días gratis</a>
+        <ul class="feat"><li>Todo lo del Estratega</li><li>Un año sin renovar</li></ul>
       </div>
     </div>
     <p class="payoff">Con un viaje malo que evites a la semana, el Estratega ya se pagó.</p>
-    <p class="seal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Garantía de lectura de 7 días</p>
+    <div class="ctas"><a class="btn btn-primary btn-big" href="instalar/?desde=precios" data-dl="precios">Empezar mis 7 días gratis</a></div>
   </div>
 </section>
 
-<!-- 9. BETA -->
-<section id="beta-banda">
-  <div class="wrap">
-    <div class="beta">
-      <div>
-        <span class="kicker">Beta</span>
-        <h2>Buscamos 50 conductores para la beta</h2>
-        <p>3 meses gratis a cambio de tu opinión. Si invitas a un amigo, los dos ganan 1 mes más.</p>
-      </div>
-      <a class="btn btn-gold" href="beta/" data-ev="beta">Quiero ser beta tester</a>
-    </div>
-  </div>
-</section>
-
-<!-- 10. PREGUNTAS -->
-<section class="section-alt" id="faq">
+<!-- 5. PREGUNTAS -->
+<section id="faq">
   <div class="wrap">
     <span class="kicker">Preguntas</span>
     <h2>Lo que más nos preguntan</h2>
     <div class="faq">
       <details><summary>¿Me pueden bloquear la cuenta?</summary><div><p>Checa solo lee la pantalla. Nunca toca botones ni acepta viajes por ti, y no cambia las apps. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></div></details>
       <details><summary>¿Por qué no está en Play Store?</summary><div><p>Por ahora se instala como APK desde esta página. Play Protect avisa porque Checa usa Accesibilidad para leer la oferta. Te guiamos <a href="instalar/">paso a paso</a> y, si te atoras, te ayudamos por WhatsApp.</p></div></details>
-      <details><summary>¿Para qué pide Accesibilidad y captura de pantalla?</summary><div><p>Es la forma en que Android deja que una app vea la oferta. La lectura se hace en tu teléfono y no se envía a ningún lado.</p></div></details>
-      <details><summary>¿Gasta datos?</summary><div><p>Casi nada. Leer ofertas funciona sin internet.</p></div></details>
       <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la ⭐ marca la mejor (Estratega y Pro).</p></div></details>
-      <details><summary>¿Qué pasa al terminar la prueba?</summary><div><p>Checa deja de mostrar el pop-up. Como no pediste tarjeta, nada se cobra.</p></div></details>
-      <details><summary>¿Cómo pago?</summary><div><p>En la app: Cuenta → Paquetes → Pagar con Mercado Pago. Tarjeta, OXXO o saldo.</p></div></details>
+      <details><summary>¿Qué pasa al terminar la prueba?</summary><div><p>Checa deja de mostrar el pop-up. Como no pediste tarjeta, nada se cobra. Pagas en la app (Cuenta → Paquetes) solo si quieres seguir.</p></div></details>
       <details><summary>¿Y si no me funciona?</summary><div><p>Tienes la garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días. Detalles en la <a href="terminos.html#reembolsos">política de reembolso</a>.</p></div></details>
     </div>
   </div>
 </section>
 
-<!-- 11. CIERRE -->
-<section class="final">
+<!-- 6. CIERRE -->
+<section class="section-alt final">
   <div class="wrap">
     <h2>Tu próxima oferta, con la cuenta hecha.</h2>
-    <div class="ctas">
-      <a class="btn btn-primary" href="instalar/?desde=cierre" data-dl="cierre">Descargar gratis · 7 días</a>
-    </div>
+    <div class="ctas"><a class="btn btn-primary btn-big" href="instalar/?desde=cierre" data-dl="cierre">Descargar gratis · 7 días</a></div>
     <p class="dl-meta">APK para Android 8 o superior</p>
-    <p class="muted small">Sin tarjeta</p>
   </div>
 </section>
 
