@@ -64,8 +64,13 @@
     note.hidden = false;
   } else if (desde) {
     // La descarga arranca aquí, así el aviso de Chrome no se pierde al cambiar de página
-    document.getElementById('i-kick').textContent = 'Listo';
-    document.getElementById('i-title').textContent = 'Tu descarga ya empezó';
+    var esApp = desde === 'app';
+    document.getElementById('i-kick').textContent = esApp ? 'Actualización' : 'Listo';
+    document.getElementById('i-title').textContent = esApp ? 'Tu actualización ya está bajando' : 'Tu descarga ya empezó';
+    if (esApp) {
+      document.querySelector('.lead').innerHTML = 'Abre el archivo <strong>Checa.apk</strong> y toca <strong>Actualizar</strong>. Se instala encima: no pierdes tu cuenta, ajustes ni historial. Si Play Protect avisa, toca <strong>Más detalles → Instalar de todos modos</strong>.';
+      document.querySelector('.install').style.display = 'none';
+    }
     var a = document.querySelector('#i-dl a'); a.className = 'btn btn-ghost'; a.textContent = '¿No bajó? Descargar otra vez';
     setTimeout(function(){ location.href = '../descargar/Checa.apk'; }, 400);
     track('descarga', { desde: decodeURIComponent(desde) });
