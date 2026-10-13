@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalar Checa · Guía paso a paso</title>
+<meta name="description" content="Instala Checa en 2 minutos: abre el APK, permite la instalación y activa el lector. Si te atoras, te ayudamos por WhatsApp.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Fira+Sans:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Saltar al contenido</a>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../" aria-label="Checa, inicio">
+    <svg viewBox="0 0 22 38" aria-hidden="true"><rect x="1" y="1" width="20" height="36" rx="6" fill="#111413" stroke="#262B28"/><circle cx="11" cy="9.5" r="4.2" fill="#F43F5E"/><circle cx="11" cy="19" r="4.2" fill="#FACC15"/><circle cx="11" cy="28.5" r="4.2" fill="#22C55E"/></svg>
+    Checa
+  </a>
+  <nav class="nav" aria-label="Principal"><a href="../#precios">Precios</a><a href="../#faq">Preguntas</a></nav>
+</div></header>
+<main id="main" class="wrap page">
+  <span class="kicker" id="i-kick">Instalar</span>
+  <h1 id="i-title">Instala Checa en 2 minutos</h1>
+  <p class="lead">Sigue estos pasos una sola vez.</p>
+  <div class="ctas" id="i-dl"><a class="btn btn-primary" href="../descargar/Checa.apk" download data-ev="descarga_instalar">Descargar Checa (APK)</a></div>
+  <p class="dl-meta">APK para Android 8 o superior</p>
+  <ol class="install" style="margin-top:24px">
+    <li><div><h3>Abre el archivo Checa.apk</h3><p>Está en tus descargas. Si te lo pide, permite <strong>«Instalar apps desconocidas»</strong> para tu navegador.</p></div></li>
+    <li><div><h3>Si Play Protect avisa</h3><p>Toca <strong>Más detalles → Instalar de todos modos</strong>. Avisa porque Checa usa Accesibilidad para leer la oferta.</p></div></li>
+    <li><div><h3>Android 13 o más nuevo</h3><p>Si dice <strong>«Controlado por ajustes restringidos»</strong>, ve a Info de la app → ⋮ → <strong>Permitir configuración restringida</strong>.</p></div></li>
+    <li><div><h3>Activa Checa</h3><p>En Ajustes → Accesibilidad, activa <strong>«Checa – lector de ofertas»</strong>.</p></div></li>
+    <li><div><h3>Abre Checa y toca ▶</h3><p>Elige <strong>Pantalla completa → Empezar</strong>. Si reinicias el teléfono, toca ▶ otra vez.</p></div></li>
+  </ol>
+  <div class="help">
+    <h2>¿Te atoraste? Te ayudo por WhatsApp.</h2>
+    <p>Mándame mensaje y lo resolvemos juntos, paso a paso.</p>
+    <div><a class="btn btn-primary" href="https://wa.me/529985214490?text=Hola%2C%20necesito%20ayuda%20para%20instalar%20Checa" target="_blank" rel="noopener" data-ev="whatsapp_ayuda">Pedir ayuda por WhatsApp</a></div>
+  </div>
+  <p class="note"><strong>Tienes 7 días gratis con todo incluido.</strong> Sin tarjeta. Si alguna app de banco se queja, en Checa ve a Ajustes → Apps de banco → Pausar lector.</p>
+  <p class="muted small">Para actualizar: descarga la nueva versión e instálala encima. No pierdes tu cuenta, ajustes ni historial.</p>
+</main>
+<footer><div class="wrap">
+  <nav class="flinks" aria-label="Pie de página">
+    <a href="../">Inicio</a><a href="../instalar/">Instalar</a><a href="../beta/">Beta</a>
+    <a href="../privacidad.html">Privacidad</a><a href="../terminos.html">Términos y reembolsos</a>
+  </nav>
+  <p>© 2026 Checa. Proyecto independiente. No afiliado a Uber ni a DiDi; sus nombres son marcas de sus dueños.</p>
+</div></footer>
+<script>
+(function(){
+  function track(n,d){ if(window.checaTrack) try{ window.checaTrack(n,d||{}); }catch(e){} }
+  if (/[?&]desde=/.test(location.search)) {
+    document.getElementById('i-kick').textContent = 'Listo';
+    document.getElementById('i-title').textContent = 'Tu descarga ya empezó';
+    var a = document.querySelector('#i-dl a'); a.className = 'btn btn-ghost'; a.textContent = '¿No bajó? Descargar otra vez';
+    track('llego_instalar');
+  }
+  document.querySelectorAll('[data-ev]').forEach(function(a){ a.addEventListener('click', function(){ track(a.getAttribute('data-ev')); }); });
+  var m = document.querySelector('.dl-meta');
+  if (m && window.fetch) fetch('../descargar/version.json',{cache:'no-store'}).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(v){ m.textContent = 'Versión ' + v.version + (v.tamano ? ' · ' + v.tamano : '') + ' · Android 8+'; }).catch(function(){});
+})();
+</script>
+</body>
+</html>

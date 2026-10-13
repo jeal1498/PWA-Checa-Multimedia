@@ -10,6 +10,9 @@
   var LABEL = { green: 'ACEPTAR', yellow: 'CONSIDERAR', red: 'RECHAZAR' };
   var settings = { metaKm: 8, metaHora: 150, gasPrice: 24, kml: 12 };
 
+  // Medición (paso 7): se conecta aquí sin tocar el resto
+  function track(name, data) { if (window.checaTrack) try { window.checaTrack(name, data || {}); } catch (e) {} }
+
   function money(n) { return '$' + Math.round(n).toLocaleString('es-MX'); }
   function dec(n) { return (Math.round(n * 10) / 10).toLocaleString('es-MX'); }
 
@@ -115,6 +118,44 @@
         metas.forEach(function (m) { m.textContent = txt; });
       })
       .catch(function () {});
+  }
+
+  // Video: se carga solo al tocar (ahorra datos)
+  var vp = document.getElementById('vid-play');
+  if (vp) vp.addEventListener('click', function () {
+    var box = document.getElementById('vid-box');
+    var v = document.createElement('video');
+    v.src = 'media/sin-lana.mp4'; v.poster = 'media/sin-lana.jpg';
+    v.controls = true; v.autoplay = true; v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    box.innerHTML = ''; box.appendChild(v);
+    var p = v.play(); if (p && p.catch) p.catch(function () {});
+    track('video_play');
+  });
+
+  // Descargar: baja el APK y lleva a la guía de instalación
+  document.querySelectorAll('[data-dl]').forEach(function (a) {
+    a.addEventListener('click', function () {
+      var src = a.getAttribute('data-dl');
+      track('descarga', { desde: src });
+      setTimeout(function () { location.href = 'instalar/?desde=' + encodeURIComponent(src); }, 1500);
+    });
+  });
+  document.querySelectorAll('[data-ev]').forEach(function (a) {
+    a.addEventListener('click', function () { track(a.getAttribute('data-ev')); });
+  });
+
+  // Botón fijo en el teléfono: aparece al pasar el encabezado
+  var sticky = document.getElementById('sticky-cta'), hero = document.getElementById('inicio');
+  if (sticky && hero && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function (e) {
+      sticky.classList.toggle('show', !e[0].isIntersecting && !nearEnd());
+    }).observe(hero);
+    var fin = document.querySelector('.final');
+    var nearEnd = function () { if (!fin) return false; var r = fin.getBoundingClientRect(); return r.top < innerHeight; };
+    addEventListener('scroll', function () {
+      if (hero.getBoundingClientRect().bottom < 0) sticky.classList.toggle('show', !nearEnd());
+    }, { passive: true });
   }
 
   var y = document.getElementById('year');
