@@ -137,13 +137,22 @@
   document.querySelectorAll('[data-dl]').forEach(function (a) {
     a.addEventListener('click', function () {
       var src = a.getAttribute('data-dl');
-      track('descarga', { desde: src });
-      setTimeout(function () { location.href = 'instalar/?desde=' + encodeURIComponent(src); }, 1500);
+      track('clic_descargar', { desde: src });
     });
   });
   document.querySelectorAll('[data-ev]').forEach(function (a) {
     a.addEventListener('click', function () { track(a.getAttribute('data-ev')); });
   });
+
+  // iPhone o computadora: avisar que Checa es para Android
+  var note = document.getElementById('device-note');
+  var ua = navigator.userAgent || '';
+  if (note && !/Android/i.test(ua)) {
+    note.textContent = /iPhone|iPad|iPod/i.test(ua)
+      ? 'Checa funciona solo en Android. Si manejas con un Android, abre esta página en ese teléfono.'
+      : 'Estás en computadora: abre esta página en tu teléfono Android para instalar Checa.';
+    note.hidden = false;
+  }
 
   // Botón fijo en el teléfono: aparece al pasar el encabezado
   var sticky = document.getElementById('sticky-cta'), hero = document.getElementById('inicio');

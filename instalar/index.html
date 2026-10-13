@@ -24,9 +24,10 @@
 <main id="main" class="wrap page">
   <span class="kicker" id="i-kick">Instalar</span>
   <h1 id="i-title">Instala Checa en 2 minutos</h1>
-  <p class="lead">Sigue estos pasos una sola vez.</p>
+  <p class="lead">Sigue estos pasos una sola vez. Si Chrome pregunta si quieres descargar el archivo, toca <strong>Descargar</strong>.</p>
   <div class="ctas" id="i-dl"><a class="btn btn-primary" href="../descargar/Checa.apk" download data-ev="descarga_instalar">Descargar Checa (APK)</a></div>
   <p class="dl-meta">APK para Android 8 o superior</p>
+  <p class="device-note" id="i-note" hidden></p>
   <ol class="install" style="margin-top:24px">
     <li><div><h3>Abre el archivo Checa.apk</h3><p>Está en tus descargas. Si te lo pide, permite <strong>«Instalar apps desconocidas»</strong> para tu navegador.</p></div></li>
     <li><div><h3>Si Play Protect avisa</h3><p>Toca <strong>Más detalles → Instalar de todos modos</strong>. Avisa porque Checa usa Accesibilidad para leer la oferta.</p></div></li>
@@ -52,11 +53,21 @@
 <script>
 (function(){
   function track(n,d){ if(window.checaTrack) try{ window.checaTrack(n,d||{}); }catch(e){} }
-  if (/[?&]desde=/.test(location.search)) {
+  var android = /Android/i.test(navigator.userAgent || '');
+  var desde = (location.search.match(/[?&]desde=([^&]+)/) || [])[1];
+  var note = document.getElementById('i-note');
+  if (!android) {
+    note.textContent = /iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+      ? 'Checa funciona solo en Android. Abre esta página en tu teléfono Android.'
+      : 'Estás en computadora: abre esta página en tu teléfono Android para instalar Checa.';
+    note.hidden = false;
+  } else if (desde) {
+    // La descarga arranca aquí, así el aviso de Chrome no se pierde al cambiar de página
     document.getElementById('i-kick').textContent = 'Listo';
     document.getElementById('i-title').textContent = 'Tu descarga ya empezó';
     var a = document.querySelector('#i-dl a'); a.className = 'btn btn-ghost'; a.textContent = '¿No bajó? Descargar otra vez';
-    track('llego_instalar');
+    setTimeout(function(){ location.href = '../descargar/Checa.apk'; }, 400);
+    track('descarga', { desde: decodeURIComponent(desde) });
   }
   document.querySelectorAll('[data-ev]').forEach(function(a){ a.addEventListener('click', function(){ track(a.getAttribute('data-ev')); }); });
   var m = document.querySelector('.dl-meta');

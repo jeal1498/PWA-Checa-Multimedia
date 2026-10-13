@@ -256,3 +256,4 @@ h1,h2,h3{font-weight:800}
 .bul{list-style:none;padding:0;margin:20px 0;display:grid;gap:10px}
 .bul li{padding-left:30px;position:relative}
 .bul li::before{content:"";position:absolute;left:6px;top:9px;width:12px;height:7px;border-left:2.5px solid var(--green);border-bottom:2.5px solid var(--green);transform:rotate(-45deg)}
+.device-note{margin-top:12px;padding:12px 14px;border:1px solid var(--yellow);border-radius:12px;color:var(--fg);font-size:.95rem;background:rgba(250,204,21,.06)}
