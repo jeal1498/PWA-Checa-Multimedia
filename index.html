@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checa · Sabe cuánto te queda de cada viaje</title>
-<meta name="description" content="Netos después de gasolina, pago por km y por hora en cada oferta de Uber y DiDi. Gratis durante la beta, sin tarjeta.">
+<title>Checa · Cuánto te queda de cada viaje</title>
+<meta name="description" content="Antes de aceptar, mira cuánto te queda de cada viaje de Uber y DiDi después de gasolina. Gratis hasta el 31 de enero, sin tarjeta.">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://jeal1498.github.io/checa-web/">
@@ -12,7 +12,7 @@
 <meta property="og:locale" content="es_MX">
 <meta property="og:site_name" content="Checa">
 <meta property="og:title" content="Antes de aceptar, checa cuánto te queda">
-<meta property="og:description" content="Netos después de gasolina, pago por km y por hora en cada oferta de Uber y DiDi. Gratis durante la beta, sin tarjeta.">
+<meta property="og:description" content="Antes de aceptar, mira cuánto te queda de cada viaje de Uber y DiDi después de gasolina. Gratis hasta el 31 de enero, sin tarjeta.">
 <meta property="og:url" content="https://jeal1498.github.io/checa-web/">
 <meta property="og:image" content="https://jeal1498.github.io/checa-web/og.png">
 <meta property="og:image:width" content="1200">
@@ -43,12 +43,12 @@
 
 <main id="main">
 
-<!-- 1. VSL: título, video y botón -->
+<!-- 1. HÉROE: promesa, video y botón -->
 <section class="hero vsl" id="inicio">
   <div class="wrap">
     <p class="ref-note" id="ref-note" hidden></p>
     <span class="kicker">Para conductores de Uber y DiDi</span>
-    <h1>Antes de aceptar, <span>checa cuánto te queda.</span></h1>
+    <h1>Sabe cuánto te queda de cada viaje, <span>antes de aceptarlo.</span></h1>
     <div class="vid-box" id="vid-box" data-src="media/vsl.mp4" data-poster="media/vsl.jpg">
       <img src="media/vsl.jpg" alt="Video: un conductor explica cómo funciona Checa" width="540" height="960" fetchpriority="high">
       <button type="button" class="vid-play" id="vid-play" aria-label="Reproducir video de 27 segundos">
@@ -56,11 +56,11 @@
         <em>Mira cómo funciona · 27 s</em>
       </button>
     </div>
-    <p class="lead">En cada oferta, Checa te muestra tus <strong>netos después de gasolina</strong>, el pago por km y por hora, y te dice en voz alta si conviene.</p>
+    <p class="lead">Checa lee la oferta, descuenta tu gasolina y te dice en voz alta si conviene: <strong>Aceptar, Considerar o Rechazar.</strong> Tú decides con la cuenta hecha.</p>
     <div class="ctas">
       <a class="btn btn-primary btn-big" href="instalar/?desde=hero" data-dl="hero">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
-        Descargar gratis
+        Descargar Checa gratis
       </a>
     </div>
     <ul class="pills">
@@ -73,19 +73,28 @@
   </div>
 </section>
 
-<!-- 2. CÓMO FUNCIONA, con el pop-up de ejemplo -->
+<!-- 2. PROBLEMA -->
+<section id="problema">
+  <div class="wrap">
+    <span class="kicker">El problema</span>
+    <h2>Una oferta de $120 no te deja $120</h2>
+    <p class="lead">De esa tarifa salen la gasolina y los kilómetros que manejas para llegar por el pasajero. Uber y DiDi te muestran el monto. Nadie te muestra lo que te queda.</p>
+    <p class="punch">Con un viaje de ejemplo, esos $120 pueden terminar en <span>$97 netos</span> antes de contar tu tiempo. Checa hace esa cuenta en cada oferta.</p>
+  </div>
+</section>
+
+<!-- 3. CÓMO FUNCIONA, con el pop-up de ejemplo -->
 <section class="section-alt" id="como">
   <div class="wrap como">
     <div>
       <span class="kicker">Cómo funciona</span>
-      <h2>Funciona en tu próxima oferta</h2>
+      <h2>Así se ve tu próxima oferta</h2>
       <ol class="pasos">
-        <li><b>Te llega la oferta</b> en Uber o DiDi, como siempre.</li>
-        <li><b>Checa la lee</b> y hace la cuenta con tu gasolina y tus metas.</li>
-        <li><b>Te avisa</b> con color, voz y vibración. Tú decides y tú tocas.</li>
+        <li><b>Llega la oferta.</b> Manejas con Uber o DiDi como siempre.</li>
+        <li><b>Checa la lee.</b> Resta tu gasolina y la compara con tus metas por km y por hora.</li>
+        <li><b>Te avisa.</b> Semáforo, voz y vibración. Aceptar o rechazar lo tocas tú, en tu app.</li>
       </ol>
       <div class="say"><span class="g">Aceptar</span><span class="y">Considerar</span><span class="r">Rechazar</span></div>
-      <p class="next"><a href="#confianza">¿Y qué hace con mis datos? &darr;</a></p>
     </div>
     <div aria-label="Ejemplo del pop-up de Checa, con números de ejemplo">
       <div class="phone">
@@ -97,30 +106,29 @@
   </div>
 </section>
 
-<!-- 3. CONFIANZA -->
+<!-- 4. CONFIANZA -->
 <section id="confianza">
   <div class="wrap">
-    <span class="kicker">Confianza</span>
+    <span class="kicker">Tu tranquilidad</span>
     <h2>Tu cuenta y tus datos se quedan contigo</h2>
     <div class="trust" style="margin-top:24px">
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><h3>Solo lee la pantalla</h3><p>Nunca toca botones, acepta ni rechaza viajes.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><h3>Todo pasa en tu teléfono</h3><p>Tus viajes no se envían a ningún lado.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Lee solo Uber y DiDi</h3><p>Si tu banco se queja, pausas el lector con un toque.</p></div></div>
-      <div class="card guar"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><div><h3>Garantía de lectura</h3><p>Si pagas y no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días.</p></div></div>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><h3>Solo lee, nunca toca</h3><p>Checa no acepta, no rechaza y no presiona nada en Uber o DiDi. La decisión es siempre tuya.</p></div></div>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><h3>Tus viajes se quedan en tu teléfono</h3><p>La lectura ocurre en tu equipo. Tus viajes no se envían a ningún servidor.</p></div></div>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Solo está activa en Uber y DiDi</h3><p>Si la app de tu banco se queja, pausas el lector con un toque.</p></div></div>
+      <div class="card guar"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><div><h3>Garantía de lectura de 7 días</h3><p>Si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero.</p></div></div>
     </div>
     <p class="fine">Checa es independiente y no está afiliada a Uber ni a DiDi.</p>
-    <p class="next"><a href="#precios">¿Cuánto cuesta? &darr;</a></p>
   </div>
 </section>
 
 <!-- testimonios reales de beta testers aquí (con su permiso) -->
 
-<!-- 4. PRECIOS -->
+<!-- 5. PRECIOS -->
 <section class="section-alt" id="precios">
   <div class="wrap">
     <span class="kicker">Precios</span>
-    <h2>Gratis durante la beta. Desde febrero, eliges.</h2>
-    <p class="lead">Hasta el 31 de enero de 2027 Checa es gratis y trae todo incluido. Quien la use en la beta tendrá precio de fundador. Después, pago único con tarjeta, OXXO o saldo de Mercado Pago; nada se cobra solo.</p>
+    <h2>Gratis hasta el 31 de enero. Después, tú eliges.</h2>
+    <p class="lead">Durante la beta Checa trae todo incluido y no pide tarjeta. Quien la use ahora conserva precio de fundador cuando empiecen los paquetes. El pago es único, con tarjeta, OXXO o saldo de Mercado Pago, y nada se renueva solo.</p>
     <div class="prices" style="margin-top:24px">
       <div class="card price">
         <h3>Básico</h3>
@@ -133,59 +141,55 @@
         <h3>Estratega</h3>
         <div class="amount">$399 <small>· 6 meses</small></div>
         <div class="perday">$2.20 <small>al día</small></div>
-        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> a la mejor</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
+        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> en la mejor oferta</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
       </div>
       <div class="card price">
         <h3>Pro</h3>
         <div class="amount">$899 <small>· 1 año</small></div>
         <div class="perday">$2.46 <small>al día</small></div>
-        <ul class="feat"><li>Todo lo del Estratega</li><li>Un año sin renovar</li></ul>
+        <ul class="feat"><li>Todo lo del Estratega</li><li>Un año completo sin renovar</li></ul>
       </div>
     </div>
-    <p class="payoff">Con un viaje malo que evites a la semana, el Estratega ya se pagó.</p>
-    <p class="seal-line"><strong>Hoy todo es gratis.</strong> Sin tarjeta y nada se cobra solo.</p>
+    <p class="payoff">Si evitas un solo viaje malo a la semana, el Estratega se paga solo.</p>
+    <p class="seal-line"><strong>Hoy todo es gratis.</strong> Sin tarjeta.</p>
   </div>
 </section>
 
-<!-- 5. PREGUNTAS -->
+<!-- 6. PREGUNTAS -->
 <section id="faq">
   <div class="wrap">
     <span class="kicker">Preguntas</span>
     <h2>Lo que más nos preguntan</h2>
     <div class="faq">
-      <details><summary>¿Me pueden bloquear la cuenta?</summary><div><p>Checa solo lee la pantalla. Nunca toca botones ni acepta viajes por ti, y no cambia las apps. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></div></details>
-      <details><summary>¿Por qué no está en Play Store?</summary><div><p>Por ahora se instala como APK desde esta página. Play Protect avisa porque Checa usa Accesibilidad para leer la oferta. Te guiamos <a href="instalar/">paso a paso</a> y, si te atoras, te ayudamos por WhatsApp.</p></div></details>
-      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la estrella <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> marca la mejor (Estratega y Pro).</p></div></details>
-      <details><summary>¿Hasta cuándo es gratis?</summary><div><p>Hasta el 31 de enero de 2027, con todo incluido y sin tarjeta. Después eliges un paquete en la app (Cuenta → Paquetes); quienes la usaron en la beta tendrán precio de fundador. Si no pagas, Checa deja de mostrar el pop-up y nada se cobra.</p></div></details>
-      <details><summary>¿Y si no me funciona?</summary><div><p>Tienes la garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días. Detalles en la <a href="terminos.html#reembolsos">política de reembolso</a>.</p></div></details>
+      <details><summary>¿Me pueden bloquear la cuenta?</summary><div><p>Checa solo lee la pantalla. No toca botones, no acepta viajes por ti y no modifica Uber ni DiDi. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></div></details>
+      <details><summary>¿Qué tan fácil es instalarla?</summary><div><p>Toma unos 2 minutos. Al descargar, una guía te lleva paso a paso y, si algo se atora, te ayudamos por WhatsApp.</p></div></details>
+      <details><summary>¿Por qué no está en Play Store?</summary><div><p>Todavía no. Por ahora se instala como archivo APK desde esta página. Play Protect muestra un aviso porque Checa usa Accesibilidad para leer la oferta, y la guía te dice qué tocar.</p></div></details>
+      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la estrella <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> marca la mejor oferta (Estratega y Pro).</p></div></details>
+      <details><summary>¿Hasta cuándo es gratis?</summary><div><p>Hasta el 31 de enero de 2027, con todo incluido y sin tarjeta. Después eliges un paquete dentro de la app, y quien la usó en la beta tendrá precio de fundador. Si no pagas, Checa deja de mostrar el pop-up y no se te cobra nada.</p></div></details>
+      <details><summary>¿Y si no me funciona?</summary><div><p>Tienes la garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero durante los primeros 7 días. Los detalles están en «Términos y reembolsos», al final de la página.</p></div></details>
     </div>
   </div>
 </section>
 
-<!-- 6. CIERRE -->
+<!-- 7. CIERRE -->
 <section class="section-alt final">
   <div class="wrap">
     <h2>Tu próxima oferta, con la cuenta hecha.</h2>
-    <div class="ctas"><a class="btn btn-primary btn-big" href="instalar/?desde=cierre" data-dl="cierre">Descargar gratis</a></div>
-    <p class="dl-meta">APK para Android 8 o superior</p>
+    <p class="lead">Descarga Checa, actívala en 2 minutos y mírala trabajar en tu siguiente viaje.</p>
+    <div class="ctas"><a class="btn btn-primary btn-big" href="instalar/?desde=cierre" data-dl="cierre">Descargar Checa gratis</a></div>
+    <p class="dl-meta">APK para Android 8 o superior · Sin tarjeta</p>
   </div>
 </section>
 
 </main>
 
 <div class="sticky-cta" id="sticky-cta">
-  <a class="btn btn-primary" href="instalar/?desde=fijo" data-dl="fijo">Descargar gratis</a>
+  <a class="btn btn-primary" href="instalar/?desde=fijo" data-dl="fijo">Descargar Checa gratis</a>
 </div>
 
 <footer>
   <div class="wrap">
-    <nav class="flinks" aria-label="Pie de página">
-      <a href="instalar/">Instalar</a>
-      <a href="beta/">Beta</a>
-      <a href="privacidad.html">Privacidad</a>
-      <a href="terminos.html">Términos y reembolsos</a>
-      <a href="https://wa.me/529985214490?text=Hola%2C%20tengo%20una%20duda%20de%20Checa" target="_blank" rel="noopener">Ayuda por WhatsApp</a>
-    </nav>
+    <nav class="flinks legal-links" aria-label="Legal"><a href="privacidad.html">Privacidad</a><a href="terminos.html">Términos y reembolsos</a></nav>
     <p>© <span id="year">2026</span> Checa. Proyecto independiente. No afiliado a Uber ni a DiDi; sus nombres son marcas de sus dueños. Pagos procesados por Mercado Pago.</p>
   </div>
 </footer>

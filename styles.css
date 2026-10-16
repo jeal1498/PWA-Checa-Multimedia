@@ -299,3 +299,5 @@ summary{transition:color .2s}
 .next{margin:20px 0 0}
 .next a{display:inline-block;padding:12px 0;font-weight:600;text-decoration:none}
 .next a:hover{text-decoration:underline}
+.legal-links a{color:var(--muted);font-size:.85rem;text-decoration:underline}
+#problema .punch{max-width:42em}
