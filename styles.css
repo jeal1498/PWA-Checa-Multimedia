@@ -301,3 +301,29 @@ summary{transition:color .2s}
 .next a:hover{text-decoration:underline}
 .legal-links a{color:var(--muted);font-size:.85rem;text-decoration:underline}
 #problema .punch{max-width:42em}
+
+/* Instalar: pasos con avance */
+.prog{margin:28px 0 14px}
+.prog-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
+.prog-bar{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}
+.prog-bar i{display:block;height:100%;width:0;background:var(--green);border-radius:99px;transition:width .3s}
+.steps{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.stp label{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;min-height:48px;transition:border-color .2s,background .2s}
+.stp label:hover{border-color:#3A423D}
+.stp input{position:absolute;opacity:0;width:1px;height:1px}
+.stp input:focus-visible + .num{outline:3px solid var(--yellow);outline-offset:3px}
+.stp .num{width:44px;height:44px;border-radius:50%;border:2px solid var(--green);display:grid;place-items:center;color:var(--green);font-weight:800;font-size:1.15rem;transition:background .2s}
+.stp .num svg{grid-area:1/1;width:22px;height:22px;stroke:#04120A;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.stp .num b{grid-area:1/1}
+.stp input:checked + .num{background:var(--green)}
+.stp input:checked + .num b{opacity:0}
+.stp input:checked + .num svg{opacity:1}
+.stp:has(input:checked) label{border-color:#1d5c34;background:#0E1A12}
+.stp h3{margin:0 0 .3em}
+.stp p{margin:0;color:var(--muted)}
+.stp strong{color:var(--fg)}
+.stp .inl{width:.9em;height:.9em;fill:var(--green);vertical-align:-.05em}
+.tag{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:99px;border:1px solid var(--yellow);color:var(--yellow);font-size:.72rem;font-weight:700;vertical-align:middle}
+.done{margin-top:16px;padding:20px;border:2px solid var(--green);border-radius:var(--radius);background:#0E1A12}
+.done h2{font-size:1.3rem;margin:0 0 .3em}
+.done p{margin:0;color:var(--muted)}
