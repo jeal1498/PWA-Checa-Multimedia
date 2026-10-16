@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Fira+Sans:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Fira+Sans:wght@400;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script src="medir.js"></script>
 </head>
@@ -102,12 +102,12 @@
   <div class="wrap">
     <span class="kicker">Confianza</span>
     <h2>Tu cuenta y tus datos se quedan contigo</h2>
-    <ul class="bul trust-list">
-      <li><b>Solo lee la pantalla.</b> Nunca toca botones, acepta ni rechaza viajes.</li>
-      <li><b>Todo pasa en tu teléfono.</b> Tus viajes no se envían a ningún lado.</li>
-      <li><b>Lee solo Uber y DiDi.</b> Si tu banco se queja, pausas el lector con un toque.</li>
-      <li><b>Garantía de lectura.</b> Si pagas y no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días.</li>
-    </ul>
+    <div class="trust" style="margin-top:24px">
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><h3>Solo lee la pantalla</h3><p>Nunca toca botones, acepta ni rechaza viajes.</p></div></div>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><h3>Todo pasa en tu teléfono</h3><p>Tus viajes no se envían a ningún lado.</p></div></div>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Lee solo Uber y DiDi</h3><p>Si tu banco se queja, pausas el lector con un toque.</p></div></div>
+      <div class="card guar"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><div><h3>Garantía de lectura</h3><p>Si pagas y no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días.</p></div></div>
+    </div>
     <p class="fine">Checa es independiente y no está afiliada a Uber ni a DiDi.</p>
   </div>
 </section>
@@ -132,7 +132,7 @@
         <h3>Estratega</h3>
         <div class="amount">$399 <small>· 6 meses</small></div>
         <div class="perday">$2.20 <small>al día</small></div>
-        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con ⭐ a la mejor</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
+        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> a la mejor</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
       </div>
       <div class="card price">
         <h3>Pro</h3>
@@ -154,7 +154,7 @@
     <div class="faq">
       <details><summary>¿Me pueden bloquear la cuenta?</summary><div><p>Checa solo lee la pantalla. Nunca toca botones ni acepta viajes por ti, y no cambia las apps. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></div></details>
       <details><summary>¿Por qué no está en Play Store?</summary><div><p>Por ahora se instala como APK desde esta página. Play Protect avisa porque Checa usa Accesibilidad para leer la oferta. Te guiamos <a href="instalar/">paso a paso</a> y, si te atoras, te ayudamos por WhatsApp.</p></div></details>
-      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la ⭐ marca la mejor (Estratega y Pro).</p></div></details>
+      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la estrella <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> marca la mejor (Estratega y Pro).</p></div></details>
       <details><summary>¿Hasta cuándo es gratis?</summary><div><p>Hasta el 31 de enero de 2027, con todo incluido y sin tarjeta. Después eliges un paquete en la app (Cuenta → Paquetes); quienes la usaron en la beta tendrán precio de fundador. Si no pagas, Checa deja de mostrar el pop-up y nada se cobra.</p></div></details>
       <details><summary>¿Y si no me funciona?</summary><div><p>Tienes la garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero en los primeros 7 días. Detalles en la <a href="terminos.html#reembolsos">política de reembolso</a>.</p></div></details>
     </div>

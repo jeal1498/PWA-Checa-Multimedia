@@ -61,7 +61,7 @@ section{padding:64px 0}
 @media (min-width:900px){.hero .wrap{grid-template-columns:1.1fr .9fr}.phone{width:320px}}
 .hero h1 span{color:var(--green)}
 .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:1.2em;padding:0;list-style:none}
-.pills li{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;color:var(--muted)}
+.pills li{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.9rem;color:var(--muted)}
 
 /* Phone mock */
 .phone{width:min(290px,100%);margin:0 auto;aspect-ratio:9/18.5;background:#050605;border:10px solid #232826;border-radius:40px;position:relative;overflow:hidden;
@@ -286,3 +286,11 @@ h1,h2,h3{font-weight:800}
 .beta-grid h2{font-size:1.25rem;margin-bottom:.2em}
 .beta-grid .bul{margin:12px 0 0}
 .beta-page .btn-big{width:auto}
+
+/* Pulido UX (oct 2026) */
+.star{width:1em;height:1em;vertical-align:-.12em;fill:var(--gold)}
+.card{transition:border-color .2s}
+.trust .card:hover{border-color:#3A423D}
+.nav a{transition:color .2s}
+summary:hover{color:var(--green)}
+summary{transition:color .2s}
