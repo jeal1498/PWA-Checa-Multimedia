@@ -294,3 +294,8 @@ h1,h2,h3{font-weight:800}
 .nav a{transition:color .2s}
 summary:hover{color:var(--green)}
 summary{transition:color .2s}
+.seal-line{margin:24px 0 0;font-size:1.1rem}
+.seal-line strong{color:var(--green)}
+.next{margin:20px 0 0}
+.next a{display:inline-block;padding:12px 0;font-weight:600;text-decoration:none}
+.next a:hover{text-decoration:underline}
