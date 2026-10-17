@@ -125,7 +125,7 @@
   if (vp) vp.addEventListener('click', function () {
     var box = document.getElementById('vid-box');
     var v = document.createElement('video');
-    v.src = box.getAttribute('data-src') || 'media/vsl.mp4'; v.poster = box.getAttribute('data-poster') || '';
+    v.src = box.getAttribute('data-src') || 'media/vsl-oferta.mp4'; v.poster = box.getAttribute('data-poster') || '';
     v.controls = true; v.autoplay = true; v.playsInline = true;
     v.setAttribute('playsinline', '');
     box.innerHTML = ''; box.appendChild(v);
