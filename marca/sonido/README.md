@@ -37,4 +37,4 @@ Cada nota sale en su frecuencia (523, 659, 784 y 1047 Hz en el logo; 784 → 104
 `python3 -I generar_sonidos.py` (necesita `numpy` y `ffmpeg`). Las notas y duraciones están en `sonidos()`. El generador descarta tres clics del logo de la propuesta B descartada solo para conservar el mismo ruido que se aprobó; si se cambia algún sonido, ese ruido puede variar.
 
 ## Pendiente
-Conectarlos a la plantilla de video `checa-marca-v2` (copiar `mp3/` a `assets/sfx/` y declararlos como `<audio>` en `construir.py`) y a la app Android, que sigue con la voz «Aceptar/Considerar/Rechazar» más `ToneGenerator`.
+Ya están conectados a la plantilla de video `checa-marca-v2` (`construir.py` los agrega solos). Falta la app Android, que sigue con la voz «Aceptar/Considerar/Rechazar» más `ToneGenerator`. **Música:** se descartó el 17 oct 2026.
