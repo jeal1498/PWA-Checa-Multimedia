@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Instalar Checa · Guía paso a paso</title>
-<meta name="description" content="Instala Checa en 2 minutos: abre el APK, permite la instalación y activa el lector. Si te atoras, te ayudamos por WhatsApp.">
+<meta name="description" content="Instala Checa paso a paso con un video: abre el APK, permite la instalación y activa el lector. Si te atoras, te ayudamos por WhatsApp.">
 <meta name="theme-color" content="#0C0C10">
 <link rel="icon" href="../marca/icono-app.svg" type="image/svg+xml">
 <link rel="icon" href="../marca/png/icono-32.png" sizes="32x32" type="image/png">
@@ -12,8 +12,8 @@
 <link rel="manifest" href="../site.webmanifest">
 <link rel="preload" href="../fonts/bricolage-800.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../fonts/dmsans.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../marca/tokens.css?v=20261021">
-<link rel="stylesheet" href="../styles.css?v=20261021">
+<link rel="stylesheet" href="../marca/tokens.css?v=20261022">
+<link rel="stylesheet" href="../styles.css?v=20261022">
 <script src="../medir.js"></script>
 </head>
 <body>
@@ -26,27 +26,20 @@
 </div></header>
 <main id="main" class="wrap page">
   <span class="kicker" id="i-kick">Instalación</span>
-  <h1 id="i-title">Instala Checa en 2 minutos</h1>
-  <p class="lead">Sigue estos 5 pasos una sola vez. Después Checa trabaja sola en cada oferta.</p>
+  <h1 id="i-title">Instala Checa paso a paso</h1>
+  <p class="lead">Mira el video y haz cada paso a tu ritmo. Se hace una sola vez; después Checa trabaja sola en cada oferta.</p>
   <div class="ctas" id="i-dl"><a class="btn btn-primary" href="../descargar/Checa.apk" download data-ev="descarga_instalar">Descargar Checa (APK)</a></div>
   <p class="dl-meta">APK para Android 8 o superior</p>
   <p class="device-note" id="i-note" hidden></p>
 
   <div id="i-steps">
-    <div class="vid-box" id="vid-box" data-tiktok="7697363827842616628">
+    <div class="vid-box" id="vid-box" data-src="../media/instalar.mp4" data-poster="../media/instalar.jpg">
       <img src="../media/instalar.jpg" alt="Video: instalación de Checa paso a paso en un teléfono Android" width="540" height="960">
-      <button type="button" class="vid-play" id="vid-play" aria-label="Reproducir video de 4 minutos con la instalación paso a paso">
+      <button type="button" class="vid-play" id="vid-play" aria-label="Reproducir video de 3 minutos con la instalación paso a paso">
         <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></span>
-        <em>Mira cómo instalarla · 4 min</em>
+        <em>Mira cómo instalarla · 3 min</em>
       </button>
     </div>
-    <ol class="steps">
-      <li class="stp"><span class="num" aria-hidden="true"><b>1</b></span><span class="body"><h3>Abre el archivo Checa.apk</h3><p>Búscalo en Descargas o toca el aviso de Chrome. Si te lo pide, permite <strong>«Instalar apps desconocidas»</strong> para tu navegador.</p></span></li>
-      <li class="stp"><span class="num" aria-hidden="true"><b>2</b></span><span class="body"><h3>Si Play Protect avisa <span class="tag">Si te aparece</span></h3><p>Es normal: Checa usa Accesibilidad para leer la oferta. Toca <strong>Más detalles</strong> y luego <strong>Instalar de todos modos</strong>.</p></span></li>
-      <li class="stp"><span class="num" aria-hidden="true"><b>3</b></span><span class="body"><h3>Si dice «ajustes restringidos» <span class="tag">Si te aparece</span></h3><p>Pasa en Android 13 o más nuevo. Ve a Info de la app, toca los tres puntos y elige <strong>Permitir configuración restringida</strong>.</p></span></li>
-      <li class="stp"><span class="num" aria-hidden="true"><b>4</b></span><span class="body"><h3>Activa el lector</h3><p>En Ajustes, entra a Accesibilidad, elige <strong>«Checa – lector de ofertas»</strong> y actívalo.</p></span></li>
-      <li class="stp"><span class="num" aria-hidden="true"><b>5</b></span><span class="body"><h3>Empieza a leer ofertas</h3><p>Abre Checa y toca el botón verde <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>. Elige <strong>Pantalla completa</strong> y luego <strong>Empezar</strong>. Si reinicias el teléfono, tócalo otra vez.</p></span></li>
-    </ol>
     <div class="done">
       <h2>¿Cómo sé que ya funciona?</h2>
       <p>Abre Uber o DiDi. En tu próxima oferta verás el pop-up con lo que te queda de cada viaje. Si no aparece, escríbenos por WhatsApp y lo revisamos juntos.</p>
@@ -101,14 +94,11 @@
   }
   var vp = document.getElementById('vid-play');
   if (vp) vp.addEventListener('click', function(){
-    // El video de TikTok se carga solo al tocar (antes no se contacta a TikTok)
-    var box = document.getElementById('vid-box'), f = document.createElement('iframe');
-    f.src = 'https://www.tiktok.com/player/v1/' + box.getAttribute('data-tiktok') + '?autoplay=1&controls=1&rel=0&music_info=0&description=0';
-    f.title = 'Instalación de Checa paso a paso';
-    f.allow = 'autoplay; fullscreen; encrypted-media';
-    f.allowFullscreen = true;
-    f.style.cssText = 'width:100%;height:100%;border:0;display:block';
-    box.innerHTML = ''; box.appendChild(f);
+    var box = document.getElementById('vid-box'), v = document.createElement('video');
+    v.src = box.getAttribute('data-src'); v.poster = box.getAttribute('data-poster');
+    v.controls = true; v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline','');
+    box.innerHTML = ''; box.appendChild(v);
+    var pr = v.play(); if (pr && pr.catch) pr.catch(function(){});
     track('video_play');
   });
   var m = document.querySelector('.dl-meta');
