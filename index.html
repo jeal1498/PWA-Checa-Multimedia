@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checa · Mira cuánto te queda de cada viaje</title>
 <meta name="description" content="Antes de aceptar, mira cuánto te queda de cada viaje de Uber y DiDi después de gasolina. Gratis hasta el 31 de enero, sin tarjeta.">
-<meta name="theme-color" content="#000000">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://jeal1498.github.io/checa-web/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_MX">
@@ -17,11 +15,18 @@
 <meta property="og:image" content="https://jeal1498.github.io/checa-web/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Checa: Checa cuánto te queda.">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Fira+Sans:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261016">
+<meta name="twitter:image" content="https://jeal1498.github.io/checa-web/og.png">
+<meta name="theme-color" content="#0C0C10">
+<link rel="icon" href="marca/icono-app.svg" type="image/svg+xml">
+<link rel="icon" href="marca/png/icono-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="marca/png/icono-180.png">
+<link rel="manifest" href="site.webmanifest">
+<link rel="preload" href="fonts/bricolage-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/dmsans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="marca/tokens.css?v=20261017">
+<link rel="stylesheet" href="styles.css?v=20261017">
 <script src="medir.js"></script>
 </head>
 <body>
@@ -30,8 +35,8 @@
 <header class="top">
   <div class="wrap">
     <a class="brand" href="./" aria-label="Checa, inicio">
-      <svg viewBox="0 0 22 38" aria-hidden="true"><rect x="1" y="1" width="20" height="36" rx="6" fill="#111413" stroke="#262B28"/><circle cx="11" cy="9.5" r="4.2" fill="#F43F5E"/><circle cx="11" cy="19" r="4.2" fill="#FACC15"/><circle cx="11" cy="28.5" r="4.2" fill="#22C55E"/></svg>
-      Checa
+      <svg viewBox="0 0 60 100" aria-hidden="true"><rect x="6" y="2" width="48" height="96" rx="20" fill="#222826" stroke="#3A423F" stroke-width="3"/><circle class="lg-r" cx="30" cy="26" r="9"/><circle class="lg-a" cx="30" cy="50" r="9"/><circle class="lg-v" cx="30" cy="74" r="12" fill="#22C55E"/><path class="lg-c" d="M24 74.5l4.5 4.5L36.5 69" fill="none" stroke="#04210F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="nm">Checa</span>
     </a>
     <nav class="nav" aria-label="Principal">
       <a href="#como">Cómo funciona</a>
@@ -72,6 +77,7 @@
     <p class="device-note" id="device-note" hidden></p>
   </div>
 </section>
+<div class="raya" aria-hidden="true"><svg viewBox="0 0 1000 64" preserveAspectRatio="none"><path d="M0 52C200 52 300 32 500 32C700 32 800 12 1000 12"/></svg><i></i></div>
 
 <!-- 2. PROBLEMA -->
 <section id="problema">
@@ -79,7 +85,7 @@
     <span class="kicker">El problema</span>
     <h2>Una oferta de $120 no te deja $120</h2>
     <p class="lead">De esa tarifa salen la gasolina y los kilómetros que manejas para llegar por el pasajero. Uber y DiDi te muestran el monto. Nadie te muestra lo que te queda.</p>
-    <p class="punch">Con un viaje de ejemplo, esos $120 pueden terminar en <span>$97 netos</span> antes de contar tu tiempo. Checa hace esa cuenta en cada oferta.</p>
+    <p class="punch">Con un viaje de ejemplo, esos $120 pueden terminar en <span>$97 netos</span> antes de contar tu tiempo. Checa hace esa cuenta en cada oferta.<small>Números de ejemplo</small></p>
   </div>
 </section>
 
@@ -94,7 +100,7 @@
         <li><b>Checa la lee.</b> Resta tu gasolina y la compara con tus metas por km y por hora.</li>
         <li><b>Te avisa.</b> Semáforo, voz y vibración. Aceptar o rechazar lo tocas tú, en tu app.</li>
       </ol>
-      <div class="say"><span class="g">Aceptar</span><span class="y">Considerar</span><span class="r">Rechazar</span></div>
+      <div class="sellos" aria-label="Los tres avisos de Checa"><span class="sello g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 6.5"/></svg>Aceptar</span><span class="sello y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v8M12 18v.5"/></svg>Considerar</span><span class="sello r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Rechazar</span></div>
     </div>
     <div aria-label="Ejemplo del pop-up de Checa, con números de ejemplo">
       <div class="phone">
@@ -102,6 +108,7 @@
         <div class="pop" id="hero-pop" role="img"></div>
         <div class="offer-card" id="hero-offer" aria-hidden="true"></div>
       </div>
+      <p class="ejemplo">Números de ejemplo</p>
     </div>
   </div>
 </section>
@@ -111,9 +118,9 @@
   <div class="wrap">
     <span class="kicker">Tu tranquilidad</span>
     <h2>Tu cuenta y tus datos se quedan contigo</h2>
-    <div class="trust" style="margin-top:24px">
+    <div class="trust">
       <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><h3>Solo lee, nunca toca</h3><p>Checa no acepta, no rechaza y no presiona nada en Uber o DiDi. La decisión es siempre tuya.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><h3>Tus viajes se quedan en tu teléfono</h3><p>La lectura ocurre en tu equipo. Tus viajes no se envían a ningún servidor.</p></div></div>
+      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="4"/><path d="M11 18h2"/></svg></div><div><h3>Tus viajes se quedan en tu teléfono</h3><p>La lectura ocurre en tu equipo. Tus viajes no se envían a ningún servidor.</p></div></div>
       <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Solo está activa en Uber y DiDi</h3><p>Si la app de tu banco se queja, pausas el lector con un toque.</p></div></div>
       <div class="card guar"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><div><h3>Garantía de lectura de 7 días</h3><p>Si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero.</p></div></div>
     </div>
@@ -129,7 +136,7 @@
     <span class="kicker">Precios</span>
     <h2>Gratis hasta el 31 de enero. Después, tú eliges.</h2>
     <p class="lead">Durante la beta Checa trae todo incluido y no pide tarjeta. Quien la use ahora conserva precio de fundador cuando empiecen los paquetes. El pago es único, con tarjeta, OXXO o saldo de Mercado Pago, y nada se renueva solo.</p>
-    <div class="prices" style="margin-top:24px">
+    <div class="prices">
       <div class="card price">
         <h3>Básico</h3>
         <div class="amount">$99 <small>· 1 mes</small></div>
@@ -141,7 +148,7 @@
         <h3>Estratega</h3>
         <div class="amount">$399 <small>· 6 meses</small></div>
         <div class="perday">$2.20 <small>al día</small></div>
-        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> en la mejor oferta</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
+        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con la etiqueta <span class="mejor">Mejor</span> en la mejor oferta</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
       </div>
       <div class="card price">
         <h3>Pro</h3>
@@ -150,10 +157,11 @@
         <ul class="feat"><li>Todo lo del Estratega</li><li>Un año completo sin renovar</li></ul>
       </div>
     </div>
-    <p class="payoff">Si evitas un solo viaje malo a la semana, el plan de 6 meses se paga solo.</p>
     <p class="seal-line"><strong>Hoy todo es gratis.</strong> Sin tarjeta.</p>
   </div>
 </section>
+
+<div class="tres" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <!-- 6. PREGUNTAS -->
 <section id="faq">
@@ -164,7 +172,7 @@
       <details><summary>¿Me pueden bloquear la cuenta?</summary><div><p>Checa solo lee la pantalla. No toca botones, no acepta viajes por ti y no modifica Uber ni DiDi. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></div></details>
       <details><summary>¿Qué tan fácil es instalarla?</summary><div><p>Toma unos 2 minutos. Al descargar, una guía te lleva paso a paso y, si algo se atora, te ayudamos por WhatsApp.</p></div></details>
       <details><summary>¿Por qué no está en Play Store?</summary><div><p>Todavía no. Por ahora se instala como archivo APK desde esta página. Play Protect muestra un aviso porque Checa usa Accesibilidad para leer la oferta, y la guía te dice qué tocar.</p></div></details>
-      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la estrella <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg> marca la mejor oferta (Estratega y Pro).</p></div></details>
+      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la etiqueta <span class="mejor">Mejor</span> marca la mejor oferta (Estratega y Pro).</p></div></details>
       <details><summary>¿Hasta cuándo es gratis?</summary><div><p>Hasta el 31 de enero de 2027, con todo incluido y sin tarjeta. Después eliges un paquete dentro de la app, y quien la usó en la beta tendrá precio de fundador. Si no pagas, Checa deja de mostrar el pop-up y no se te cobra nada.</p></div></details>
       <details><summary>¿Y si no me funciona?</summary><div><p>Tienes la garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero durante los primeros 7 días. Los detalles están en «Términos y reembolsos», al final de la página.</p></div></details>
     </div>
@@ -172,6 +180,8 @@
 </section>
 
 <!-- 7. CIERRE -->
+<div class="raya" aria-hidden="true"><svg viewBox="0 0 1000 64" preserveAspectRatio="none"><path d="M0 52C200 52 300 32 500 32C700 32 800 12 1000 12"/></svg><i></i></div>
+
 <section class="section-alt final">
   <div class="wrap">
     <h2>Tu próxima oferta, con la cuenta hecha.</h2>

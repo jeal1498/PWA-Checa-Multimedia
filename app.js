@@ -3,9 +3,9 @@
 
   // Ofertas de ejemplo. km y min totales = recogida + viaje (igual que la app).
   var OFFERS = [
-    { app: 'Uber', fare: 120, pk: 1.5, pm: 4, tk: 10, tm: 18, surge: '+$15 incluido' },
-    { app: 'DiDi', fare: 95, pk: 2.5, pm: 7, tk: 13, tm: 20, surge: '' },
-    { app: 'Uber', fare: 62, pk: 4.5, pm: 11, tk: 6, tm: 19, surge: '' }
+    { fare: 120, pk: 1.5, pm: 4, tk: 10, tm: 18 },
+    { fare: 95, pk: 2.5, pm: 7, tk: 13, tm: 20 },
+    { fare: 62, pk: 4.5, pm: 11, tk: 6, tm: 19 }
   ];
   var LABEL = { green: 'ACEPTAR', yellow: 'CONSIDERAR', red: 'RECHAZAR' };
   var settings = { metaKm: 8, metaHora: 150, gasPrice: 24, kml: 12 };
@@ -29,22 +29,22 @@
     var r = evaluate(o);
     pop.setAttribute('data-c', r.color);
     pop.innerHTML =
-      '<div class="pop-band">' + LABEL[r.color] + '<small>' + o.app + '</small></div>' +
+      '<div class="pop-band">' + LABEL[r.color] + '</div>' +
       '<div class="pop-body">' +
-        '<div class="pop-net">' + money(r.net) + '<span>netos</span></div>' +
+        '<div class="pop-lbl">Te quedan</div>' +
+        '<div class="pop-net">' + money(r.net) + '</div>' +
         '<div class="pop-sub">Viaje ' + money(o.fare) + ' · Gasolina −' + money(r.gas) + '</div>' +
         '<div class="chips">' +
-          '<div class="chip ' + (r.okH ? 'ok' : 'no') + '"><b>' + money(r.perHour) + '</b>por hora</div>' +
-          '<div class="chip ' + (r.okKm ? 'ok' : 'no') + '"><b>$' + dec(r.perKm) + '</b>por km</div>' +
-          '<div class="chip"><b>' + r.min + ' min</b>' + dec(r.km) + ' km</div>' +
+          '<div class="chip ' + (r.okH ? 'ok' : 'no') + '">' + money(r.perHour) + '/h</div>' +
+          '<div class="chip ' + (r.okKm ? 'ok' : 'no') + '">$' + dec(r.perKm) + '/km</div>' +
+          '<div class="chip">' + dec(r.km) + ' km total</div>' +
         '</div>' +
-        '<div class="surge">' + (o.surge ? '⚡ Dinámica ' + o.surge : '') + '</div>' +
       '</div>';
-    pop.setAttribute('aria-label', 'Checa dice ' + LABEL[r.color] + ': ' + money(r.net) + ' netos');
+    pop.setAttribute('aria-label', 'Checa dice ' + LABEL[r.color] + ': te quedan ' + money(r.net) + ' netos (números de ejemplo)');
   }
 
   function fillOffer(card, o) {
-    card.innerHTML = '<span>' + o.app + ' · Nuevo viaje</span><b>' + money(o.fare) + '</b>' +
+    card.innerHTML = '<span>Nuevo viaje</span><b>' + money(o.fare) + '</b>' +
       'Recogida ' + o.pm + ' min (' + dec(o.pk) + ' km) · Viaje ' + o.tm + ' min (' + dec(o.tk) + ' km)' +
       '<div class="ln"></div><div class="ln s"></div>';
   }
