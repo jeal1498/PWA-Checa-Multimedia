@@ -10,3 +10,4 @@ Aprobada el 17 oct 2026. Aún **no** se aplica a la app ni a la web.
 - **Marca:** asfalto y hueso. El color solo decide: aceptar `#22C55E` (igual al verde del logo), considerar `#FACC15` (amarillo de la raya de la calle), rechazar `#EF4444`.
 - **PNG:** pendientes (solo hay SVG).
 - **Láminas de diseño (reglas del logo, tipografía, voz, recursos, plantillas, subtítulos, movimiento, pop-up, marcas ajenas, material de venta y tarjeta de marca):** en el artifact «Checa: identidad de marca».
+- **Sonido:** carpeta `sonido/` con los efectos oficiales (logo, aceptar, considerar, rechazar, pop-up, número que sube y sello), sintetizados con `generar_sonidos.py`. Reglas de uso en `sonido/README.md`. Pendiente de aprobación de Eduardo.
