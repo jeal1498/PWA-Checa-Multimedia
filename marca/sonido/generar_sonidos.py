@@ -1,18 +1,20 @@
-"""Efectos de sonido oficiales de Checa (marca v2). Se sintetizan, no se graban ni se piden a un generador:
-cada corrida da exactamente los mismos archivos, sin derechos de terceros.
+"""Efectos de sonido OFICIALES de Checa (marca v2): la mezcla aprobada por Eduardo el 17 oct 2026.
+Se sintetizan, no se graban ni se piden a un generador: cada corrida da exactamente los mismos archivos,
+sin derechos de terceros.
+
+  Logo y ACEPTAR  → «el semáforo»: campanas en do mayor.
+  Todo lo demás   → «el tablero del auto»: direccional, relé, odómetro y golpes secos.
 
 Uso:  python3 -I generar_sonidos.py        (necesita numpy y ffmpeg)
 Salida: wav/ (16 bits, 44.1 kHz, mono), mp3/ (192 kbps) y demo-completa.mp3 (todos con pausas, para escucharlos de corrido).
-
-Idea sonora: el semáforo. Tres notas que suben (rojo, ámbar, verde) y un «ping» de campana al final (la ✓).
-Todo en do mayor, sin graves pesados, para oírse bien en el altavoz de un teléfono y por debajo de la voz.
 """
 import os, subprocess, wave
 import numpy as np
 
 SR = 44100
 AQUI = os.path.dirname(os.path.abspath(__file__))
-rng = np.random.default_rng(7)
+rng_ruido = np.random.default_rng(7)   # ruido de los golpes
+rng_clic = np.random.default_rng(11)   # ruido de los clics
 
 # Notas fijas (Hz). Do mayor.
 G3, C4 = 196.00, 261.63
@@ -34,13 +36,6 @@ def campana(f, dur, amp=1.0, tau=None):
     return amp * y
 
 
-def triangulo(f, dur, amp=1.0, tau=None):
-    x = t(dur)
-    tau = tau or dur / 3
-    y = (2 / np.pi) * np.arcsin(np.sin(2 * np.pi * f * x))
-    return amp * y * np.exp(-x / tau) * np.minimum(1.0, x / 0.004)
-
-
 def deslizar(f0, f1, dur, amp=1.0, tau=None):
     """Seno con frecuencia que baja (o sube) de f0 a f1."""
     x = t(dur)
@@ -52,10 +47,32 @@ def deslizar(f0, f1, dur, amp=1.0, tau=None):
 
 def ruido(dur, amp=1.0, tau=0.01, corte=2000):
     x = t(dur)
-    r = rng.standard_normal(len(x))
+    r = rng_ruido.standard_normal(len(x))
     k = max(1, int(SR / corte))
     r = np.convolve(r, np.ones(k) / k, mode="same")  # filtro simple pasa-bajos
     return amp * r * np.exp(-x / tau)
+
+
+def clic(f, amp=1.0, dur=0.05):
+    """Clic de relé: ráfaga corta de tono + un toque de ruido (el «tic» o el «toc» de la direccional)."""
+    x = t(dur)
+    y = np.sin(2 * np.pi * f * x) * np.exp(-x / 0.007)
+    r = rng_clic.standard_normal(len(x))
+    r = r - np.convolve(r, np.ones(6) / 6, mode="same")  # pasa-altos simple
+    return amp * (y + 0.35 * r * np.exp(-x / 0.003))
+
+
+def cuadrada_suave(f0, f1, dur, amp=1.0, tau=0.1):
+    x = t(dur)
+    f = f0 * (f1 / f0) ** (x / dur)
+    y = np.sign(np.sin(2 * np.pi * np.cumsum(f) / SR))
+    y = np.convolve(y, np.ones(14) / 14, mode="same")  # quita lo áspero
+    return amp * y * np.exp(-x / tau) * np.minimum(1.0, x / 0.004)
+
+
+def empujar(y, g):
+    """Compresión suave (tanh): sube lo flojo de los clics sin pasar el pico, para igualar el volumen."""
+    return np.tanh(g * y / (np.max(np.abs(y)) + 1e-9)) / np.tanh(g)
 
 
 def poner(buf, senal, t0):
@@ -73,44 +90,47 @@ def cerrar(y, pico=0.7):
 
 def sonidos():
     s = {}
-    # 1. Logo: rojo 0.1 s, ámbar 0.4 s, verde 0.7 s (iguales a la animación) y ping de la ✓ a 0.9 s.
+    # --- «tablero del auto» (el ruido de cada clic sale de un generador con semilla; se conserva el orden original) ---
+    for f in (1900, 1300, 1900):   # el logo de la propuesta B usaba estos tres clics; se descartan para no cambiar el ruido aprobado
+        clic(f, 0.8)
+    b = np.zeros(int(SR * 0.6))
+    poner(b, clic(1900, 1.0), 0.0)
+    poner(b, clic(1300, 1.0), 0.22)
+    s["considerar"] = cerrar(empujar(b, 4.0))               # tic-toc de direccional
+    b = np.zeros(int(SR * 0.8))
+    poner(b, cuadrada_suave(240, 185, 0.22, 0.9, tau=0.14), 0.0)
+    poner(b, cuadrada_suave(185, 120, 0.34, 1.0, tau=0.18), 0.20)
+    s["rechazar"] = cerrar(b, 0.62)                         # dos pitidos graves que bajan, apagados
+    b = np.zeros(int(SR * 0.3))
+    poner(b, clic(1500, 1.0), 0.0)
+    poner(b, deslizar(320, 140, 0.12, 0.6, tau=0.04), 0.0)
+    s["popup-entra"] = cerrar(empujar(b, 3.0), 0.6)         # clac de relé con golpe sordo
+    b = np.zeros(int(SR * 0.9))
+    pos, paso = 0.0, 0.12
+    for i in range(10):
+        poner(b, clic(1700 + 40 * i, 0.7 + 0.03 * i, 0.04), pos)
+        pos += paso; paso *= 0.82
+    s["numero-sube"] = cerrar(empujar(b, 3.5), 0.6)         # odómetro: clics que se aceleran
+    b = np.zeros(int(SR * 0.5))
+    poner(b, clic(1100, 0.8), 0.0)
+    poner(b, deslizar(130, 48, 0.30, 1.0, tau=0.09), 0.06)
+    poner(b, ruido(0.05, 0.4, tau=0.01, corte=1200), 0.06)
+    s["sello"] = cerrar(b, 0.75)                            # ka-chunk
+    # --- «semáforo»: campanas ---
+    # Logo: rojo 0.1 s, ámbar 0.4 s, verde 0.7 s (iguales a la animación) y ping de la ✓ a 0.9 s.
     b = np.zeros(int(SR * 1.8))
     for nota, t0 in ((C5, 0.10), (E5, 0.40), (G5, 0.70)):
         poner(b, campana(nota, 0.40, 0.7), t0)
     poner(b, campana(C6, 0.90, 1.0, tau=0.35), 0.90)
     poner(b, campana(C6 * 1.5, 0.60, 0.25, tau=0.22), 0.90)  # quinta arriba: brillo del ✓
     s["logo-semaforo"] = cerrar(b)
-    # 2. Aceptar: dos notas que suben (sol → do), cortas.
+    # Aceptar: dos notas que suben (sol → do), cortas.
     b = np.zeros(int(SR * 0.7))
     poner(b, campana(G5, 0.25, 0.8), 0.0)
     poner(b, campana(C6, 0.55, 1.0, tau=0.2), 0.10)
     s["aceptar"] = cerrar(b)
-    # 3. Considerar: dos toques iguales (como las dos vibraciones cortas).
-    b = np.zeros(int(SR * 0.6))
-    poner(b, triangulo(E5, 0.18, 0.9, tau=0.07), 0.0)
-    poner(b, triangulo(E5, 0.30, 0.9, tau=0.10), 0.18)
-    s["considerar"] = cerrar(b)
-    # 4. Rechazar: nota grave que baja, sin ser agresiva.
-    b = np.zeros(int(SR * 0.8))
-    poner(b, deslizar(C4 * 0.85, G3 * 0.8, 0.7, 1.0, tau=0.22), 0.0)
-    poner(b, deslizar(C4 * 1.7, G3 * 1.6, 0.5, 0.25, tau=0.14), 0.0)
-    s["rechazar"] = cerrar(b)
-    # 5. Pop-up que entra: «pop» corto.
-    b = np.zeros(int(SR * 0.3))
-    poner(b, deslizar(760, 360, 0.16, 1.0, tau=0.05), 0.0)
-    poner(b, ruido(0.03, 0.25, tau=0.006, corte=4000), 0.0)
-    s["popup-entra"] = cerrar(b, 0.6)
-    # 6. Número que sube: seis toques cada vez más agudos.
-    b = np.zeros(int(SR * 0.8))
-    for i, f in enumerate(np.geomspace(600, 1250, 6)):
-        poner(b, campana(f, 0.12, 0.6 + 0.08 * i, tau=0.04), 0.09 * i)
-    s["numero-sube"] = cerrar(b, 0.6)
-    # 7. Sello: golpe sordo.
-    b = np.zeros(int(SR * 0.5))
-    poner(b, deslizar(150, 52, 0.30, 1.0, tau=0.09), 0.0)
-    poner(b, ruido(0.06, 0.5, tau=0.012, corte=1500), 0.0)
-    s["sello"] = cerrar(b, 0.75)
-    return s
+    orden = ["logo-semaforo", "aceptar", "considerar", "rechazar", "popup-entra", "numero-sube", "sello"]
+    return {k: s[k] for k in orden}
 
 
 def guardar_wav(nombre, y):
