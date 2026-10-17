@@ -1,0 +1,10 @@
+[
+ {"tipo": "gancho", "lineas": ["Instalar Checa", "toma dos minutos.", "Son cinco pasos,", "una sola vez."], "resalta": 1, "sfx": false},
+ {"tipo": "paso", "n": 1, "icono": "archivo", "titulo": "Abre el archivo", "chips": [["Abre Checa.apk", 2], ["Permite instalar apps desconocidas", 13]], "sfx": [["sello", 0.1, 0.35]]},
+ {"tipo": "paso", "n": 2, "icono": "escudo", "titulo": "Si Play Protect avisa", "chips": [["Más detalles", 9], ["Instalar de todos modos", 13]], "sfx": [["sello", 0.1, 0.35]]},
+ {"tipo": "paso", "n": 3, "icono": "candado", "titulo": "Ajustes restringidos", "chips": [["Info de la app", 8], ["Tres puntos", 14], ["Permitir configuración restringida", 18]], "sfx": [["sello", 0.1, 0.35]]},
+ {"tipo": "paso", "n": 4, "icono": "interruptor", "titulo": "Activa el lector", "chips": [["Accesibilidad", 6], ["Checa – lector de ofertas", 8]], "sfx": [["sello", 0.1, 0.35]]},
+ {"tipo": "paso", "n": 5, "icono": "play", "titulo": "Empieza a leer ofertas", "chips": [["Pantalla completa", 11], ["Empezar", 15]], "sfx": [["sello", 0.1, 0.35]]},
+ {"tipo": "listo", "sfx": [["aceptar", 0.2, 0.4]]},
+ {"tipo": "fin", "sfx": [["logo-semaforo", 0.0, 0.5]]}
+]
