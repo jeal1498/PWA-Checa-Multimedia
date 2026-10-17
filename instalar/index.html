@@ -12,8 +12,8 @@
 <link rel="manifest" href="../site.webmanifest">
 <link rel="preload" href="../fonts/bricolage-800.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../fonts/dmsans.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../marca/tokens.css?v=20261017">
-<link rel="stylesheet" href="../styles.css?v=20261017">
+<link rel="stylesheet" href="../marca/tokens.css?v=20261018">
+<link rel="stylesheet" href="../styles.css?v=20261018">
 <script src="../medir.js"></script>
 </head>
 <body>
@@ -33,20 +33,16 @@
   <p class="device-note" id="i-note" hidden></p>
 
   <div id="i-steps">
-    <div class="prog" aria-live="polite">
-      <div class="prog-top"><strong id="prog-txt">0 de 5 pasos</strong><span class="muted small">Toca cada paso al terminarlo</span></div>
-      <div class="prog-bar" role="progressbar" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0" aria-labelledby="prog-txt"><i id="prog-fill"></i></div>
-    </div>
     <ol class="steps">
-      <li class="stp"><label><input type="checkbox" data-n="1"><span class="num" aria-hidden="true"><b>1</b><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><span class="body"><h3>Abre el archivo Checa.apk</h3><p>Búscalo en Descargas o toca el aviso de Chrome. Si te lo pide, permite <strong>«Instalar apps desconocidas»</strong> para tu navegador.</p></span></label></li>
-      <li class="stp"><label><input type="checkbox" data-n="2"><span class="num" aria-hidden="true"><b>2</b><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><span class="body"><h3>Si Play Protect avisa <span class="tag">Si te aparece</span></h3><p>Es normal: Checa usa Accesibilidad para leer la oferta. Toca <strong>Más detalles</strong> y luego <strong>Instalar de todos modos</strong>.</p></span></label></li>
-      <li class="stp"><label><input type="checkbox" data-n="3"><span class="num" aria-hidden="true"><b>3</b><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><span class="body"><h3>Si dice «ajustes restringidos» <span class="tag">Si te aparece</span></h3><p>Pasa en Android 13 o más nuevo. Ve a Info de la app, toca los tres puntos y elige <strong>Permitir configuración restringida</strong>.</p></span></label></li>
-      <li class="stp"><label><input type="checkbox" data-n="4"><span class="num" aria-hidden="true"><b>4</b><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><span class="body"><h3>Activa el lector</h3><p>En Ajustes, entra a Accesibilidad, elige <strong>«Checa – lector de ofertas»</strong> y actívalo.</p></span></label></li>
-      <li class="stp"><label><input type="checkbox" data-n="5"><span class="num" aria-hidden="true"><b>5</b><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><span class="body"><h3>Empieza a leer ofertas</h3><p>Abre Checa y toca el botón verde <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>. Elige <strong>Pantalla completa</strong> y luego <strong>Empezar</strong>. Si reinicias el teléfono, tócalo otra vez.</p></span></label></li>
+      <li class="stp"><span class="num" aria-hidden="true"><b>1</b></span><span class="body"><h3>Abre el archivo Checa.apk</h3><p>Búscalo en Descargas o toca el aviso de Chrome. Si te lo pide, permite <strong>«Instalar apps desconocidas»</strong> para tu navegador.</p></span></li>
+      <li class="stp"><span class="num" aria-hidden="true"><b>2</b></span><span class="body"><h3>Si Play Protect avisa <span class="tag">Si te aparece</span></h3><p>Es normal: Checa usa Accesibilidad para leer la oferta. Toca <strong>Más detalles</strong> y luego <strong>Instalar de todos modos</strong>.</p></span></li>
+      <li class="stp"><span class="num" aria-hidden="true"><b>3</b></span><span class="body"><h3>Si dice «ajustes restringidos» <span class="tag">Si te aparece</span></h3><p>Pasa en Android 13 o más nuevo. Ve a Info de la app, toca los tres puntos y elige <strong>Permitir configuración restringida</strong>.</p></span></li>
+      <li class="stp"><span class="num" aria-hidden="true"><b>4</b></span><span class="body"><h3>Activa el lector</h3><p>En Ajustes, entra a Accesibilidad, elige <strong>«Checa – lector de ofertas»</strong> y actívalo.</p></span></li>
+      <li class="stp"><span class="num" aria-hidden="true"><b>5</b></span><span class="body"><h3>Empieza a leer ofertas</h3><p>Abre Checa y toca el botón verde <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>. Elige <strong>Pantalla completa</strong> y luego <strong>Empezar</strong>. Si reinicias el teléfono, tócalo otra vez.</p></span></li>
     </ol>
-    <div class="done" id="done" hidden>
-      <h2>Listo. Checa ya está lista.</h2>
-      <p>Abre Uber o DiDi. En tu próxima oferta verás el pop-up con lo que te queda de cada viaje.</p>
+    <div class="done">
+      <h2>¿Cómo sé que ya funciona?</h2>
+      <p>Abre Uber o DiDi. En tu próxima oferta verás el pop-up con lo que te queda de cada viaje. Si no aparece, escríbenos por WhatsApp y lo revisamos juntos.</p>
     </div>
   </div>
 
@@ -96,23 +92,6 @@
     p.innerHTML = '<strong>Código de tu amigo: ' + ref.replace(/[^A-Z0-9-]/g, '') + '.</strong> Checa lo toma solo al abrirse. Si no, escríbelo en Cuenta → «¿Te invitó alguien?».';
     var help = document.querySelector('.help'); help.parentNode.insertBefore(p, help);
   }
-  var cbs = document.querySelectorAll('.stp input'), key = 'checa_pasos', hechos = {};
-  try { hechos = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
-  function pintar(){
-    var n = 0; cbs.forEach(function(c){ if (c.checked) n++; });
-    document.getElementById('prog-txt').textContent = n + ' de ' + cbs.length + ' pasos';
-    document.getElementById('prog-fill').style.width = (n / cbs.length * 100) + '%';
-    document.querySelector('.prog-bar').setAttribute('aria-valuenow', n);
-    document.getElementById('done').hidden = n < cbs.length;
-  }
-  cbs.forEach(function(c){
-    c.checked = !!hechos[c.dataset.n];
-    c.addEventListener('change', function(){
-      hechos[c.dataset.n] = c.checked; try { localStorage.setItem(key, JSON.stringify(hechos)); } catch(e) {}
-      pintar(); if (c.checked && cbs.length && Array.prototype.every.call(cbs, function(x){return x.checked;})) track('instalacion_completa');
-    });
-  });
-  pintar();
   var m = document.querySelector('.dl-meta');
   if (m && window.fetch) fetch('../descargar/version.json',{cache:'no-store'}).then(function(r){ if(!r.ok) throw 0; return r.json(); })
     .then(function(v){ m.textContent = 'Versión ' + v.version + (v.tamano ? ' · ' + v.tamano : '') + ' · Android 8+'; }).catch(function(){});
