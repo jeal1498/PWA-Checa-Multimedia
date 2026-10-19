@@ -34,7 +34,7 @@
   <div class="note" id="i-tt" hidden>
     <strong>TikTok no permite descargar desde su navegador.</strong>
     <p>Ábrelo en Chrome para instalar Checa.</p>
-    <div class="ctas">
+    <div class="ctas" style="justify-content:center">
       <a class="btn btn-primary" id="i-chrome" href="#">Abrir en Chrome</a>
       <button type="button" class="btn btn-ghost" id="i-copy">Copiar enlace</button>
     </div>
@@ -78,6 +78,7 @@
     document.getElementById('i-tt').hidden = false;
     document.getElementById('i-dl').style.display = 'none';
     document.querySelector('.dl-meta').style.display = 'none';
+    document.querySelector('.lead').style.display = 'none';
     document.getElementById('i-chrome').href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
     document.getElementById('i-copy').addEventListener('click', function(){
       var msg = document.getElementById('i-copy-msg');
