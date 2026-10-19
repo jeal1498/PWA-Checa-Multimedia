@@ -32,10 +32,10 @@
   <p class="dl-meta">APK para Android 8 o superior</p>
   <p class="device-note" id="i-note" hidden></p>
   <div class="note" id="i-tt" hidden>
-    <strong>Estás en el navegador de TikTok y desde aquí no se puede descargar.</strong>
-    <p>Toca los tres puntos <strong>⋯</strong> (arriba a la derecha) y elige <strong>Abrir en el navegador</strong>. Ahí sí baja Checa.</p>
+    <strong>TikTok no permite descargar desde su navegador.</strong>
+    <p>Ábrelo en Chrome para instalar Checa.</p>
     <div class="ctas">
-      <a class="btn btn-ghost" id="i-chrome" href="#">Intentar abrir en Chrome</a>
+      <a class="btn btn-primary" id="i-chrome" href="#">Abrir en Chrome</a>
       <button type="button" class="btn btn-ghost" id="i-copy">Copiar enlace</button>
     </div>
     <p class="muted small" id="i-copy-msg" hidden>Enlace copiado. Pégalo en Chrome.</p>
@@ -76,6 +76,8 @@
   var tiktok = /musical_ly|BytedanceWebview|TikTok/i.test(navigator.userAgent || '');
   if (android && tiktok) {
     document.getElementById('i-tt').hidden = false;
+    document.getElementById('i-dl').style.display = 'none';
+    document.querySelector('.dl-meta').style.display = 'none';
     document.getElementById('i-chrome').href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
     document.getElementById('i-copy').addEventListener('click', function(){
       var msg = document.getElementById('i-copy-msg');
