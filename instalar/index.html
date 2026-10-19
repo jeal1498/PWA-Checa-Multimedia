@@ -33,7 +33,7 @@
   <p class="device-note" id="i-note" hidden></p>
   <div class="note" id="i-tt" hidden>
     <strong>Un paso más y la instalas</strong>
-    <p>TikTok no deja descargar apps desde aquí. Ábrela en Chrome y sigue.</p>
+    <p id="i-tt-msg">TikTok no deja descargar apps desde aquí. Ábrela en Chrome y sigue.</p>
     <div class="ctas" style="justify-content:center">
       <a class="btn btn-primary" id="i-chrome" href="#">Abrir en Chrome</a>
       <button type="button" class="btn btn-ghost" id="i-copy">Copiar enlace</button>
@@ -73,14 +73,17 @@
   var android = /Android/i.test(navigator.userAgent || '');
   var desde = (location.search.match(/[?&]desde=([^&]+)/) || [])[1];
   var note = document.getElementById('i-note');
-  var tiktok = /musical_ly|BytedanceWebview|TikTok/i.test(navigator.userAgent || '');
-  if (android && tiktok) {
+  var uaTxt = navigator.userAgent || '';
+  var red = /Instagram/i.test(uaTxt) ? 'instagram' : /FBAN|FBAV|FB_IAB/i.test(uaTxt) ? 'facebook' : /musical_ly|BytedanceWebview|TikTok/i.test(uaTxt) ? 'tiktok' : '';
+  var nombreRed = { tiktok: 'TikTok', facebook: 'Facebook', instagram: 'Instagram' }[red];
+  if (android && red) {
     document.getElementById('i-tt').hidden = false;
+    document.getElementById('i-tt-msg').textContent = nombreRed + ' no deja descargar apps desde aquí. Ábrela en Chrome y sigue.';
     document.getElementById('i-dl').style.display = 'none';
     document.querySelector('.dl-meta').style.display = 'none';
     document.querySelector('.lead').style.display = 'none';
     // Siempre lleva ?desde= para que en Chrome la descarga arranque sola
-    var q = desde ? location.search : (location.search ? location.search + '&desde=tiktok' : '?desde=tiktok');
+    var q = desde ? location.search : (location.search ? location.search + '&desde=' + red : '?desde=' + red);
     var urlChrome = location.origin + location.pathname + q;
     var aChrome = 'intent://' + location.host + location.pathname + q + '#Intent;scheme=https;package=com.android.chrome;end';
     document.getElementById('i-chrome').href = aChrome;
@@ -96,7 +99,7 @@
       }
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(urlChrome).then(ok, viejo); else viejo();
     });
-    track('descarga_tiktok_bloqueada');
+    track('descarga_' + red + '_bloqueada');
   } else if (!android) {
     note.textContent = /iPhone|iPad|iPod/i.test(navigator.userAgent || '')
       ? 'Checa funciona solo en Android. Abre esta página en tu teléfono Android.'
