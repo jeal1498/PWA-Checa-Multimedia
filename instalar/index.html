@@ -31,6 +31,15 @@
   <div class="ctas" id="i-dl"><a class="btn btn-primary" href="../descargar/Checa.apk" download data-ev="descarga_instalar">Descargar Checa (APK)</a></div>
   <p class="dl-meta">APK para Android 8 o superior</p>
   <p class="device-note" id="i-note" hidden></p>
+  <div class="note" id="i-tt" hidden>
+    <strong>Estás en el navegador de TikTok y desde aquí no se puede descargar.</strong>
+    <p>Toca los tres puntos <strong>⋯</strong> (arriba a la derecha) y elige <strong>Abrir en el navegador</strong>. Ahí sí baja Checa.</p>
+    <div class="ctas">
+      <a class="btn btn-ghost" id="i-chrome" href="#">Intentar abrir en Chrome</a>
+      <button type="button" class="btn btn-ghost" id="i-copy">Copiar enlace</button>
+    </div>
+    <p class="muted small" id="i-copy-msg" hidden>Enlace copiado. Pégalo en Chrome.</p>
+  </div>
 
   <div id="i-steps">
     <div class="vid-box" id="vid-box" data-src="../media/instalar.mp4" data-poster="../media/instalar.jpg">
@@ -64,7 +73,22 @@
   var android = /Android/i.test(navigator.userAgent || '');
   var desde = (location.search.match(/[?&]desde=([^&]+)/) || [])[1];
   var note = document.getElementById('i-note');
-  if (!android) {
+  var tiktok = /musical_ly|BytedanceWebview|TikTok/i.test(navigator.userAgent || '');
+  if (android && tiktok) {
+    document.getElementById('i-tt').hidden = false;
+    document.getElementById('i-chrome').href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
+    document.getElementById('i-copy').addEventListener('click', function(){
+      var msg = document.getElementById('i-copy-msg');
+      function ok(){ msg.hidden = false; }
+      function viejo(){
+        var t = document.createElement('textarea'); t.value = location.href; document.body.appendChild(t); t.select();
+        try { if (document.execCommand('copy')) ok(); } catch(e) {}
+        document.body.removeChild(t);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(ok, viejo); else viejo();
+    });
+    track('descarga_tiktok_bloqueada');
+  } else if (!android) {
     note.textContent = /iPhone|iPad|iPod/i.test(navigator.userAgent || '')
       ? 'Checa funciona solo en Android. Abre esta página en tu teléfono Android.'
       : 'Estás en computadora: abre esta página en tu teléfono Android para instalar Checa.';
