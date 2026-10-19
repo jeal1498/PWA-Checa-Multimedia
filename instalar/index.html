@@ -79,7 +79,10 @@
     document.getElementById('i-dl').style.display = 'none';
     document.querySelector('.dl-meta').style.display = 'none';
     document.querySelector('.lead').style.display = 'none';
-    var aChrome = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
+    // Siempre lleva ?desde= para que en Chrome la descarga arranque sola
+    var q = desde ? location.search : (location.search ? location.search + '&desde=tiktok' : '?desde=tiktok');
+    var urlChrome = location.origin + location.pathname + q;
+    var aChrome = 'intent://' + location.host + location.pathname + q + '#Intent;scheme=https;package=com.android.chrome;end';
     document.getElementById('i-chrome').href = aChrome;
     // Intento automático; si TikTok lo bloquea, el usuario sigue viendo los botones
     setTimeout(function(){ location.href = aChrome; }, 800);
@@ -87,11 +90,11 @@
       var msg = document.getElementById('i-copy-msg');
       function ok(){ msg.hidden = false; }
       function viejo(){
-        var t = document.createElement('textarea'); t.value = location.href; document.body.appendChild(t); t.select();
+        var t = document.createElement('textarea'); t.value = urlChrome; document.body.appendChild(t); t.select();
         try { if (document.execCommand('copy')) ok(); } catch(e) {}
         document.body.removeChild(t);
       }
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(ok, viejo); else viejo();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(urlChrome).then(ok, viejo); else viejo();
     });
     track('descarga_tiktok_bloqueada');
   } else if (!android) {
