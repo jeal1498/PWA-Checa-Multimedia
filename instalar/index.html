@@ -79,7 +79,10 @@
     document.getElementById('i-dl').style.display = 'none';
     document.querySelector('.dl-meta').style.display = 'none';
     document.querySelector('.lead').style.display = 'none';
-    document.getElementById('i-chrome').href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
+    var aChrome = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
+    document.getElementById('i-chrome').href = aChrome;
+    // Intento automático; si TikTok lo bloquea, el usuario sigue viendo los botones
+    setTimeout(function(){ location.href = aChrome; }, 800);
     document.getElementById('i-copy').addEventListener('click', function(){
       var msg = document.getElementById('i-copy-msg');
       function ok(){ msg.hidden = false; }
