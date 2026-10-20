@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Fuentes de la marca v2, autohospedadas (sin Google Fonts) */
+@font-face { font-family: 'Bricolage Grotesque'; src: url('/fonts/bricolage-800.woff2') format('woff2'); font-weight: 800; font-display: swap; }
+@font-face { font-family: 'DM Sans'; src: url('/fonts/dmsans.woff2') format('woff2'); font-weight: 100 1000; font-display: swap; }
+
+/* Colores de la marca v2 (marca/tokens.css) + acentos fluorescentes de alto contraste */
+@theme {
+  --color-asfalto: #0C0C10;
+  --color-tablero: #16161C;
+  --color-humo: #3A3A45;
+  --color-hueso: #F4F4EF;
+  --color-gris: #A3A3AD;
+  --color-aceptar: #22C55E;
+  --color-neon: #3DFF8C;
+  --color-considerar: #FACC15;
+  --color-rechazar: #EF4444;
+  --font-titulo: 'Bricolage Grotesque', 'Arial Black', sans-serif;
+  --font-texto: 'DM Sans', Arial, sans-serif;
+  --shadow-glow-verde: 0 0 0 1px rgb(61 255 140 / 0.35), 0 10px 40px -8px rgb(34 197 94 / 0.55);
+  --shadow-glow-amarillo: 0 0 0 1px rgb(250 204 21 / 0.35), 0 10px 40px -8px rgb(250 204 21 / 0.35);
+}
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--color-asfalto);
+  color: var(--color-hueso);
+  font-family: var(--font-texto);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+:focus-visible { outline: 3px solid var(--color-considerar); outline-offset: 3px; border-radius: 6px; }
+
+/* Raya de carretera: separador de secciones */
+.raya {
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--color-considerar) 0 28px, transparent 28px 52px);
+  opacity: 0.85;
+}
+
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
