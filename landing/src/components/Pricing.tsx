@@ -21,19 +21,19 @@ export function Pricing() {
               Plan Fundador · Limitado a 100 lugares
             </span>
             <p className="mt-2 flex items-baseline gap-2">
-              <span className="font-titulo text-5xl font-extrabold text-hueso">$539</span>
+              <span className="font-titulo text-5xl font-extrabold text-hueso">$635</span>
               <span className="text-lg font-bold text-gris">/año</span>
             </p>
-            <p className="mt-1 text-base font-semibold text-considerar">Equivalente a $45 al mes</p>
+            <p className="mt-1 text-base font-semibold text-considerar">Equivalente a $53 al mes</p>
           </div>
 
           {/* Precio normal */}
           <div className="rounded-3xl border border-humo bg-asfalto p-5">
             <p className="text-sm font-bold uppercase tracking-wider text-gris">Precio normal post-lanzamiento</p>
             <p className="mt-2 text-xl font-bold text-hueso/80">
-              <span>$899/año</span>
+              <span>$1,059/año</span>
               <span className="mx-2 text-gris">o</span>
-              <span>$99/mes</span>
+              <span>$119/mes</span>
             </p>
           </div>
         </div>
