@@ -18,7 +18,7 @@ export function Pricing() {
           {/* Plan Fundador */}
           <div className="relative rounded-3xl border-2 border-considerar bg-tablero p-5 shadow-glow-amarillo">
             <span className="absolute -top-3.5 left-5 rounded-full bg-considerar px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#2B2200]">
-              Plan Fundador · Limitado a 100 lugares
+              Plan Fundador · Solo 50 lugares
             </span>
             <p className="mt-2 flex items-baseline gap-2">
               <span className="font-titulo text-5xl font-extrabold text-hueso">$635</span>
