@@ -32,7 +32,9 @@ export function Pricing() {
             <p className="text-sm font-bold uppercase tracking-wider text-gris">Precio normal post-lanzamiento</p>
             <p className="mt-2 text-xl font-bold text-hueso/80">
               <span>$1,059/año</span>
-              <span className="mx-2 text-gris">o</span>
+              <span className="mx-2 text-gris">·</span>
+              <span>$589/6 meses</span>
+              <span className="mx-2 text-gris">·</span>
               <span>$119/mes</span>
             </p>
           </div>
