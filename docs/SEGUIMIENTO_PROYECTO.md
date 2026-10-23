@@ -1,13 +1,13 @@
 # Checa — seguimiento del proyecto y punto de reanudación
 
-Última actualización: 21 de octubre de 2026.
+Última actualización: 23 de octubre de 2026.
 
 ## Estado rápido
-- **Sí: los cambios están en `main`** del repositorio web `jeal1498/checa-web`. El cambio más reciente fue confirmado en GitHub.
-- Commit más reciente: [4801d83](https://github.com/jeal1498/checa-web/commit/4801d83b5bc4c577bb04255dfb7d6c3a3319b165) — “Actualiza cupo del plan fundador a 50 lugares”.
-- Archivo: `landing/src/components/Pricing.tsx`; cambió el texto “Limitado a 100 lugares” por “Solo 50 lugares”.
-- **Importante:** esto solo cambia el texto visible. El límite real de 50 aún no está implementado en backend.
-- Los cambios anteriores de precios se hicieron mediante commits en los repositorios, pero no se ha desplegado la Edge Function ni publicado una nueva versión de Android como parte de este trabajo.
+- Última actualización de esta sección: **23 oct 2026**. Todo está en `main` de ambos repos.
+- **Precios (tabla confirmada por Eduardo el 23 oct 2026):** normal $119 (1 mes), $589 (6 meses), $1,059 (1 año); Plan Fundador −40 % de por vida: $71, $353, $635; **50 cupos totales** (aplicado como 50 compartidos entre los tres paquetes).
+- **El tope de 50 ya está aplicado en el backend** (Supabase, desplegado con CI verde): tabla `public.fundadores` + función `reclamar_fundador` con candado, usada por `mp-pago`. Commits en `jeal1498/Mi-Ruta`: `a22546a`, `07f01c4`; textos de la app: `1ffb042`.
+- **Web:** `index.html`, `terminos.html`, `eliminar-cuenta.html` y la landing `registro/` (recompilada) muestran los tres precios de fundador y los 50 lugares en total (commits `e306ba3` y `281a046`).
+- **Pendiente real:** Google Play Billing (Fase 7) no está implementado, y no se publicó un APK nuevo del canal `directo`.
 
 ## Repositorios
 - Android (privado): https://github.com/jeal1498/Mi-Ruta
@@ -22,8 +22,7 @@
 - Versión descargable directamente: mantener Mercado Pago, si se confirma este diseño final.
 - Precios regulares: mensual **$119 MXN**, 6 meses **$589 MXN**, anual **$1,059 MXN**.
 - Precios de fundador: mensual **$71 MXN**, 6 meses **$353 MXN**, anual **$635 MXN** (aprox. 40% de descuento).
-- Cupo fundador: **50 personas máximo**, no 100.
-- El precio fundador actual se calcula en `supabase/functions/mp-pago/index.ts` según la fecha de creación/condiciones de beta; no hay aún un contador o asignación transaccional de 50 plazas.
+- Cupo fundador: **50 cuentas en total** (no 100; no 50 por paquete). Se asigna en `supabase/functions/mp-pago/index.ts` con la función SQL `reclamar_fundador` (atómica); `FUNDADOR_CUPOS` está en `_shared/planes.ts`. Aplica a cuentas creadas antes del 1 feb 2027, primer pago a más tardar el 28 feb 2027.
 
 ## Cambios realizados
 ### Android `jeal1498/Mi-Ruta`
@@ -51,14 +50,14 @@
 
 ## Plan de trabajo
 1. **Verificar estado:** revisar últimos commits, ramas y build de ambos repositorios antes de editar.
-2. **Cupo fundador:** diseñar asignación segura de máximo 50 plazas (operación atómica para evitar que usuarios simultáneos superen el límite); acordar elegibilidad y qué ocurre con fundadores existentes.
+2. ~~**Cupo fundador**~~ **Hecho el 23 oct 2026** (atómico, desplegado). Pendiente de Eduardo: revisar quién ocupa los lugares (`select correo, creado from fundadores order by creado;`) y liberar cuentas de prueba con `delete from fundadores where correo = '…';`.
 3. **Configurar Play Console:** crear productos/base plans mensual, semestral y anual; acordar IDs definitivos y precio/oferta de fundador.
 4. **Backend de suscripciones:** validar purchase tokens con Google Play Developer API antes de otorgar licencia; tratar renovaciones, cancelaciones, expiraciones, reembolsos/revocaciones, idempotencia y restauración; preservar pagos/licencias de Mercado Pago.
 5. **Android Billing:** implementar compras, acknowledge, restauración y estado de suscripción para flavor Play; mantener Mercado Pago solo en la distribución directa; pruebas con license testers y errores de red.
 6. **Lanzamiento:** generar AAB firmado, completar prueba cerrada si aplica, revisar políticas y publicar solo con autorización explícita.
 
 ## Punto exacto de reanudación
-Precios actualizados en repositorios; el texto de la web anuncia 50 plazas y el commit está en `main` del repo web. El límite no está aplicado en backend. Google Play Billing aún no está implementado. Siguiente paso recomendado: inspeccionar estado actual de `main` en ambos repositorios y definir la implementación segura del cupo de 50 y el modelo de licencias antes de programar la facturación. No desplegar ni publicar sin autorización explícita.
+Precios y cupo de 50 aplicados en backend, app (texto), web y landing. Siguiente: Play Console (productos/base plans con los precios normales y cómo representar el precio de fundador y su tope), backend de suscripciones y Android Billing (Fase 7), cada uno con su «adelante». No publicar un APK nuevo del canal `directo` sin autorización explícita.
 
 ## Regla de trabajo
 La persona usuaria prefiere que no se realicen cambios en repositorios, backend o producción sin autorización explícita (“adelante” o equivalente). Mantener esta bitácora al día después de cada avance, indicando archivos, commits, pruebas, despliegues y pendientes.
