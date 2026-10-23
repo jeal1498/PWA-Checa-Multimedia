@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0C0C10">
+<title>Calendario de videos · Checa</title>
+<link rel="icon" href="../marca/icono-app.svg" type="image/svg+xml">
+<link rel="preload" href="../fonts/bricolage-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/dmsans.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face { font-family: 'Bricolage Grotesque'; font-weight: 800; font-display: swap; src: url('../fonts/bricolage-800.woff2') format('woff2'); }
+  @font-face { font-family: 'DM Sans'; font-weight: 400 700; font-display: swap; src: url('../fonts/dmsans.woff2') format('woff2'); }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 500 700; font-display: swap; src: url('../fonts/jetbrains.woff2') format('woff2'); }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  /* Concepto: tablero de operación. Calendario de mes que se desliza, y debajo (o al lado) los dos videos del día. */
+  :root {
+    --bg: #0C0C10; --panel: #16161C; --panel-2: #1D1D25; --line: #3A3A45;
+    --fg: #F4F4EF; --mute: #A3A3AD;
+    --ok: #22C55E; --ok-t: rgba(34,197,94,.16);
+    --warn: #FACC15; --warn-t: rgba(250,204,21,.15);
+    --idle: #A3A3AD; --idle-t: rgba(163,163,173,.14);
+    --on-fg: #0C0C10;
+    --f-display: 'Bricolage Grotesque', 'Arial Black', system-ui, sans-serif;
+    --f-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --f-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #F4F4EF; --panel: #FFFFFF; --panel-2: #ECECE6; --line: #D4D4CC;
+      --fg: #0C0C10; --mute: #5C5C66;
+      --ok: #15803D; --ok-t: rgba(21,128,61,.12);
+      --warn: #8A6A00; --warn-t: rgba(202,160,0,.18);
+      --idle: #5C5C66; --idle-t: rgba(92,92,102,.12);
+      --on-fg: #F4F4EF;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F4EF; --panel: #FFFFFF; --panel-2: #ECECE6; --line: #D4D4CC;
+    --fg: #0C0C10; --mute: #5C5C66;
+    --ok: #15803D; --ok-t: rgba(21,128,61,.12);
+    --warn: #8A6A00; --warn-t: rgba(202,160,0,.18);
+    --idle: #5C5C66; --idle-t: rgba(92,92,102,.12);
+    --on-fg: #F4F4EF;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--f-body); font-size: 15px; line-height: 1.45;
+    padding-block: 20px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, summary:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+  @media (min-width: 900px) { .wrap { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; } .top { grid-column: 1 / -1; } }
+
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand svg { flex: none; }
+  .brand h1 { margin: 0; font: 800 24px/1 var(--f-display); letter-spacing: -.03em; }
+  .brand small { display: block; font: 500 11px/1.3 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--mute); margin-top: 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font: 500 12px var(--f-mono); color: var(--mute); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); display: inline-block; }
+
+  .cal { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 14px 6px; }
+  .cal-head h2 { margin: 0; font: 800 26px/1 var(--f-display); letter-spacing: -.035em; text-transform: capitalize; text-align: center; flex: 1; }
+  .nav { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); display: grid; place-items: center; }
+  .nav:disabled { opacity: .35; cursor: default; }
+  .hoy-btn { font: 700 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; color: var(--mute); }
+  .sub { display: flex; justify-content: center; padding-bottom: 8px; min-height: 30px; }
+
+  .pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .pager::-webkit-scrollbar { display: none; }
+  .month { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 8px 12px; min-width: 0; }
+  .dow, .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .dow span { text-align: center; font: 700 11px var(--f-mono); letter-spacing: .08em; color: var(--mute); padding: 8px 0; text-transform: uppercase; }
+  .grid { gap: 4px; }
+  .day {
+    min-width: 0; min-height: 80px; padding: 6px 3px 5px; border-radius: 14px; border: 1px solid transparent;
+    background: transparent; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  }
+  .day:hover { background: var(--panel-2); }
+  .day.out { opacity: .32; }
+  .day .n { font: 700 13px/1 var(--f-mono); width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; }
+  .day.hoy .n { background: var(--fg); color: var(--on-fg); }
+  .day.sel { background: var(--panel-2); border-color: var(--fg); }
+  .chips { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+  .chip { display: block; font: 700 10px/1 var(--f-mono); padding: 4px 0; border-radius: 6px; color: var(--c); background: var(--t); letter-spacing: -.01em; }
+  .chip.P { border-radius: 999px; }
+  .ok { --c: var(--ok); --t: var(--ok-t); }
+  .warn { --c: var(--warn); --t: var(--warn-t); }
+  .idle { --c: var(--idle); --t: var(--idle-t); }
+  @media (min-width: 560px) { .day { min-height: 92px; } .chip { font-size: 11px; padding: 5px 0; } }
+
+  .detalle { display: grid; gap: 14px; min-width: 0; }
+  .detalle > header h3 { margin: 0; font: 800 28px/1.05 var(--f-display); letter-spacing: -.035em; }
+  .detalle > header h3::first-letter { text-transform: uppercase; }
+  .detalle > header p { margin: 4px 0 0; color: var(--mute); font: 500 12px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; }
+
+  .acct { display: grid; gap: 10px; }
+  .acct > h4 { margin: 0; font: 700 11px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); display: flex; gap: 8px; align-items: center; }
+  .acct > h4 b { color: var(--fg); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+  .card.vacio { border-style: dashed; background: transparent; color: var(--mute); padding: 18px 14px; }
+  .row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; }
+  .thumb { width: 92px; aspect-ratio: 9 / 16; border-radius: 12px; overflow: hidden; background: var(--panel-2); border: 1px solid var(--line); display: grid; place-items: center; font: 800 28px var(--f-display); color: var(--mute); }
+  .thumb { position: relative; padding: 0; cursor: pointer; }
+  .thumb.sinplay { cursor: default; }
+  .play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.30); transition: background .15s; }
+  .play i { width: 40px; height: 40px; border-radius: 50%; background: rgba(244,244,239,.94); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  .play svg { margin-left: 3px; }
+  .thumb:hover .play { background: rgba(0,0,0,.12); }
+  .thumb:hover .play i { transform: scale(1.08); }
+  .modal { position: fixed; inset: 0; z-index: 20; background: rgba(5,5,8,.86); display: grid; place-items: center; align-content: center; gap: 12px;
+    padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .modal[hidden] { display: none; }
+  .modal .barra { width: min(100%, 340px); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #F4F4EF; }
+  .modal .barra strong { font: 800 18px/1.15 var(--f-display); letter-spacing: -.02em; min-width: 0; }
+  .modal .cerrar { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #3A3A45; background: #1D1D25; color: #F4F4EF; display: grid; place-items: center; }
+  .modal video { display: block; width: min(100%, 340px); max-height: calc(100vh - 160px); aspect-ratio: 9 / 16; background: #000; border-radius: 18px; object-fit: contain; }
+  .modal p { margin: 0; color: #A3A3AD; font: 500 11px var(--f-mono); letter-spacing: .06em; text-align: center; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .info { min-width: 0; display: grid; gap: 8px; align-content: start; }
+  .info h5 { margin: 0; font: 800 21px/1.1 var(--f-display); letter-spacing: -.03em; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { font: 700 11px/1 var(--f-mono); letter-spacing: .04em; padding: 6px 10px; border-radius: 999px; background: var(--t, var(--panel-2)); color: var(--c, var(--mute)); border: 1px solid transparent; white-space: nowrap; }
+  .pill.n { border-color: var(--line); background: transparent; color: var(--mute); }
+  .nota { margin: 0; font-size: 13px; color: var(--mute); }
+  .files { display: flex; flex-wrap: wrap; gap: 6px; font: 500 11px var(--f-mono); color: var(--mute); }
+  .files span { display: inline-flex; align-items: center; gap: 4px; }
+  .files .si { color: var(--ok); } .files .no { opacity: .6; }
+  .copybox { background: var(--panel-2); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font-family: var(--f-body); }
+  .copybox .tags { display: block; margin-top: 6px; color: var(--mute); font: 500 12px var(--f-mono); }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 10px 16px; min-height: 44px; font-weight: 700; font-size: 14px; }
+  .btn.dl { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
+  .aviso { margin: 0; font: 500 12px/1.5 var(--f-mono); color: var(--mute); background: var(--panel-2); border-radius: 12px; padding: 10px 12px; }
+  .btn.pri { background: var(--fg); color: var(--on-fg); border-color: var(--fg); }
+  details { border-top: 1px solid var(--line); padding-top: 10px; }
+  summary { font: 700 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mute); cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+  details pre { margin: 8px 0 0; font: 500 12px/1.55 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
+  .pie { color: var(--mute); font: 500 12px var(--f-mono); text-align: center; padding-top: 4px; }
+  @media (max-width: 380px) { .row { grid-template-columns: 76px minmax(0, 1fr); } .thumb { width: 76px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="50" viewBox="0 0 60 100" aria-hidden="true"><rect x="6" y="2" width="48" height="96" rx="20" fill="#222826" stroke="#3A423F" stroke-width="2"/><circle cx="30" cy="26" r="9" fill="#4A2222"/><circle cx="30" cy="50" r="9" fill="#4A3C16"/><circle cx="30" cy="74" r="12" fill="#22C55E"/><path d="M24 74.5l4.5 4.5L36.5 69" fill="none" stroke="#04210F" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h1>Calendario de videos</h1><small>Checa · una publicación al día, 8:00 pm</small></div>
+    </div>
+    <div class="legend" aria-label="Leyenda">
+      <span><i class="dot" style="--c:var(--ok)"></i>Publicado</span>
+      <span><i class="dot" style="--c:var(--warn)"></i>Listo para subir</span>
+      <span><i class="dot" style="--c:var(--idle)"></i>En proceso</span>
+      <span>C = CHECA · P = PERSONAL</span>
+    </div>
+  </header>
+
+  <section class="cal" aria-label="Calendario">
+    <div class="cal-head">
+      <button class="nav" id="prev" aria-label="Mes anterior"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="mes" aria-live="polite"></h2>
+      <button class="nav" id="next" aria-label="Mes siguiente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="sub"><button class="hoy-btn" id="hoy">Ir a hoy</button></div>
+    <div class="pager" id="pager"></div>
+  </section>
+
+  <section class="detalle" id="detalle" aria-live="polite"></section>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Reproductor de video" hidden>
+  <div class="barra"><strong id="m-tit"></strong><button class="cerrar" id="m-x" aria-label="Cerrar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <video id="m-v" controls playsinline></video>
+</div>
+
+<script>
+  var hoyD = new Date();
+  var HOY = hoyD.getFullYear() + '-' + ('0' + (hoyD.getMonth() + 1)).slice(-2) + '-' + ('0' + hoyD.getDate()).slice(-2);
+  var VIDEOS = [];
+  var CUENTAS = { C: { nombre: 'CHECA', usuario: '@checa.driver' }, P: { nombre: 'PERSONAL', usuario: '@Eduardoalv9802' } };
+  var ESTADO = { pub: ['Publicado', 'ok'], listo: ['Listo para subir', 'warn'], proceso: ['En proceso', 'idle'] };
+  var MESES = [];
+  var NOM_MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var NOM_DIA = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var key = function (y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); };
+  var porDia = {};
+  var sel = HOY;
+  var pager = document.getElementById('pager');
+  var idx = 0;
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function fechaLarga(k) {
+    var p = k.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    return { dia: NOM_DIA[d.getUTCDay()], txt: p[2] + ' de ' + NOM_MES[p[1] - 1], corta: p[2] + ' ' + NOM_MES[p[1] - 1].slice(0, 3) };
+  }
+
+  function armarMes(y, m) {
+    var primero = new Date(Date.UTC(y, m, 1)), dias = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    var lead = (primero.getUTCDay() + 6) % 7; // semana desde lunes
+    var h = '<div class="month" data-y="' + y + '" data-m="' + m + '"><div class="dow" aria-hidden="true">' + ['L','M','M','J','V','S','D'].map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div><div class="grid">';
+    var total = Math.ceil((lead + dias) / 7) * 7;
+    for (var i = 0; i < total; i++) {
+      var d = new Date(Date.UTC(y, m, 1 - lead + i)), yy = d.getUTCFullYear(), mm = d.getUTCMonth(), dd = d.getUTCDate();
+      var k = key(yy, mm, dd), out = mm !== m, items = (porDia[k] || []).slice().sort(function (a, b) { return a.c < b.c ? -1 : a.c > b.c ? 1 : 0; });
+      var chips = items.map(function (v) { return '<span class="chip ' + v.c + ' ' + ESTADO[v.e][1] + '">' + v.c + ' ' + v.n + '</span>'; }).join('');
+      var lab = dd + ' de ' + NOM_MES[mm] + (items.length ? ', ' + items.length + ' video' + (items.length > 1 ? 's' : '') : ', sin videos');
+      h += '<button class="day' + (out ? ' out' : '') + (k === HOY ? ' hoy' : '') + (k === sel ? ' sel' : '') + '" data-k="' + k + '" aria-label="' + lab + '"><span class="n">' + dd + '</span><span class="chips">' + chips + '</span></button>';
+    }
+    return h + '</div></div>';
+  }
+
+  function pintarMeses() {
+    pager.innerHTML = MESES.map(function (x) { return armarMes(x[0], x[1]); }).join('');
+  }
+
+  function miniatura(v) {
+    var clave = v.c + v.n, img = v.th ? '<img alt="Portada del video ' + v.n + '" src="' + v.th + '">' : v.n;
+    if (!v.v) return '<div class="thumb sinplay">' + img + '</div>';
+    return '<button class="thumb" data-play="' + clave + '" aria-label="Reproducir el video ' + v.n + ' de ' + CUENTAS[v.c].nombre + '">' + img +
+      '<span class="play"><i><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5v17l15-8.5z" fill="#0C0C10"/></svg></i></span></button>';
+  }
+
+  function descarga(v) {
+    if (!v.v) return '';
+    var nombre = (v.c === 'C' ? 'checa' : 'personal') + '-' + v.n + '-' + v.t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.mp4';
+    return '<a class="btn dl" href="' + esc(v.v) + '" download="' + nombre + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> Descargar video · ' + v.mb + ' MB</a>';
+  }
+
+  function bloque(c, k) {
+    var items = (porDia[k] || []).filter(function (v) { return v.c === c; });
+    var cu = CUENTAS[c];
+    var h = '<div class="acct"><h4><b>' + cu.nombre + '</b> ' + cu.usuario + '</h4>';
+    if (!items.length) {
+      return h + '<div class="card vacio">Sin video de ' + cu.nombre + ' este día.</div></div>';
+    }
+    items.forEach(function (v, i) {
+      var e = ESTADO[v.e], id = c + v.n + k;
+      var lineas = v.copy ? v.copy.split('\n') : [], tags = lineas.length && lineas[lineas.length - 1].charAt(0) === '#' ? lineas.pop() : '';
+      var nota = v.p && v.p !== v.f ? 'Programado ' + fechaLarga(v.f).corta + ', publicado ' + fechaLarga(v.p).corta + '.' : (v.p ? 'Publicado ' + fechaLarga(v.p).corta + '.' : (k < HOY ? 'Programado para este día, sin publicar todavía.' : ''));
+      var f = v.files, chk = function (ok, t) { return '<span class="' + (ok ? 'si' : 'no') + '">' + (ok ? '✓' : '–') + ' ' + t + '</span>'; };
+      h += '<article class="card"><div class="row">' + miniatura(v) +
+        '<div class="info"><h5>' + v.n + ' · ' + esc(v.t) + '</h5><div class="meta"><span class="pill ' + e[1] + '">' + e[0] + '</span><span class="pill n">' + esc(v.tipo) + '</span><span class="pill n">8:00 pm</span></div>' +
+        (nota ? '<p class="nota">' + nota + '</p>' : '') +
+        '<div class="files">' + chk(f.portada, 'portada') + chk(f.video, 'video') + chk(f.copy, 'copy') + chk(f.dm, 'dm') + '</div></div></div>';
+      if (v.copy) {
+        h += '<p class="copybox" id="cb-' + id + '">' + esc(lineas.join('\n')) + (tags ? '<span class="tags">' + esc(tags) + '</span>' : '') + '</p>' +
+          '<div class="acts"><button class="btn pri" data-copiar="cb-' + id + '">Copiar copy</button>' + (v.dm ? '<button class="btn" data-copiar="dm-' + id + '">Copiar DM</button>' : '') + descarga(v) + '</div>';
+        if (v.dm) h += '<details><summary>Mensaje directo para quien comente «CHECA»</summary><pre id="dm-' + id + '">' + esc(v.dm) + '</pre></details>';
+      } else {
+        h += '<p class="nota">El copy de este video todavía no está escrito.</p>' + (v.v ? '<div class="acts">' + descarga(v) + '</div>' : '');
+      }
+      h += '</article>';
+    });
+    return h + '</div>';
+  }
+
+  function pintarDetalle() {
+    var f = fechaLarga(sel);
+    document.getElementById('detalle').innerHTML =
+      '<header><h3>' + f.dia + ' ' + f.txt + '</h3><p>' + (sel === HOY ? 'Hoy · ' : '') + 'Los 2 videos del día</p></header>' + bloque('C', sel) + bloque('P', sel) +
+      '<p class="pie">Página interna de Checa. No compartas este enlace.</p>';
+  }
+
+  function marcarSel() {
+    Array.prototype.forEach.call(document.querySelectorAll('.day.sel'), function (b) { b.classList.remove('sel'); });
+    Array.prototype.forEach.call(document.querySelectorAll('.day[data-k="' + sel + '"]:not(.out)'), function (b) { b.classList.add('sel'); });
+  }
+
+  function etiqueta() {
+    var x = MESES[idx];
+    document.getElementById('mes').textContent = NOM_MES[x[1]] + ' ' + x[0];
+    document.getElementById('prev').disabled = idx === 0;
+    document.getElementById('next').disabled = idx === MESES.length - 1;
+  }
+  function ir(i, suave) {
+    idx = Math.max(0, Math.min(MESES.length - 1, i));
+    if (suave) pager.scrollTo({ left: idx * pager.clientWidth, behavior: 'smooth' });
+    else pager.scrollLeft = idx * pager.clientWidth;
+    etiqueta();
+  }
+
+  pager.addEventListener('scroll', function () {
+    var i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
+    if (i !== idx && i >= 0 && i < MESES.length) { idx = i; etiqueta(); }
+  }, { passive: true });
+  pager.addEventListener('click', function (e) {
+    var b = e.target.closest('.day'); if (!b) return;
+    sel = b.getAttribute('data-k'); marcarSel(); pintarDetalle();
+  });
+  document.getElementById('prev').addEventListener('click', function () { ir(idx - 1, true); });
+  document.getElementById('next').addEventListener('click', function () { ir(idx + 1, true); });
+  document.getElementById('hoy').addEventListener('click', function () { sel = HOY; marcarSel(); pintarDetalle(); ir(MESES.findIndex(function (x) { var p = HOY.split('-'); return x[0] === +p[0] && x[1] === p[1] - 1; }), true); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest && e.target.closest('input,textarea')) return;
+    if (e.key === 'ArrowLeft' && e.altKey) ir(idx - 1, true);
+    if (e.key === 'ArrowRight' && e.altKey) ir(idx + 1, true);
+  });
+  var modal = document.getElementById('modal'), mv = document.getElementById('m-v'), ultimo = null;
+  function cerrar() { mv.pause(); modal.hidden = true; mv.removeAttribute('src'); mv.load(); if (ultimo) ultimo.focus(); }
+  document.getElementById('m-x').addEventListener('click', cerrar);
+  modal.addEventListener('click', function (e) { if (e.target === modal) cerrar(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) cerrar(); });
+  document.getElementById('detalle').addEventListener('click', function (e) {
+    var pl = e.target.closest('[data-play]');
+    if (pl) {
+      var k = pl.getAttribute('data-play'), v = VIDEOS.filter(function (x) { return x.c + x.n === k; })[0];
+      ultimo = pl;
+      document.getElementById('m-tit').textContent = CUENTAS[v.c].nombre + ' · ' + v.n + ' ' + v.t;
+      mv.src = v.v; modal.hidden = false;
+      var pr = mv.play(); if (pr && pr.catch) pr.catch(function () {});
+      document.getElementById('m-x').focus();
+      return;
+    }
+    var b = e.target.closest('[data-copiar]'); if (!b) return;
+    var el = document.getElementById(b.getAttribute('data-copiar')), txt = el.innerText.trim(), ant = b.textContent;
+    function listo() { b.textContent = 'Copiado'; setTimeout(function () { b.textContent = ant; }, 1400); }
+    function seleccionar() {
+      var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      b.textContent = 'Seleccionado: copia con tu teclado'; setTimeout(function () { b.textContent = ant; }, 2200);
+    }
+    try { navigator.clipboard.writeText(txt).then(listo, seleccionar); } catch (err) { seleccionar(); }
+  });
+  window.addEventListener('resize', function () { pager.scrollLeft = idx * pager.clientWidth; });
+
+  function arrancar(datos) {
+    VIDEOS = datos;
+    VIDEOS.forEach(function (v) { (porDia[v.f] = porDia[v.f] || []).push(v); });
+    // meses desde el primero con videos (o el de hoy) hasta 5 meses después de hoy
+    var ps = VIDEOS.map(function (v) { return v.f; }).concat([HOY]).sort()[0].split('-').map(Number);
+    var y = ps[0], m = ps[1] - 1, ph = HOY.split('-').map(Number), fin = ph[0] * 12 + (ph[1] - 1) + 5;
+    for (; y * 12 + m <= fin; m++) { if (m > 11) { m = 0; y++; } MESES.push([y, m]); }
+    idx = Math.max(0, MESES.findIndex(function (x) { return x[0] === ph[0] && x[1] === ph[1] - 1; }));
+    pintarMeses(); pintarDetalle(); etiqueta();
+    requestAnimationFrame(function () { ir(idx, false); });
+    window.addEventListener('load', function () { ir(idx, false); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { ir(idx, false); });
+  }
+  fetch('data.json').then(function (r) { return r.json(); }).then(arrancar).catch(function () {
+    document.getElementById('detalle').innerHTML = '<p class="pie">No se pudo cargar data.json.</p>';
+  });
+</script>
+</body>
+</html>
