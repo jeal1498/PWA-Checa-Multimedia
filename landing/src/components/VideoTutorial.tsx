@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { URL_INSTALAR, VIDEO_PERMISOS_URL } from '../config';
+import { VIDEO_PERMISOS_URL } from '../config';
 import { track } from '../lib/track';
 import { resolverVideo } from '../lib/video';
 
@@ -53,9 +53,7 @@ export function VideoTutorial() {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
               <span aria-hidden="true" className="text-3xl">🎬</span>
               <p className="font-bold">El video de permisos llega muy pronto</p>
-              <a href={URL_INSTALAR} className="text-sm font-semibold text-considerar underline underline-offset-2">
-                Mientras tanto, mira el tutorial de instalación
-              </a>
+              <p className="text-sm text-gris">Te lo compartimos en la comunidad de WhatsApp.</p>
             </div>
           )}
         </div>

@@ -140,7 +140,7 @@ export function TesterForm({ onRegistrado }: Props) {
         disabled={estado === 'enviando'}
         className="min-h-14 w-full rounded-full bg-neon px-5 py-3 text-[0.95rem] font-extrabold uppercase leading-tight tracking-wide text-[#04210F] shadow-glow-verde transition active:scale-[0.98] disabled:opacity-70 sm:hover:bg-aceptar"
       >
-        {estado === 'enviando' ? 'Registrando…' : 'Registrar mi correo y descargar Checa'}
+        {estado === 'enviando' ? 'Registrando…' : 'Registrar mi correo'}
       </button>
 
       <p className="text-center text-xs leading-snug text-gris">

@@ -2,10 +2,6 @@
 
 export const WHATSAPP_COMUNIDAD = 'https://chat.whatsapp.com/BtQoeEV2bQ3BbdvMfm3M0v';
 
-// Rutas relativas a /registro/ (la landing vive en checa-web/registro/).
-export const URL_INSTALAR = '../instalar/?desde=registro';
-export const URL_APK_DIRECTO = '../descargar/Checa.apk';
-
 export const FECHA_FIN_GRATIS = '31 de enero de 2027';
 
 // Video de permisos (sobreposición de pantalla sobre Uber y DiDi).

@@ -22,7 +22,7 @@ export function StickyCta({ oculto }: { oculto: boolean }) {
         href="#registro"
         className="flex min-h-13 w-full items-center justify-center rounded-full bg-neon px-5 py-3 text-center text-sm font-extrabold uppercase tracking-wide text-[#04210F] shadow-glow-verde"
       >
-        Registrar mi correo y descargar
+        Registrar mi correo
       </a>
     </div>
   );
