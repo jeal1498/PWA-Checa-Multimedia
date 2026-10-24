@@ -6,7 +6,7 @@ interface Props {
   onRegistrado: (nombre: string) => void;
 }
 
-type Estado = 'inactivo' | 'enviando' | 'error';
+type Estado = 'inactivo' | 'enviando' | 'error' | 'cerrado';
 
 export function TesterForm({ onRegistrado }: Props) {
   const idNombre = useId();
@@ -49,7 +49,7 @@ export function TesterForm({ onRegistrado }: Props) {
       track('beta', 'registro');
       onRegistrado(n);
     } else {
-      setEstado('error');
+      setEstado(r.motivo === 'cerrado' ? 'cerrado' : 'error');
     }
   }
 
@@ -132,6 +132,12 @@ export function TesterForm({ onRegistrado }: Props) {
       {estado === 'error' && (
         <p role="alert" className="rounded-2xl border border-rechazar/50 bg-rechazar/10 px-4 py-3 text-sm text-hueso">
           No pudimos guardar tu correo. Revisa tu internet e inténtalo otra vez en un momento.
+        </p>
+      )}
+
+      {estado === 'cerrado' && (
+        <p role="alert" className="rounded-2xl border border-considerar/50 bg-considerar/10 px-4 py-3 text-sm text-hueso">
+          El registro de testers ya cerró. Recarga la página para ver cómo seguir.
         </p>
       )}
 

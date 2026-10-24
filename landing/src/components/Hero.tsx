@@ -23,7 +23,8 @@ export function Hero() {
 
         <p className="mt-4 text-lg leading-snug text-hueso/85">
           Filtra viajes basura antes de aceptarlos.{' '}
-          <strong className="font-bold text-considerar">¡Gratis hasta el 31 de Enero de 2027!</strong>
+          <strong className="font-bold text-considerar">¡Gratis hasta el 31 de Enero de 2027!</strong> Los primeros 50
+          testers conservan −40 % de por vida.
         </p>
 
         <a

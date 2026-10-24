@@ -18,3 +18,10 @@ export const TESTERS_ENDPOINT = `${SUPABASE_URL}/rest/v1/testers`;
 
 // Marca en el navegador de que este teléfono ya se registró (solo el nombre, nunca el correo).
 export const CLAVE_REGISTRO = 'checa_registro_v1';
+
+// Plan Fundador: los primeros 50 testers registrados conservan −40 % de por vida (ver supabase/esquema.sql).
+export const LUGARES_TOTAL = 50;
+// El registro cierra al llegar a 50 o en esta fecha (23:59 hora de Cancún). Debe coincidir con registro_abierto().
+export const CIERRE_REGISTRO_TEXTO = '15 de noviembre';
+export const CIERRE_REGISTRO_MS = Date.parse('2026-11-16T05:00:00Z');
+export const LUGARES_ENDPOINT = `${SUPABASE_URL}/rest/v1/rpc/lugares_fundador`;

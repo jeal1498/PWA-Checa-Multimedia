@@ -1,4 +1,4 @@
-import { CLAVE_REGISTRO, SUPABASE_ANON_KEY, TESTERS_ENDPOINT } from '../config';
+import { CLAVE_REGISTRO, LUGARES_ENDPOINT, SUPABASE_ANON_KEY, TESTERS_ENDPOINT } from '../config';
 import { dispositivo, origenVisita } from './track';
 
 export interface DatosTester {
@@ -8,7 +8,7 @@ export interface DatosTester {
 
 export type ResultadoRegistro =
   | { ok: true; yaRegistrado: boolean }
-  | { ok: false; motivo: 'red' | 'servidor' };
+  | { ok: false; motivo: 'red' | 'servidor' | 'cerrado' };
 
 const RE_CORREO = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 
@@ -53,6 +53,8 @@ export async function registrarTester(datos: DatosTester): Promise<ResultadoRegi
 
   if (respuesta.ok) return { ok: true, yaRegistrado: false };
   if (respuesta.status === 409) return { ok: true, yaRegistrado: true };
+  // El registro ya cerró (50 testers o fecha límite): la base de datos rechaza la inserción.
+  if (respuesta.status === 401 || respuesta.status === 403) return { ok: false, motivo: 'cerrado' };
   return { ok: false, motivo: 'servidor' };
 }
 
@@ -73,5 +75,25 @@ export function guardarRegistroLocal(nombre: string): void {
     window.localStorage.setItem(CLAVE_REGISTRO, JSON.stringify({ nombre, fecha: new Date().toISOString() }));
   } catch {
     /* modo privado: la página sigue mostrando el estado en memoria */
+  }
+}
+
+/** Lugares de fundador que quedan (0 a 50), o null si no se pudo consultar. */
+export async function consultarLugares(): Promise<number | null> {
+  try {
+    const r = await fetch(LUGARES_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    });
+    if (!r.ok) return null;
+    const n = await r.json();
+    return typeof n === 'number' && n >= 0 ? n : null;
+  } catch {
+    return null;
   }
 }
