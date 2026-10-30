@@ -23,7 +23,7 @@
 
   var ua = navigator.userAgent || '';
   var disp = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'iphone' : /Mobi/i.test(ua) ? 'otro' : 'pc';
-  var pagina = location.pathname.replace(/^\/checa-web/, '') || '/';
+  var pagina = location.pathname.replace(/^\/PWA-Checa-Multimedia/, '') || '/';
 
   window.checaTrack = function (evento, datos) {
     datos = datos || {};

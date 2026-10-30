@@ -1,6 +1,6 @@
 # SCRIPT — instalar-web (video de /instalar/, marca v2)
 
-**Voz:** Fernando Martínez (ElevenLabs `dlGxemPxFMTY7iXagmOj`, velocidad 1.0). Una línea por escena. Sigue los 5 pasos de la página `checa-web/instalar/`.
+**Voz:** Fernando Martínez (ElevenLabs `dlGxemPxFMTY7iXagmOj`, velocidad 1.0). Una línea por escena. Sigue los 5 pasos de la página `PWA-Checa-Multimedia/instalar/`.
 
     Instalar Checa toma dos minutos. Son cinco pasos, una sola vez.
     Paso uno. Abre el archivo de Checa que descargaste. Si te lo pide, permite instalar apps desconocidas para tu navegador.

@@ -1,6 +1,6 @@
 # Identidad de marca Checa v2
 
-**Fuente única de la identidad de marca.** Vive aquí, en `checa-web`, y el repo de la app (`jeal1498/Mi-Ruta`) apunta a esta carpeta cuando se pide la marca. Se publica en https://jeal1498.github.io/checa-web/marca/
+**Fuente única de la identidad de marca.** Vive aquí, en `PWA-Checa-Multimedia`, y el repo de la app (`jeal1498/Mi-Ruta`) apunta a esta carpeta cuando se pide la marca. Se publica en https://jeal1498.github.io/PWA-Checa-Multimedia/marca/
 
 Aprobada el 17 oct 2026. Ya se aplica a la web (17 oct 2026); aún no a la app.
 

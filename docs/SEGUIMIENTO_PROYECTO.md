@@ -13,8 +13,8 @@
 - Android (privado): https://github.com/jeal1498/Mi-Ruta
   - Paquete Android: `com.jeal1498.checa`
   - Namespace Kotlin: `com.karen.miruta`
-- Web (público): https://github.com/jeal1498/checa-web
-  - Web pública: https://jeal1498.github.io/checa-web/
+- Web (público): https://github.com/jeal1498/PWA-Checa-Multimedia
+  - Web pública: https://jeal1498.github.io/PWA-Checa-Multimedia/
 - Supabase: proyecto `gqsadclvftkzwrihfipz`, nombre `checa`, región us-east-1.
 
 ## Modelo comercial acordado
@@ -31,12 +31,12 @@
 - En el código actual de `MainActivity.kt`, el flavor Play aún dice que las compras integradas no están disponibles. **Google Play Billing no está implementado todavía.**
 - `supabase/functions/mp-pago/index.ts` crea preferencias de Mercado Pago y calcula elegibilidad de fundador.
 - `supabase/functions/mp-webhook/index.ts` confirma pagos Mercado Pago y activa/extiende licencias.
-### Web `jeal1498/checa-web`
+### Web `jeal1498/PWA-Checa-Multimedia`
 - `index.html`: precios actualizados; diferencia el sistema actual de pago único Mercado Pago del futuro modelo de suscripciones de Play; equivalencias diarias 3.97, 3.27 y 2.90 MXN; se cambió “Nada se cobra solo” por “Precios claros”.
 - `terminos.html`: precios y explicación de pagos actuales vs. suscripciones futuras, cancelación y procesadores actualizados.
 - `privacidad.html`: texto sobre procesadores de pago actualizado.
 - `landing/src/components/Pricing.tsx`: precios regulares y fundador actualizados; anual fundador $635 y equivalente aprox. $53/mes.
-- Último commit del cupo visible: [4801d83](https://github.com/jeal1498/checa-web/commit/4801d83b5bc4c577bb04255dfb7d6c3a3319b165).
+- Último commit del cupo visible: [4801d83](https://github.com/jeal1498/PWA-Checa-Multimedia/commit/4801d83b5bc4c577bb04255dfb7d6c3a3319b165).
 
 ## Trabajo previo y contexto de lanzamiento
 - Existe workflow `.github/workflows/play-aab-firmado.yml` que genera un AAB firmado como artefacto, sin publicar automáticamente. Requiere secretos `PLAY_UPLOAD_KEYSTORE_BASE64`, `PLAY_UPLOAD_STORE_PASSWORD`, `PLAY_UPLOAD_KEY_ALIAS`, `PLAY_UPLOAD_KEY_PASSWORD`.
