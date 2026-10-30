@@ -440,6 +440,26 @@
   }
  },
  {
+  "c": "C",
+  "n": "29",
+  "t": "Checa cambia de app",
+  "f": "2026-11-06",
+  "e": "listo",
+  "p": null,
+  "tipo": "Aviso",
+  "copy": "El 15 de noviembre, el APK de Checa deja de abrir ⚠️\nSi instalaste la app Checa con el archivo de la web, pásate a Google Play: entras con el mismo Google y tu licencia y tus ajustes se quedan.\n¿Ya te pasaste a Google Play? 👇\nComenta «CHECA» y te mando el acceso a la prueba en Google Play (solo Android).\n#choferuber #choferdidi #conductores #appdeconductores #checaapp",
+  "dm": "¡Hola! 👋 Gracias por comentar. Aquí está tu lugar para probar Checa en Google Play:\n\n1️⃣ Regístrate con tu Gmail (el de tu Play Store):\nhttps://jeal1498.github.io/checa-web/registro/?utm_source=tiktok&utm_campaign=checa-cambia-de-app\n\n2️⃣ Al terminar te lleva a nuestra comunidad de WhatsApp. Entra: ahí te aviso cuando tu acceso esté habilitado y te paso el enlace para descargar.\n\n📲 Solo Android.",
+  "th": "t/C29.jpg",
+  "v": "v/C29.mp4",
+  "mb": 1.4,
+  "files": {
+   "portada": true,
+   "video": true,
+   "copy": true,
+   "dm": true
+  }
+ },
+ {
   "c": "P",
   "n": "26",
   "t": "Dos ofertas, misma neta",
@@ -512,6 +532,26 @@
   "th": "t/P27.jpg",
   "v": "v/P27.mp4",
   "mb": 2.3,
+  "files": {
+   "portada": true,
+   "video": true,
+   "copy": true,
+   "dm": true
+  }
+ },
+ {
+  "c": "P",
+  "n": "29",
+  "t": "Checa cambia de app",
+  "f": "2026-11-06",
+  "e": "listo",
+  "p": null,
+  "tipo": "Aviso",
+  "copy": "Pásate a Google Play antes del 15 de noviembre o tu Checa deja de abrir ⚠️\nLa app Checa cambia de casa: del archivo de la web a Google Play. Con el mismo Google, tu licencia y tus ajustes se quedan.\n¿Ya tienes tu Gmail de Play Store listo? 👇\nComenta «CHECA» y te mando el acceso a la prueba en Google Play (solo Android).\n#choferuber #choferdidi #conductores #appdeconductores #checaapp",
+  "dm": "¡Hola! 👋 Soy Eduardo, gracias por comentar. Aquí está tu lugar para probar Checa en Google Play:\n\n1️⃣ Regístrate con tu Gmail (el de tu Play Store):\nhttps://jeal1498.github.io/checa-web/registro/?utm_source=tiktok-personal&utm_campaign=checa-cambia-de-app\n\n2️⃣ Al terminar te lleva a nuestra comunidad de WhatsApp. Entra: ahí te aviso cuando tu acceso esté habilitado y te paso el enlace para descargar.\n\n📲 Solo Android.",
+  "th": "t/P29.jpg",
+  "v": "v/P29.mp4",
+  "mb": 1.4,
   "files": {
    "portada": true,
    "video": true,
