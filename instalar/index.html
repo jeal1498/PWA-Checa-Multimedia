@@ -72,6 +72,8 @@
   function track(n,d){ if(window.checaTrack) try{ window.checaTrack(n,d||{}); }catch(e){} }
   var android = /Android/i.test(navigator.userAgent || '');
   var desde = (location.search.match(/[?&]desde=([^&]+)/) || [])[1];
+  // El APK se cierra el 15 nov 2026: solo quien actualiza desde la app (desde=app) baja el archivo; los demás van a Google Play
+  if (desde !== 'app') { location.replace('../registro/?utm_source=web&utm_campaign=instalar'); return; }
   var note = document.getElementById('i-note');
   var uaTxt = navigator.userAgent || '';
   var red = /Instagram/i.test(uaTxt) ? 'instagram' : /FBAN|FBAV|FB_IAB/i.test(uaTxt) ? 'facebook' : /musical_ly|BytedanceWebview|TikTok/i.test(uaTxt) ? 'tiktok' : '';

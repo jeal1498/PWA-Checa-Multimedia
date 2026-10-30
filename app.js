@@ -103,7 +103,7 @@
   }
 
   // Versión del APK (si falla, el botón sigue funcionando)
-  var metas = document.querySelectorAll('.dl-meta');
+  var metas = document.querySelectorAll('.dl-meta:not([data-fijo])');
   if (metas.length && window.fetch) {
     fetch('descargar/version.json', { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
