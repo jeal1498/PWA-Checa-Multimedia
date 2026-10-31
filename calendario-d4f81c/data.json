@@ -598,5 +598,25 @@
    "copy": true,
    "dm": true
   }
+ },
+ {
+  "c": "C",
+  "n": "31",
+  "t": "Este viaje sí rinde",
+  "f": "2026-11-10",
+  "e": "listo",
+  "p": null,
+  "tipo": "Venta",
+  "copy": "Te ofrecen 48 y con gasolina te quedan 24 ⛽\nLa app Checa lee la oferta, le resta la gasolina y te dice con un color si conviene, por hora y por km (números de ejemplo).\n¿Cuál es la oferta más mala que te ha caído? 👇\nComenta «CHECA» y te mando el acceso a la prueba en Google Play (solo Android).\n#choferuber #choferdidi #conductores #appdeconductores #checaapp",
+  "dm": "¡Hola! 👋 Gracias por comentar. Aquí está tu lugar para probar Checa en Google Play:\n\n1️⃣ Regístrate con tu Gmail (el de tu Play Store):\nhttps://jeal1498.github.io/PWA-Checa-Multimedia/registro/?utm_source=tiktok&utm_campaign=este-viaje-si-rinde\n\n2️⃣ Al terminar te lleva a nuestra comunidad de WhatsApp. Entra: ahí te aviso cuando tu acceso esté habilitado y te paso el enlace para descargar.\n\n📲 Solo Android.",
+  "th": "t/C31.jpg",
+  "v": "v/C31.mp4",
+  "mb": 6.0,
+  "files": {
+   "portada": true,
+   "video": true,
+   "copy": true,
+   "dm": true
+  }
  }
 ]
