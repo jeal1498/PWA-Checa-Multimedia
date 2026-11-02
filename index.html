@@ -3,19 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checa · Mira cuánto te queda de cada viaje</title>
-<meta name="description" content="Antes de aceptar, mira cuánto te queda de cada viaje de Uber y DiDi después de gasolina. Gratis hasta el 31 de enero, sin tarjeta.">
+<title>Checa · Checa cuánto te queda</title>
+<meta name="description" content="Checa lee cada oferta de Uber y DiDi, descuenta tu gasolina y te dice cuánto te queda antes de aceptar. Gratis hasta el 31 de enero, sin tarjeta.">
 <link rel="canonical" href="https://jeal1498.github.io/PWA-Checa-Multimedia/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_MX">
 <meta property="og:site_name" content="Checa">
 <meta property="og:title" content="Antes de aceptar, checa cuánto te queda">
-<meta property="og:description" content="Antes de aceptar, mira cuánto te queda de cada viaje de Uber y DiDi después de gasolina. Gratis hasta el 31 de enero, sin tarjeta.">
+<meta property="og:description" content="Checa lee cada oferta de Uber y DiDi, descuenta tu gasolina y te dice cuánto te queda antes de aceptar. Gratis hasta el 31 de enero, sin tarjeta.">
 <meta property="og:url" content="https://jeal1498.github.io/PWA-Checa-Multimedia/">
 <meta property="og:image" content="https://jeal1498.github.io/PWA-Checa-Multimedia/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Checa: Checa cuánto te queda.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://jeal1498.github.io/PWA-Checa-Multimedia/og.png">
 <meta name="theme-color" content="#0C0C10">
@@ -25,189 +24,664 @@
 <link rel="manifest" href="site.webmanifest">
 <link rel="preload" href="fonts/bricolage-800.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/dmsans.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="marca/tokens.css?v=20261022">
-<link rel="stylesheet" href="styles.css?v=20261022">
+<link rel="stylesheet" href="marca/tokens.css?v=20261102">
 <script src="medir.js"></script>
+<style>
+@font-face{font-family:'Bricolage Grotesque';font-weight:800;font-display:swap;src:url(fonts/bricolage-800.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-weight:400 700;font-display:swap;src:url(fonts/dmsans.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:500 700;font-display:swap;src:url(fonts/jetbrains.woff2) format('woff2')}
+:root{--borde:#24242C;--borde2:#2E2E38;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--asfalto);color:var(--hueso);font:400 16px/1.55 var(--fuente-texto);overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img,svg{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--fuente-titulos);font-weight:800;margin:0;letter-spacing:-.045em;line-height:1}
+p{margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+section{padding:96px 0}
+section[id]{scroll-margin-top:72px}
+.g{color:var(--aceptar)}
+.mut{color:var(--gris-texto)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font:700 .74rem/1 var(--fuente-datos);letter-spacing:.14em;text-transform:uppercase;color:var(--gris-texto)}
+.eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--aceptar);box-shadow:0 0 0 4px rgba(34,197,94,.15)}
+.h2{font-size:clamp(2.1rem,5.4vw,3.6rem);margin:16px 0 18px}
+.sub{font-size:1.15rem;color:var(--gris-texto);max-width:36em}
+.head{max-width:760px;margin-bottom:56px}
+.head.c{margin-inline:auto;text-align:center}
+.head.c .sub{margin-inline:auto}
+
+/* Botones */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:56px;padding:0 28px;border-radius:999px;font:700 1rem/1 var(--fuente-texto);transition:transform .2s var(--curva),background .2s var(--curva),border-color .2s var(--curva);white-space:nowrap}
+.btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--hueso);color:var(--asfalto)}
+.btn-p:hover{transform:translateY(-2px)}
+.btn-s{border:1px solid var(--borde2);background:#121218}
+.btn-s:hover{border-color:var(--gris-texto)}
+.btn-sm{height:42px;padding:0 20px;font-size:.92rem}
+:focus-visible{outline:3px solid var(--hueso);outline-offset:3px}
+
+/* Navegación */
+.nav{position:sticky;top:0;z-index:50;background:rgba(12,12,16,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
+.nav.on{border-bottom-color:var(--borde)}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;font:800 1.45rem/1 var(--fuente-titulos);letter-spacing:-.04em}
+.brand svg{width:20px;height:34px}
+.links{display:none;gap:30px;margin-left:auto;font-size:.95rem;color:var(--gris-texto)}
+.links a:hover{color:var(--hueso)}
+.nav .btn{margin-left:auto}
+@media(min-width:900px){.links{display:flex}.nav .btn{margin-left:8px}}
+
+/* Héroe */
+.hero{padding:56px 0 40px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;width:900px;height:900px;right:-260px;top:-280px;background:radial-gradient(closest-side,rgba(34,197,94,.13),transparent);pointer-events:none}
+.hero .wrap{display:grid;gap:56px;align-items:center;position:relative}
+@media(min-width:960px){.hero{padding:80px 0 64px}.hero .wrap{grid-template-columns:1.1fr .9fr}}
+.tag{display:inline-flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border:1px solid var(--borde2);border-radius:999px;background:#121218;font-size:.88rem;color:var(--gris-texto)}
+.tag b{background:var(--aceptar);color:var(--texto-sobre-aceptar);font:700 .7rem/1 var(--fuente-datos);letter-spacing:.08em;padding:6px 10px;border-radius:999px;text-transform:uppercase}
+.hero h1{font-size:clamp(2.9rem,8.4vw,5.6rem);margin:26px 0 24px;letter-spacing:-.055em;line-height:.94}
+.hero .sub{font-size:clamp(1.08rem,2.2vw,1.28rem);max-width:30em}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.ok-list{display:flex;flex-wrap:wrap;gap:10px 22px;margin:26px 0 0;padding:0;list-style:none;font-size:.92rem;color:var(--gris-texto)}
+.ok-list li{display:flex;align-items:center;gap:8px}
+.ok-list svg{width:18px;height:18px;fill:none;stroke:var(--aceptar);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* Teléfono */
+.stage{position:relative;display:flex;justify-content:center;padding:10px 0 30px}
+.phone{width:300px;max-width:82vw;aspect-ratio:9/19;background:#08080B;border:11px solid #1E1E25;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 1px #2C2C35,0 40px 100px rgba(0,0,0,.7)}
+.phone::before{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:84px;height:22px;border-radius:999px;background:#000;z-index:5}
+.map{position:absolute;inset:0;background:#0F0F14}
+.map svg{width:100%;height:100%}
+.offer{position:absolute;left:10px;right:10px;bottom:12px;background:#1F1F27;border-radius:22px;padding:16px;z-index:2;font-size:.74rem;color:var(--gris-texto)}
+.offer .t{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font:600 .72rem/1 var(--fuente-datos);letter-spacing:.06em;text-transform:uppercase}
+.offer b{display:block;font:800 1.9rem/1 var(--fuente-titulos);letter-spacing:-.04em;color:var(--hueso);margin-bottom:8px}
+.offer .row{display:flex;gap:8px;align-items:center;margin-top:4px}
+.offer .row i{width:7px;height:7px;border-radius:50%;background:var(--gris-texto);flex:none}
+.offer .row i.f{border-radius:2px;background:var(--hueso)}
+.offer .acc{margin-top:12px;height:40px;border-radius:12px;background:#33333D}
+.phone .pop{position:absolute;left:10px;right:10px;top:42px;z-index:3}
+.pop{height:226px;border-radius:24px;border:2px solid #2A2A33;overflow:hidden;background:var(--tablero);display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(0,0,0,.6);transition:opacity .35s var(--curva),transform .35s var(--curva)}
+.pop.out{opacity:0;transform:translateY(-10px) scale(.98)}
+.pop-band{padding:9px 0;text-align:center;font:800 1.15rem/1.2 var(--fuente-titulos);letter-spacing:.08em;color:var(--texto-sobre-aceptar);background:var(--aceptar)}
+.pop[data-c="y"] .pop-band{background:var(--considerar);color:var(--texto-sobre-considerar)}
+.pop[data-c="r"] .pop-band{background:var(--rechazar);color:var(--texto-sobre-rechazar)}
+.pop-body{flex:1;padding:10px 12px 12px;text-align:center;display:flex;flex-direction:column;justify-content:space-between}
+.pop-lbl{font:500 .7rem/1 var(--fuente-datos);color:var(--gris-texto)}
+.pop-net{font:800 3.2rem/1 var(--fuente-titulos);letter-spacing:-.05em}
+.pop-sub{font-size:.72rem;color:var(--gris-texto);white-space:nowrap}
+.chips{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:6px}
+.chip{height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font:700 .7rem/1 var(--fuente-datos);white-space:nowrap;background:#1B1B22;border:1px solid #1B1B22}
+.chip.ok{background:#12301F;border-color:var(--aceptar)}
+.chip.no{background:#3A1414;border-color:var(--rechazar)}
+.float{position:absolute;background:rgba(22,22,28,.9);backdrop-filter:blur(10px);border:1px solid var(--borde2);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;font-size:.8rem;box-shadow:0 20px 40px rgba(0,0,0,.5);z-index:6}
+.float .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:#0C0C10;flex:none}
+.float .ic svg{width:18px;height:18px;fill:none;stroke:var(--hueso);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.float b{display:block;font:700 .82rem/1.2 var(--fuente-texto)}
+.float span{color:var(--gris-texto);font-size:.74rem}
+.f1{left:0;top:60%}
+.f2{right:0;top:42%}
+@media(max-width:620px){.float{display:none}}
+.wave{display:flex;gap:3px;align-items:center;height:18px}
+.wave i{width:3px;border-radius:2px;background:var(--aceptar);animation:w 1s var(--curva) infinite alternate}
+.wave i:nth-child(1){height:6px}.wave i:nth-child(2){height:14px;animation-delay:.15s}.wave i:nth-child(3){height:10px;animation-delay:.3s}.wave i:nth-child(4){height:16px;animation-delay:.45s}
+@keyframes w{to{transform:scaleY(.4)}}
+.ej{font:500 .7rem/1 var(--fuente-datos);color:var(--gris-texto);text-align:center;margin-top:14px;letter-spacing:.06em;text-transform:uppercase}
+
+/* Franja de datos */
+.strip{border-block:1px solid var(--borde);padding:0}
+.strip .wrap{display:grid;grid-template-columns:repeat(2,1fr)}
+@media(min-width:860px){.strip .wrap{grid-template-columns:repeat(4,1fr)}}
+.stat{padding:30px 20px;border-left:1px solid var(--borde)}
+.stat:nth-child(odd){border-left:0}
+@media(min-width:860px){.stat:nth-child(odd){border-left:1px solid var(--borde)}.stat:first-child{border-left:0}}
+@media(max-width:859px){.stat:nth-child(n+3){border-top:1px solid var(--borde)}}
+.stat b{display:block;font:800 clamp(1.7rem,4vw,2.4rem)/1 var(--fuente-titulos);letter-spacing:-.04em;margin-bottom:8px}
+.stat span{color:var(--gris-texto);font-size:.92rem}
+
+/* Problema */
+.versus{display:grid;gap:20px}
+@media(min-width:860px){.versus{grid-template-columns:1fr 1fr}}
+.vcard{border:1px solid var(--borde);border-radius:var(--radio-tarjeta);padding:34px;background:#111116}
+.vcard.yes{background:var(--tablero);border-color:var(--borde2);position:relative;overflow:hidden}
+.vcard.yes::after{content:"";position:absolute;inset:auto -80px -120px auto;width:300px;height:300px;background:radial-gradient(closest-side,rgba(34,197,94,.16),transparent)}
+.vcard .lb{font:700 .74rem/1 var(--fuente-datos);letter-spacing:.12em;text-transform:uppercase;color:var(--gris-texto)}
+.vcard .big{font:800 clamp(3.6rem,10vw,5.6rem)/1 var(--fuente-titulos);letter-spacing:-.06em;margin:18px 0 26px}
+.vcard .big small{font:500 1rem var(--fuente-datos);letter-spacing:0;color:var(--gris-texto)}
+.lines{display:grid;gap:12px;font-size:.98rem}
+.lines div{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px dashed var(--borde2)}
+.lines div:last-child{border:0;padding:0}
+.lines em{font:700 .95rem var(--fuente-datos);font-style:normal}
+.minus{color:var(--rechazar)}
+.bar{height:12px;border-radius:999px;background:#1B1B22;margin:0 0 26px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.note{font:500 .72rem/1 var(--fuente-datos);color:var(--gris-texto);margin-top:18px;letter-spacing:.06em;text-transform:uppercase}
+
+/* Pasos */
+.steps{display:grid;gap:20px;counter-reset:s}
+@media(min-width:860px){.steps{grid-template-columns:repeat(3,1fr)}}
+.step{border:1px solid var(--borde);border-radius:var(--radio-tarjeta);padding:30px;background:#111116;position:relative}
+.step .n{font:700 .8rem/1 var(--fuente-datos);color:var(--gris-texto);letter-spacing:.1em}
+.step h3{font-size:1.6rem;margin:46px 0 12px;letter-spacing:-.035em}
+.step p{color:var(--gris-texto)}
+.step .ico{position:absolute;top:24px;right:24px;width:52px;height:52px;border-radius:18px;background:var(--asfalto);border:1px solid var(--borde2);display:grid;place-items:center}
+.ico svg{width:24px;height:24px;fill:none;stroke:var(--hueso);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Funciones (bento) */
+.bento{display:grid;gap:18px}
+@media(min-width:760px){.bento{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.bento{grid-template-columns:repeat(6,1fr)}.b3{grid-column:span 3}.b2{grid-column:span 2}.b4{grid-column:span 4}}
+.box{background:var(--tablero);border:1px solid var(--borde);border-radius:var(--radio-tarjeta);padding:28px;display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:300px;transition:border-color .2s}
+.box:hover{border-color:var(--borde2)}
+.box .k{font:700 .7rem/1 var(--fuente-datos);letter-spacing:.12em;text-transform:uppercase;color:var(--gris-texto)}
+.box h3{font-size:1.5rem;letter-spacing:-.035em;line-height:1.05}
+.box p{color:var(--gris-texto);font-size:.97rem}
+.viz{margin-top:auto;padding-top:18px}
+.mini{display:flex;gap:10px;flex-wrap:wrap}
+.mini .chip{height:40px;padding:0 14px;font-size:.85rem;border-radius:12px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mp{border:2px solid #2A2A33;border-radius:16px;overflow:hidden;background:#111116}
+.mp.best{border-color:var(--hueso)}
+.mp .bd{padding:6px;text-align:center;font:800 .74rem/1.2 var(--fuente-titulos);letter-spacing:.08em;background:var(--aceptar);color:var(--texto-sobre-aceptar)}
+.mp.y .bd{background:var(--considerar);color:var(--texto-sobre-considerar)}
+.mp .bb{padding:10px;text-align:center}
+.mp .bb b{display:block;font:800 1.7rem/1 var(--fuente-titulos);letter-spacing:-.04em}
+.mp .bb span{font:500 .66rem var(--fuente-datos);color:var(--gris-texto)}
+.mp .star{display:inline-block;margin-top:6px;font:700 .62rem/1 var(--fuente-datos);background:var(--hueso);color:var(--asfalto);padding:4px 8px;border-radius:999px;letter-spacing:.06em;text-transform:uppercase}
+.voice{display:flex;align-items:center;gap:14px;background:#111116;border:1px solid var(--borde2);border-radius:18px;padding:14px 16px}
+.voice .wave{height:26px}.voice .wave i{width:4px}
+.voice q{font:800 1.3rem/1 var(--fuente-titulos);letter-spacing:-.03em;quotes:"«" "»"}
+.dots{display:flex;gap:8px;margin-left:auto}
+.dots i{width:12px;height:12px;border-radius:50%}
+.meta{background:#111116;border:1px solid var(--borde2);border-radius:18px;padding:16px}
+.meta .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.meta .row b{font:800 1.6rem/1 var(--fuente-titulos);letter-spacing:-.04em}
+.meta .track{height:10px;border-radius:999px;background:#24242C;overflow:hidden}
+.meta .track i{display:block;height:100%;width:68%;background:var(--aceptar);border-radius:999px}
+.meta small{display:flex;justify-content:space-between;margin-top:10px;color:var(--gris-texto);font:500 .72rem var(--fuente-datos)}
+.hours{display:flex;align-items:flex-end;gap:6px;height:110px}
+.hours i{flex:1;border-radius:6px 6px 3px 3px;background:#2A2A33}
+.hours i.hi{background:var(--hueso)}
+.hlab{display:flex;justify-content:space-between;font:500 .66rem var(--fuente-datos);color:var(--gris-texto);margin-top:8px}
+.filters{display:grid;gap:10px}
+.fil{display:flex;justify-content:space-between;align-items:center;background:#111116;border:1px solid var(--borde2);border-radius:14px;padding:12px 14px;font-size:.9rem}
+.fil em{font:700 .82rem var(--fuente-datos);font-style:normal;background:#1E1E25;padding:6px 10px;border-radius:8px}
+.lock{display:flex;align-items:center;gap:14px}
+.lock .ico{width:56px;height:56px;border-radius:18px;background:#111116;border:1px solid var(--borde2);display:grid;place-items:center}
+.lock .off{font:700 .78rem var(--fuente-datos);color:var(--gris-texto);border:1px dashed var(--borde2);padding:8px 12px;border-radius:10px}
+
+/* Demo */
+.demo{display:grid;gap:36px;align-items:center;background:var(--tablero);border:1px solid var(--borde);border-radius:36px;padding:28px}
+@media(min-width:960px){.demo{grid-template-columns:1.1fr .9fr;padding:56px}}
+.picks{display:grid;gap:10px;margin:28px 0}
+.pick{text-align:left;font:inherit;color:inherit;background:#111116;border:1px solid var(--borde2);border-radius:18px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.pick b{font:800 1.4rem/1 var(--fuente-titulos);letter-spacing:-.03em;min-width:64px}
+.pick span{font-size:.84rem;color:var(--gris-texto)}
+.pick[aria-pressed="true"]{border-color:var(--hueso);background:#1A1A21}
+.sl{display:grid;gap:18px}
+.sl label{display:grid;gap:8px;font-size:.92rem}
+.sl .lr{display:flex;justify-content:space-between}
+.sl output{font:700 .9rem var(--fuente-datos)}
+input[type=range]{width:100%;accent-color:var(--hueso);height:28px}
+.demo .pop{max-width:320px;margin:0 auto}
+
+/* Confianza */
+.trust{display:grid;gap:18px}
+@media(min-width:760px){.trust{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.trust{grid-template-columns:repeat(4,1fr)}}
+.tc{border:1px solid var(--borde);border-radius:var(--radio-tarjeta);padding:26px;background:#111116}
+.tc .ico{width:48px;height:48px;border-radius:16px;background:var(--tablero);display:grid;place-items:center;margin-bottom:22px}
+.tc h3{font-size:1.2rem;letter-spacing:-.02em;margin-bottom:8px;line-height:1.15}
+.tc p{color:var(--gris-texto);font-size:.94rem}
+.tc.hl{border-color:var(--hueso)}
+
+/* Precios */
+.plans{display:grid;gap:18px;align-items:stretch}
+@media(min-width:960px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{border:1px solid var(--borde);border-radius:var(--radio-tarjeta);padding:30px;background:var(--tablero);display:flex;flex-direction:column;position:relative}
+.plan.hot{border:2px solid var(--hueso);background:#1A1A21}
+.plan .badge{position:absolute;top:-13px;left:28px;background:var(--hueso);color:var(--asfalto);font:700 .68rem/1 var(--fuente-datos);padding:7px 12px;border-radius:999px;letter-spacing:.1em;text-transform:uppercase}
+.plan h3{font-size:1.3rem;letter-spacing:-.02em}
+.plan .per{color:var(--gris-texto);font-size:.9rem;margin-top:4px}
+.price{display:flex;align-items:baseline;gap:10px;margin:26px 0 6px}
+.price b{font:800 3.2rem/1 var(--fuente-titulos);letter-spacing:-.05em}
+.price s{color:var(--gris-texto);font:500 1.05rem var(--fuente-datos)}
+.fnd{display:inline-flex;align-self:flex-start;gap:6px;align-items:center;font:700 .72rem/1 var(--fuente-datos);background:#12301F;color:var(--aceptar);border:1px solid rgba(34,197,94,.4);padding:6px 10px;border-radius:999px;letter-spacing:.04em}
+.day{font:500 .85rem var(--fuente-datos);color:var(--gris-texto);margin-top:12px}
+.feat{list-style:none;padding:22px 0 0;margin:22px 0 26px;border-top:1px solid var(--borde2);display:grid;gap:12px;font-size:.95rem}
+.feat li{display:flex;gap:10px}
+.feat svg{width:18px;height:18px;flex:none;margin-top:3px;fill:none;stroke:var(--hueso);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.plan .btn{margin-top:auto;width:100%}
+.free{margin-top:26px;border:1px dashed var(--borde2);border-radius:22px;padding:20px 24px;display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.free p{color:var(--gris-texto);max-width:46em;font-size:.95rem}
+.free strong{color:var(--hueso)}
+
+/* Comunidad */
+.beta{display:grid;gap:28px;align-items:center;border:1px solid var(--borde);border-radius:36px;padding:36px;background:linear-gradient(135deg,#121218,#0F0F14)}
+@media(min-width:900px){.beta{grid-template-columns:1.3fr 1fr;padding:56px}}
+.beta ol{margin:0;padding:0;list-style:none;display:grid;gap:14px;counter-reset:b}
+.beta li{display:flex;gap:14px;align-items:flex-start;counter-increment:b}
+.beta li::before{content:counter(b);flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--borde2);font:700 .85rem var(--fuente-datos)}
+.beta li span{color:var(--gris-texto);display:block;font-size:.92rem}
+
+/* Preguntas */
+.faq{max-width:820px;margin:0 auto;display:grid;gap:12px}
+.faq details{border:1px solid var(--borde);border-radius:22px;background:#111116;transition:border-color .2s}
+.faq details[open]{border-color:var(--borde2);background:var(--tablero)}
+.faq summary{cursor:pointer;list-style:none;padding:22px 24px;display:flex;justify-content:space-between;gap:16px;font:700 1.05rem/1.3 var(--fuente-texto)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:500 1.5rem/1 var(--fuente-datos);color:var(--gris-texto);transition:transform .2s var(--curva)}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 24px 22px;color:var(--gris-texto)}
+
+/* Cierre */
+.final{text-align:center;padding:110px 0;position:relative;overflow:hidden}
+.final::before{content:"";position:absolute;left:50%;top:50%;width:900px;height:600px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(34,197,94,.12),transparent)}
+.final .wrap{position:relative}
+.final h2{font-size:clamp(2.6rem,7vw,5rem);letter-spacing:-.055em;margin:18px 0}
+.final .ctas{justify-content:center}
+.road{height:6px;background:repeating-linear-gradient(90deg,var(--considerar) 0 34px,transparent 34px 60px);opacity:.75;margin:0 auto 34px;max-width:420px;border-radius:3px}
+
+/* Pie */
+footer{border-top:1px solid var(--borde);padding:56px 0 36px;color:var(--gris-texto);font-size:.9rem}
+.fg{display:grid;gap:32px}
+@media(min-width:860px){.fg{grid-template-columns:2fr 1fr 1fr}}
+.fg h4{margin:0 0 14px;color:var(--hueso);font:700 .74rem/1 var(--fuente-datos);letter-spacing:.12em;text-transform:uppercase}
+.fg ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.fg a:hover{color:var(--hueso)}
+.legal{border-top:1px solid var(--borde);margin-top:40px;padding-top:24px;font-size:.8rem;line-height:1.6}
+
+/* CTA fijo en teléfono */
+.sticky{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;transform:translateY(140%);transition:transform .3s var(--curva)}
+.sticky.on{transform:none}
+.sticky .btn{width:100%;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+@media(min-width:900px){.sticky{display:none}}
+
+/* Aparición */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s var(--curva),transform .7s var(--curva)}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.rv{opacity:1;transform:none}*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
-<a class="skip" href="#main">Saltar al contenido</a>
 
-<header class="top">
+<header class="nav" id="nav">
   <div class="wrap">
-    <a class="brand" href="./" aria-label="Checa, inicio">
-      <svg viewBox="0 0 60 100" aria-hidden="true"><rect x="6" y="2" width="48" height="96" rx="20" fill="#222826" stroke="#3A423F" stroke-width="3"/><circle class="lg-r" cx="30" cy="26" r="9"/><circle class="lg-a" cx="30" cy="50" r="9"/><circle class="lg-v" cx="30" cy="74" r="12" fill="#22C55E"/><path class="lg-c" d="M24 74.5l4.5 4.5L36.5 69" fill="none" stroke="#04210F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="nm">Checa</span>
+    <a class="brand" href="#" aria-label="Checa, inicio">
+      <svg viewBox="0 0 60 100" aria-hidden="true"><rect x="6" y="2" width="48" height="96" rx="20" fill="#222826" stroke="#3A423F" stroke-width="3"/><circle cx="30" cy="26" r="9" fill="#3A1414"/><circle cx="30" cy="50" r="9" fill="#3A3210"/><circle cx="30" cy="74" r="12" fill="#22C55E"/><path d="M24 74.5l4.5 4.5L36.5 69" fill="none" stroke="#04210F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Checa
     </a>
-    <nav class="nav" aria-label="Principal">
+    <nav class="links" aria-label="Principal">
+      <a href="#funciones">Funciones</a>
       <a href="#como">Cómo funciona</a>
       <a href="#precios">Precios</a>
-      <a href="#faq">Preguntas</a>
+      <a href="#preguntas">Preguntas</a>
     </nav>
+    <a class="btn btn-p btn-sm" href="registro/?utm_source=web&utm_campaign=nav" data-dl="nav">Probar gratis</a>
   </div>
 </header>
 
-<main id="main">
+<main>
 
-<!-- 1. HÉROE: promesa, video y botón -->
-<section class="hero vsl" id="inicio">
+<!-- HÉROE -->
+<section class="hero">
   <div class="wrap">
-    <p class="ref-note" id="ref-note" hidden></p>
-    <span class="kicker">Para conductores de Uber y DiDi</span>
-    <h1>Mira cuánto te queda de cada viaje <span>antes de aceptarlo.</span></h1>
-    <div class="vid-box" id="vid-box" data-src="media/vsl-oferta.mp4" data-poster="media/vsl-oferta.jpg">
-      <img src="media/vsl-oferta.jpg" alt="Video: Checa lee una oferta y te dice cuánto te queda, con números de ejemplo" width="540" height="960" fetchpriority="high">
-      <button type="button" class="vid-play" id="vid-play" aria-label="Reproducir video de 35 segundos">
-        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></span>
-        <em>Mira cómo funciona · 35 s</em>
-      </button>
+    <div>
+      <span class="tag"><b>Beta</b> Gratis hasta el 31 de enero · sin tarjeta</span>
+      <h1>Checa cuánto <span class="g">te queda</span> antes de aceptar.</h1>
+      <p class="sub">Checa lee cada oferta de Uber y DiDi, descuenta tu gasolina y te dice en voz alta si conviene. Tú solo decides.</p>
+      <div class="ctas">
+        <a class="btn btn-p" href="registro/?utm_source=web&utm_campaign=hero" data-dl="hero">
+          <svg viewBox="0 0 24 24"><path d="M5 3.5v17l14-8.5z"/></svg>Probar en Google Play
+        </a>
+        <a class="btn btn-s" href="#como">Ver cómo funciona</a>
+      </div>
+      <ul class="ok-list">
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Sin tarjeta</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Teléfono y tablet</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Lee sin internet</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Android 8+</li>
+      </ul>
     </div>
-    <p class="lead">Checa lee la oferta, descuenta tu gasolina y te dice en voz alta si conviene: <strong>Aceptar, Considerar o Rechazar.</strong> Tú decides con la cuenta hecha.</p>
-    <div class="ctas">
-      <a class="btn btn-primary btn-big" href="registro/?utm_source=web&utm_campaign=hero" data-dl="hero">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
-        Probar Checa en Google Play
-      </a>
+
+    <div>
+      <div class="stage">
+        <div class="phone" aria-label="Ejemplo: Checa sobre una oferta de viaje, con números de ejemplo" role="img">
+          <div class="map"><svg viewBox="0 0 300 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <g stroke="#1A1A21" stroke-width="14" fill="none"><path d="M-20 140L320 260"/><path d="M80 -20L170 620"/><path d="M-20 430L320 360"/><path d="M240 -20L210 620"/></g>
+            <g stroke="#15151B" stroke-width="6" fill="none"><path d="M-20 60L320 90"/><path d="M20 -20L40 620"/><path d="M-20 520L320 560"/><path d="M-20 300L320 300"/></g>
+            <path d="M110 330C130 300 150 300 165 270S200 230 228 228" stroke="#F4F4EF" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="1 10"/>
+            <circle cx="110" cy="332" r="8" fill="#F4F4EF"/><rect x="220" y="220" width="16" height="16" rx="4" fill="#F4F4EF"/>
+          </svg></div>
+          <div class="pop" id="hero-pop"></div>
+          <div class="offer" id="hero-offer"></div>
+        </div>
+        <div class="float f1"><div class="ic"><div class="wave"><i></i><i></i><i></i><i></i></div></div><div><b id="say">«Aceptar»</b><span>Te avisa en voz alta</span></div></div>
+        <div class="float f2"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div><b>Gasolina restada</b><span>12 km/l · $24/l</span></div></div>
+      </div>
+      <p class="ej">Números de ejemplo</p>
     </div>
-    <ul class="pills">
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Sin tarjeta</li>
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Precios claros</li>
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Gratis hasta el 31 de enero</li>
-    </ul>
-    <p class="dl-meta" data-fijo>Solo Android 8 o superior · Prueba en Google Play</p>
-    <p class="device-note" id="device-note" hidden></p>
   </div>
 </section>
-<div class="raya" aria-hidden="true"><svg viewBox="0 0 1000 64" preserveAspectRatio="none"><path d="M0 52C200 52 300 32 500 32C700 32 800 12 1000 12"/></svg><i></i></div>
 
-<!-- 2. PROBLEMA -->
+<!-- FRANJA -->
+<section class="strip" aria-label="Lo esencial">
+  <div class="wrap">
+    <div class="stat"><b>~1 s</b><span>para leer la oferta</span></div>
+    <div class="stat"><b>3 avisos</b><span>Aceptar, Considerar, Rechazar</span></div>
+    <div class="stat"><b>0 datos</b><span>de tus viajes salen del teléfono</span></div>
+    <div class="stat"><b>2 apps</b><span>a la vez en pantalla dividida</span></div>
+  </div>
+</section>
+
+<!-- PROBLEMA -->
 <section id="problema">
   <div class="wrap">
-    <span class="kicker">El problema</span>
-    <h2>Una oferta de $120 no te deja $120</h2>
-    <p class="lead">De esa tarifa salen la gasolina y los kilómetros que manejas para llegar por el pasajero. Uber y DiDi te muestran el monto. Nadie te muestra lo que te queda.</p>
-    <p class="punch">Con un viaje de ejemplo, esos $120 pueden terminar en <span>$97 netos</span> antes de contar tu tiempo. Checa hace esa cuenta en cada oferta.<small>Números de ejemplo</small></p>
-  </div>
-</section>
-
-<!-- 3. CÓMO FUNCIONA, con el pop-up de ejemplo -->
-<section class="section-alt" id="como">
-  <div class="wrap como">
-    <div>
-      <span class="kicker">Cómo funciona</span>
-      <h2>Así se ve tu próxima oferta</h2>
-      <ol class="pasos">
-        <li><b>Llega la oferta.</b> Manejas con Uber o DiDi como siempre.</li>
-        <li><b>Checa la lee.</b> Resta tu gasolina y la compara con tus metas por km y por hora.</li>
-        <li><b>Te avisa.</b> Semáforo, voz y vibración. Aceptar o rechazar lo tocas tú, en tu app.</li>
-      </ol>
-      <div class="sellos" aria-label="Los tres avisos de Checa"><span class="sello g"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 6.5"/></svg>Aceptar</span><span class="sello y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v8M12 18v.5"/></svg>Considerar</span><span class="sello r"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Rechazar</span></div>
+    <div class="head rv">
+      <span class="eyebrow">El problema</span>
+      <h2 class="h2">Una oferta de $120 no te deja $120.</h2>
+      <p class="sub">La app te enseña la tarifa. La gasolina y los kilómetros para llegar por el pasajero los pagas tú, y nadie te los resta.</p>
     </div>
-    <div aria-label="Ejemplo del pop-up de Checa, con números de ejemplo">
-      <div class="phone">
-        <div class="map"></div>
-        <div class="pop" id="hero-pop" role="img"></div>
-        <div class="offer-card" id="hero-offer" aria-hidden="true"></div>
+    <div class="versus">
+      <div class="vcard rv">
+        <span class="lb">Lo que te enseña la app</span>
+        <div class="big">$120</div>
+        <div class="lines">
+          <div><span>Recogida</span><em>4 min · 1.5 km</em></div>
+          <div><span>Viaje</span><em>18 min · 10 km</em></div>
+          <div><span>¿Conviene?</span><em class="mut">Adivina</em></div>
+        </div>
       </div>
-      <p class="ejemplo">Números de ejemplo</p>
+      <div class="vcard yes rv">
+        <span class="lb">Lo que te enseña Checa</span>
+        <div class="big"><span class="g">$97</span> <small>netos</small></div>
+        <div class="bar" aria-hidden="true"><i style="width:81%;background:var(--aceptar)"></i><i style="width:19%;background:var(--rechazar)"></i></div>
+        <div class="lines">
+          <div><span>Gasolina (11.5 km)</span><em class="minus">−$23</em></div>
+          <div><span>Por hora</span><em>$327/h</em></div>
+          <div><span>Por km</span><em>$10.4/km</em></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Números de ejemplo · 12 km/l y $24 por litro</p>
+  </div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section id="como" style="padding-top:0">
+  <div class="wrap">
+    <div class="head rv">
+      <span class="eyebrow">Cómo funciona</span>
+      <h2 class="h2">Tres pasos. Cero cuentas en la cabeza.</h2>
+    </div>
+    <div class="steps">
+      <div class="step rv"><span class="n">01</span><div class="ico"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></div><h3>Llega la oferta</h3><p>Manejas con Uber o DiDi como siempre. No cambias nada de tu forma de trabajar.</p></div>
+      <div class="step rv"><span class="n">02</span><div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div><h3>Checa la lee</h3><p>Resta tu gasolina y compara el viaje con tus metas por km y por hora. En un segundo.</p></div>
+      <div class="step rv"><span class="n">03</span><div class="ico"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div><h3>Tú decides</h3><p>Semáforo, voz y vibración. Aceptar o rechazar lo tocas tú, en tu app.</p></div>
     </div>
   </div>
 </section>
 
-<!-- 4. CONFIANZA -->
-<section id="confianza">
+<!-- FUNCIONES -->
+<section id="funciones" style="padding-top:0">
   <div class="wrap">
-    <span class="kicker">Tu tranquilidad</span>
-    <h2>Tu cuenta y tus datos se quedan contigo</h2>
+    <div class="head rv">
+      <span class="eyebrow">Funciones</span>
+      <h2 class="h2">Todo lo que necesitas para decidir rápido.</h2>
+      <p class="sub">Cada función tiene un solo trabajo: que sepas cuánto te queda de cada viaje.</p>
+    </div>
+    <div class="bento">
+      <div class="box b3 rv">
+        <span class="k">Netos</span>
+        <h3>Lo que te queda, no lo que te pagan</h3>
+        <p>La tarifa menos la gasolina de todo el recorrido, recogida incluida.</p>
+        <div class="viz mini"><span class="chip ok">$97 netos</span><span class="chip no">Gasolina −$23</span><span class="chip">11.5 km total</span></div>
+      </div>
+      <div class="box b3 rv">
+        <span class="k">Semáforo</span>
+        <h3>Te lo dice en voz alta</h3>
+        <p>No despegas los ojos del camino: escuchas «Aceptar», «Considerar» o «Rechazar» y sientes la vibración.</p>
+        <div class="viz"><div class="voice"><div class="wave"><i></i><i></i><i></i><i></i></div><q>Aceptar</q><div class="dots"><i style="background:var(--aceptar)"></i><i style="background:var(--considerar)"></i><i style="background:var(--rechazar)"></i></div></div></div>
+      </div>
+      <div class="box b4 rv">
+        <span class="k">Tablet y pantalla dividida</span>
+        <h3>Uber y DiDi a la vez, y te marca la mejor</h3>
+        <p>Un aviso por app. Cuando llegan dos ofertas juntas, la mejor lleva la etiqueta «Mejor».</p>
+        <div class="viz duo">
+          <div class="mp y"><div class="bd">CONSIDERAR</div><div class="bb"><b>$64</b><span>$211/h · $6.1/km</span></div></div>
+          <div class="mp best"><div class="bd">ACEPTAR</div><div class="bb"><b>$97</b><span>$327/h · $10.4/km</span><br><span class="star">★ Mejor</span></div></div>
+        </div>
+      </div>
+      <div class="box b2 rv">
+        <span class="k">Filtros</span>
+        <h3>Tus reglas</h3>
+        <p>Si la recogida o el viaje se pasan, va a rojo.</p>
+        <div class="viz filters"><div class="fil">Por hora<em>$150</em></div><div class="fil">Por km<em>$8</em></div><div class="fil">Recogida máx.<em>3 km</em></div></div>
+      </div>
+      <div class="box b2 rv">
+        <span class="k">Mi día</span>
+        <h3>Tu meta, a la vista</h3>
+        <p>Viajes aceptados, lo que llevas y la gasolina de la semana.</p>
+        <div class="viz meta"><div class="row"><b>$1,360</b><span class="mut">de $2,000</span></div><div class="track"><i></i></div><small><span>8 viajes</span><span>68 %</span></small></div>
+      </div>
+      <div class="box b2 rv">
+        <span class="k">Mejores horas</span>
+        <h3>Cuándo te conviene salir</h3>
+        <p>Con tus propias ofertas de la semana.</p>
+        <div class="viz"><div class="hours" aria-hidden="true"><i style="height:30%"></i><i style="height:44%"></i><i class="hi" style="height:88%"></i><i class="hi" style="height:100%"></i><i style="height:58%"></i><i style="height:40%"></i><i class="hi" style="height:80%"></i><i style="height:52%"></i></div><div class="hlab"><span>6 h</span><span>12 h</span><span>18 h</span><span>22 h</span></div></div>
+      </div>
+      <div class="box b2 rv">
+        <span class="k">Privacidad</span>
+        <h3>Lee sin internet</h3>
+        <p>La lectura pasa en tu teléfono. Tus viajes no se mandan a ningún lado.</p>
+        <div class="viz lock"><div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><span class="off">Modo avión: sigue leyendo</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section id="prueba" style="padding-top:0">
+  <div class="wrap">
+    <div class="demo rv">
+      <div>
+        <span class="eyebrow">Pruébalo aquí</span>
+        <h2 class="h2">Elige una oferta y mueve tus metas.</h2>
+        <div class="picks" id="picks"></div>
+        <div class="sl">
+          <label><span class="lr">Meta por hora <output id="o-h"></output></span><input type="range" id="r-h" min="80" max="300" step="10" value="150"></label>
+          <label><span class="lr">Meta por km <output id="o-km"></output></span><input type="range" id="r-km" min="4" max="15" step="0.5" value="8"></label>
+          <label><span class="lr">Precio de la gasolina <output id="o-gas"></output></span><input type="range" id="r-gas" min="18" max="30" step="0.5" value="24"></label>
+        </div>
+      </div>
+      <div>
+        <div class="pop" id="demo-pop" role="img"></div>
+        <p class="ej">Números de ejemplo</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONFIANZA -->
+<section id="confianza" style="padding-top:0">
+  <div class="wrap">
+    <div class="head rv">
+      <span class="eyebrow">Tu tranquilidad</span>
+      <h2 class="h2">Tu cuenta y tus datos se quedan contigo.</h2>
+    </div>
     <div class="trust">
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><h3>Solo lee, nunca toca</h3><p>Checa no acepta, no rechaza y no presiona nada en Uber o DiDi. La decisión es siempre tuya.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="4"/><path d="M11 18h2"/></svg></div><div><h3>Tus viajes se quedan en tu teléfono</h3><p>La lectura ocurre en tu equipo. Tus viajes no se envían a ningún servidor.</p></div></div>
-      <div class="card"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Solo está activa en Uber y DiDi</h3><p>Si la app de tu banco se queja, pausas el lector con un toque.</p></div></div>
-      <div class="card guar"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><div><h3>Garantía de lectura de 7 días</h3><p>Si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero.</p></div></div>
+      <div class="tc rv"><div class="ico"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><h3>Solo lee, nunca toca</h3><p>No acepta, no rechaza y no presiona nada en Uber o DiDi.</p></div>
+      <div class="tc rv"><div class="ico"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="4"/><path d="M11 18h2"/></svg></div><h3>Todo en tu teléfono</h3><p>Tus viajes no se envían a ningún servidor.</p></div>
+      <div class="tc rv"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Solo en Uber y DiDi</h3><p>Si otra app se queja, pausas el lector con un toque.</p></div>
+      <div class="tc hl rv"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><h3>Garantía de 7 días</h3><p>Si pagas y no lee las ofertas en tu teléfono, te devolvemos tu dinero.</p></div>
     </div>
-    <p class="fine">Checa es independiente y no está afiliada a Uber ni a DiDi.</p>
   </div>
 </section>
 
-<!-- testimonios reales de beta testers aquí (con su permiso) -->
-
-<!-- 5. PRECIOS -->
-<section class="section-alt" id="precios">
+<!-- PRECIOS -->
+<section id="precios" style="padding-top:0">
   <div class="wrap">
-    <span class="kicker">Precios</span>
-    <h2>Gratis hasta el 31 de enero. Después, tú eliges.</h2>
-    <p class="lead">Durante la beta Checa trae todo incluido y no pide tarjeta. Las primeras 50 cuentas que se registren con Google durante la beta conservan precio de fundador (40 % menos de por vida). En la versión actual descargable, los paquetes se pagan una sola vez por periodo mediante Mercado Pago. La futura versión de Google Play ofrecerá suscripciones con renovación automática gestionadas por Google Play.</p>
-    <div class="prices">
-      <div class="card price">
-        <h3>Básico</h3>
-        <div class="amount">$119 <small>· 1 mes</small></div>
-        <div class="perday">$3.97 <small>al día</small></div>
-        <div class="fund">Plan Fundador: <strong>$71</strong> <small>· −40 %</small></div>
-        <ul class="feat"><li>Netos y semáforo, filtros y voz</li><li>1 equipo</li></ul>
+    <div class="head c rv">
+      <span class="eyebrow">Precios</span>
+      <h2 class="h2">Hoy es gratis. Después, tú eliges.</h2>
+      <p class="sub">Todo incluido hasta el 31 de enero de 2027, sin tarjeta. Las primeras 50 cuentas con Google pagan precio Fundador de por vida.</p>
+    </div>
+    <div class="plans">
+      <div class="plan rv">
+        <h3>Básico</h3><p class="per">1 mes · 1 equipo</p>
+        <div class="price"><b>$71</b><s>$119</s></div>
+        <span class="fnd">Fundador −40 %</span>
+        <p class="day">$2.37 al día con Fundador</p>
+        <ul class="feat">
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Netos, $/hora y $/km</li>
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Semáforo con voz y vibración</li>
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Filtros y Mi día</li>
+        </ul>
+        <a class="btn btn-s" href="registro/?utm_source=web&utm_campaign=precio_basico" data-dl="precio_basico">Empezar gratis</a>
       </div>
-      <div class="card price hot">
+      <div class="plan hot rv">
         <span class="badge">Recomendado</span>
-        <h3>Estratega</h3>
-        <div class="amount">$589 <small>· 6 meses</small></div>
-        <div class="perday">$3.27 <small>al día</small></div>
-        <div class="fund">Plan Fundador: <strong>$353</strong> <small>· −40 %</small></div>
-        <ul class="feat"><li>Todo lo del Básico</li><li>Uber y DiDi juntos, con la etiqueta <span class="mejor">Mejor</span> en la mejor oferta</li><li>Mejores horas de la semana</li><li>2 equipos</li></ul>
+        <h3>Estratega</h3><p class="per">6 meses · 2 equipos</p>
+        <div class="price"><b>$353</b><s>$589</s></div>
+        <span class="fnd">Fundador −40 %</span>
+        <p class="day">$1.96 al día con Fundador</p>
+        <ul class="feat">
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Todo lo del Básico</li>
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Uber y DiDi juntos con «Mejor»</li>
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Mejores horas de la semana</li>
+        </ul>
+        <a class="btn btn-p" href="registro/?utm_source=web&utm_campaign=precio_estratega" data-dl="precio_estratega">Empezar gratis</a>
       </div>
-      <div class="card price">
-        <h3>Pro</h3>
-        <div class="amount">$1,059 <small>· 1 año</small></div>
-        <div class="perday">$2.90 <small>al día</small></div>
-        <div class="fund">Plan Fundador: <strong>$635</strong> <small>· −40 %</small></div>
-        <ul class="feat"><li>Todo lo del Estratega</li><li>Acceso durante un año</li></ul>
+      <div class="plan rv">
+        <h3>Pro</h3><p class="per">1 año · 2 equipos</p>
+        <div class="price"><b>$635</b><s>$1,059</s></div>
+        <span class="fnd">Fundador −40 %</span>
+        <p class="day">$1.74 al día con Fundador</p>
+        <ul class="feat">
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Todo lo del Estratega</li>
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Un año sin pensar en pagos</li>
+          <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>El menor precio por día</li>
+        </ul>
+        <a class="btn btn-s" href="registro/?utm_source=web&utm_campaign=precio_pro" data-dl="precio_pro">Empezar gratis</a>
       </div>
     </div>
-    <p class="fund-note"><strong>Plan Fundador:</strong> 40 % menos de por vida para las primeras 50 cuentas de Google que se registren durante la beta. Son <strong>50 lugares en total</strong>, compartidos entre los tres paquetes; si ya se ocuparon, se paga el precio normal.</p>
-    <p class="seal-line"><strong>Hoy todo es gratis.</strong> Sin tarjeta.</p>
+    <div class="free rv">
+      <p><strong>Plan Fundador:</strong> 50 lugares en total, compartidos entre los tres paquetes. Si ya se ocuparon, aplica el precio normal. Precios en pesos mexicanos.</p>
+      <a class="btn btn-p btn-sm" href="registro/?utm_source=web&utm_campaign=fundador" data-dl="fundador">Apartar mi lugar</a>
+    </div>
   </div>
 </section>
 
-<div class="tres" aria-hidden="true"><i></i><i></i><i></i></div>
-
-<!-- 6. PREGUNTAS -->
-<section id="faq">
+<!-- COMUNIDAD BETA -->
+<section style="padding-top:0">
   <div class="wrap">
-    <span class="kicker">Preguntas</span>
-    <h2>Lo que más nos preguntan</h2>
+    <div class="beta rv">
+      <div>
+        <span class="eyebrow">Prueba cerrada en Google Play</span>
+        <h2 class="h2">Entra a la beta en 3 pasos.</h2>
+        <p class="sub">Estamos abriendo Checa con un grupo de conductores. Tus comentarios deciden lo que sigue.</p>
+      </div>
+      <ol>
+        <li><div><b>Regístrate con tu Gmail</b><span>Toma 30 segundos.</span></div></li>
+        <li><div><b>Únete a la comunidad de WhatsApp</b><span>Ahí te avisamos y te ayudamos.</span></div></li>
+        <li><div><b>Descárgala desde Google Play</b><span>Con el acceso que te damos.</span></div></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- PREGUNTAS -->
+<section id="preguntas" style="padding-top:0">
+  <div class="wrap">
+    <div class="head c rv">
+      <span class="eyebrow">Preguntas</span>
+      <h2 class="h2">Lo que más nos preguntan.</h2>
+    </div>
     <div class="faq">
-      <details><summary>¿Me pueden bloquear la cuenta?</summary><div><p>Checa solo lee la pantalla. No toca botones, no acepta viajes por ti y no modifica Uber ni DiDi. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></div></details>
-      <details><summary>¿Qué tan fácil es instalarla?</summary><div><p>Toma unos 2 minutos. Al descargar, una guía te lleva paso a paso y, si algo se atora, te ayudamos por WhatsApp.</p></div></details>
-      <details><summary>¿Por qué no está en Play Store?</summary><div><p>Todavía no. Por ahora se instala como archivo APK desde esta página. Play Protect muestra un aviso porque Checa usa Accesibilidad para leer la oferta, y la guía te dice qué tocar.</p></div></details>
-      <details><summary>¿Funciona en tablet?</summary><div><p>Sí. Con pantalla dividida ves un pop-up por app y la etiqueta <span class="mejor">Mejor</span> marca la mejor oferta (Estratega y Pro).</p></div></details>
-      <details><summary>¿Hasta cuándo es gratis?</summary><div><p>Hasta el 31 de enero de 2027, con todo incluido y sin tarjeta. Después eliges un paquete dentro de la app. Las primeras 50 cuentas de Google registradas en la beta tienen precio de fundador (40 % menos de por vida); si ya se ocuparon los lugares, se paga el precio normal. Si no pagas, Checa deja de mostrar el pop-up y no se te cobra nada.</p></div></details>
-      <details><summary>¿Y si no me funciona?</summary><div><p>Tienes la garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero durante los primeros 7 días. Los detalles están en «Términos y reembolsos», al final de la página.</p></div></details>
+      <details><summary>¿Me pueden bloquear la cuenta?</summary><p>Checa solo lee la pantalla. No toca botones, no acepta viajes por ti y no modifica Uber ni DiDi. Cada plataforma tiene sus propios términos y no podemos hablar por ellas.</p></details>
+      <details><summary>¿Cómo la descargo?</summary><p>Checa está en prueba cerrada de Google Play. Te registras con tu Gmail, te damos acceso y la instalas desde la tienda, como cualquier app.</p></details>
+      <details><summary>¿Necesita internet?</summary><p>Para leer las ofertas no. Solo usa internet para tu cuenta y tu licencia.</p></details>
+      <details><summary>¿Funciona en tablet?</summary><p>Sí. Con pantalla dividida ves un aviso por app y la etiqueta «Mejor» marca la mejor oferta (Estratega y Pro).</p></details>
+      <details><summary>¿Hasta cuándo es gratis?</summary><p>Hasta el 31 de enero de 2027, con todo incluido y sin tarjeta. Si después no pagas, Checa deja de mostrar el aviso y no se te cobra nada.</p></details>
+      <details><summary>¿Y si no me funciona?</summary><p>Tienes 7 días de garantía de lectura: si pagas y Checa no lee las ofertas en tu teléfono, te devolvemos tu dinero.</p></details>
     </div>
   </div>
 </section>
 
-<!-- 7. CIERRE -->
-<div class="raya" aria-hidden="true"><svg viewBox="0 0 1000 64" preserveAspectRatio="none"><path d="M0 52C200 52 300 32 500 32C700 32 800 12 1000 12"/></svg><i></i></div>
-
-<section class="section-alt final">
+<!-- CIERRE -->
+<section class="final">
   <div class="wrap">
-    <h2>Tu próxima oferta, con la cuenta hecha.</h2>
-    <p class="lead">Descarga Checa, actívala en 2 minutos y mírala trabajar en tu siguiente viaje.</p>
-    <div class="ctas"><a class="btn btn-primary btn-big" href="registro/?utm_source=web&utm_campaign=cierre" data-dl="cierre">Probar Checa en Google Play</a></div>
-    <p class="dl-meta" data-fijo>Solo Android 8 o superior · Sin tarjeta</p>
+    <div class="road" aria-hidden="true"></div>
+    <span class="eyebrow">Gratis hasta el 31 de enero</span>
+    <h2>Tu próxima oferta,<br>con la cuenta hecha.</h2>
+    <p class="sub" style="margin:0 auto">Regístrate, instálala en 2 minutos y mírala trabajar en tu siguiente viaje.</p>
+    <div class="ctas"><a class="btn btn-p" href="registro/?utm_source=web&utm_campaign=cierre" data-dl="cierre"><svg viewBox="0 0 24 24"><path d="M5 3.5v17l14-8.5z"/></svg>Probar en Google Play</a></div>
   </div>
 </section>
 
 </main>
 
-<div class="sticky-cta" id="sticky-cta">
-  <a class="btn btn-primary" href="registro/?utm_source=web&utm_campaign=fijo" data-dl="fijo">Probar Checa en Google Play</a>
-</div>
-
 <footer>
   <div class="wrap">
-    <nav class="flinks legal-links" aria-label="Legal"><a href="privacidad.html">Privacidad</a><a href="terminos.html">Términos y reembolsos</a></nav>
-    <p>© <span id="year">2026</span> Checa. Proyecto independiente. No afiliado a Uber ni a DiDi; sus nombres son marcas de sus dueños. Pagos de la versión descargable procesados por Mercado Pago; las suscripciones de Google Play se procesarán mediante Google Play.</p>
+    <div class="fg">
+      <div>
+        <a class="brand" href="#"><svg viewBox="0 0 60 100" aria-hidden="true"><rect x="6" y="2" width="48" height="96" rx="20" fill="#222826" stroke="#3A423F" stroke-width="3"/><circle cx="30" cy="26" r="9" fill="#3A1414"/><circle cx="30" cy="50" r="9" fill="#3A3210"/><circle cx="30" cy="74" r="12" fill="#22C55E"/><path d="M24 74.5l4.5 4.5L36.5 69" fill="none" stroke="#04210F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>Checa</a>
+        <p style="margin-top:14px;max-width:24em">Checa cuánto te queda. Para conductores de Uber y DiDi en Android.</p>
+      </div>
+      <div><h4>Producto</h4><ul><li><a href="#funciones">Funciones</a></li><li><a href="#como">Cómo funciona</a></li><li><a href="#precios">Precios</a></li><li><a href="#preguntas">Preguntas</a></li></ul></div>
+      <div><h4>Legal</h4><ul><li><a href="privacidad.html">Privacidad</a></li><li><a href="terminos.html">Términos y reembolsos</a></li><li><a href="eliminar-cuenta.html">Eliminar cuenta</a></li></ul></div>
+    </div>
+    <p class="legal">© 2026 Checa. Proyecto independiente, no afiliado a Uber ni a DiDi; sus nombres son marcas de sus dueños. Los números de esta página son de ejemplo.</p>
   </div>
 </footer>
 
-<script src="app.js" defer></script>
+<div class="sticky" id="sticky"><a class="btn btn-p" href="registro/?utm_source=web&utm_campaign=fijo" data-dl="fijo">Probar gratis en Google Play</a></div>
+
+<script>
+(function(){
+  'use strict';
+  // Ofertas de ejemplo. km y min totales = recogida + viaje (igual que la app).
+  var OF=[{f:120,pk:1.5,pm:4,tk:10,tm:18},{f:95,pk:2.5,pm:7,tk:13,tm:20},{f:62,pk:4.5,pm:11,tk:6,tm:19}];
+  var LB={g:'ACEPTAR',y:'CONSIDERAR',r:'RECHAZAR'}, VOZ={g:'«Aceptar»',y:'«Considerar»',r:'«Rechazar»'};
+  var S={km:8,h:150,gas:24,kml:12};
+  function $(n){return '$'+Math.round(n).toLocaleString('es-MX');}
+  function d(n){return (Math.round(n*10)/10).toLocaleString('es-MX');}
+  function ev(o){var km=o.pk+o.tk,mn=o.pm+o.tm,pk=o.f/km,ph=o.f/mn*60,gas=km/S.kml*S.gas,a=pk>=S.km,b=ph>=S.h;
+    return{km:km,pk:pk,ph:ph,gas:gas,net:o.f-gas,a:a,b:b,c:a&&b?'g':(a||b?'y':'r')};}
+  function draw(el,o){var r=ev(o);el.setAttribute('data-c',r.c);
+    el.innerHTML='<div class="pop-band">'+LB[r.c]+'</div><div class="pop-body"><div class="pop-lbl">Te quedan</div><div class="pop-net">'+$(r.net)+'</div>'+
+    '<div class="pop-sub">Viaje '+$(o.f)+' · Gasolina −'+$(r.gas)+'</div><div class="chips"><div class="chip '+(r.b?'ok':'no')+'">'+$(r.ph)+'/h</div>'+
+    '<div class="chip '+(r.a?'ok':'no')+'">$'+d(r.pk)+'/km</div><div class="chip">'+d(r.km)+' km total</div></div></div>';
+    el.setAttribute('aria-label','Checa dice '+LB[r.c]+': te quedan '+$(r.net)+' netos (números de ejemplo)');return r;}
+  function offer(el,o){el.innerHTML='<div class="t"><span>Nuevo viaje</span><span>⚡ 1.2x</span></div><b>'+$(o.f)+'</b>'+
+    '<div class="row"><i></i>Recogida · '+o.pm+' min ('+d(o.pk)+' km)</div><div class="row"><i class="f"></i>Viaje · '+o.tm+' min ('+d(o.tk)+' km)</div><div class="acc"></div>';}
+
+  var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hp=document.getElementById('hero-pop'),ho=document.getElementById('hero-offer'),say=document.getElementById('say'),i=0;
+  function hero(){var r=draw(hp,OF[i]);offer(ho,OF[i]);say.textContent=VOZ[r.c];}
+  hero();
+  if(!still)setInterval(function(){hp.classList.add('out');setTimeout(function(){i=(i+1)%OF.length;hero();hp.classList.remove('out');},350);},4000);
+
+  // Demo
+  var dp=document.getElementById('demo-pop'),pk=document.getElementById('picks'),cur=0,btns=[];
+  OF.forEach(function(o,n){var b=document.createElement('button');b.type='button';b.className='pick';
+    b.innerHTML='<b>'+$(o.f)+'</b><span>Recogida '+d(o.pk)+' km · '+o.pm+' min<br>Viaje '+d(o.tk)+' km · '+o.tm+' min</span>';
+    b.addEventListener('click',function(){cur=n;demo();});pk.appendChild(b);btns.push(b);});
+  function demo(){draw(dp,OF[cur]);btns.forEach(function(b,n){b.setAttribute('aria-pressed',n===cur?'true':'false');});}
+  [['r-h','h','o-h',function(v){return '$'+v+'/h';}],['r-km','km','o-km',function(v){return '$'+d(v)+'/km';}],['r-gas','gas','o-gas',function(v){return '$'+d(v)+'/l';}]].forEach(function(a){
+    var el=document.getElementById(a[0]),out=document.getElementById(a[2]);
+    function u(){S[a[1]]=parseFloat(el.value);out.textContent=a[3](S[a[1]]);demo();}
+    el.addEventListener('input',u);u();});
+
+  // Medición de clics a registro/descarga
+  document.querySelectorAll('[data-dl]').forEach(function(a){a.addEventListener('click',function(){if(window.checaTrack)try{window.checaTrack('clic_descargar',{desde:a.getAttribute('data-dl')});}catch(e){}});});
+  // Navegación, CTA fijo y aparición
+  var nav=document.getElementById('nav'),st=document.getElementById('sticky');
+  function sc(){var y=window.scrollY;nav.classList.toggle('on',y>8);st.classList.toggle('on',y>620&&(innerHeight+y)<document.body.scrollHeight-260);}
+  addEventListener('scroll',sc,{passive:true});sc();
+  var rv=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window&&!still){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{rootMargin:'0px 0px -8% 0px'});rv.forEach(function(e){io.observe(e);});}
+  else rv.forEach(function(e){e.classList.add('in');});
+})();
+</script>
 </body>
 </html>
