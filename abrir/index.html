@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Abrir en Chrome · Checa</title>
+<meta name="theme-color" content="#0C0C10">
+<link rel="icon" href="../marca/icono-app.svg" type="image/svg+xml">
+<link rel="preload" href="../fonts/bricolage-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/dmsans.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Bricolage Grotesque';font-weight:800;font-display:swap;src:url(../fonts/bricolage-800.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-weight:400 700;font-display:swap;src:url(../fonts/dmsans.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:500 700;font-display:swap;src:url(../fonts/jetbrains.woff2) format('woff2')}
+:root{--asfalto:#0C0C10;--tablero:#16161C;--hueso:#F4F4EF;--gris:#9A9AA6;--humo:#2A2A33;--verde:#22C55E;--neon:#3DFF8F;--amarillo:#FACC15;--rojo:#EF4444;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--asfalto);color:var(--hueso);font:400 16px/1.5 'DM Sans',system-ui,sans-serif;display:flex;justify-content:center;padding:32px 20px 40px}
+main{width:100%;max-width:420px;display:flex;flex-direction:column;gap:18px}
+h1{font:800 clamp(28px,8vw,34px)/1.08 'Bricolage Grotesque','Arial Black',sans-serif;margin:8px 0 0;text-wrap:balance}
+p{margin:0;color:var(--gris);font-size:15px}
+.sem{display:flex;gap:16px}
+.luces{display:flex;flex-direction:column;gap:10px;background:var(--tablero);border:1px solid var(--humo);border-radius:20px;padding:12px;align-self:flex-start}
+.luz{width:30px;height:30px;border-radius:50%;background:var(--humo);transition:background .3s,box-shadow .3s}
+.est-rojo .r{background:var(--rojo);box-shadow:0 0 16px var(--rojo)}
+.est-amarillo .a{background:var(--amarillo);box-shadow:0 0 16px var(--amarillo)}
+.est-verde .v{background:var(--verde);box-shadow:0 0 16px var(--verde)}
+.pasos{display:flex;flex-direction:column;gap:12px;min-width:0}
+.paso{font-size:14px;color:var(--gris);opacity:.55;transition:opacity .3s,color .3s}
+.paso b{display:block;color:var(--hueso);font:800 16px 'Bricolage Grotesque','Arial Black',sans-serif}
+.est-rojo .p1,.est-amarillo .p2,.est-verde .p3{opacity:1;color:var(--hueso)}
+.btn{display:flex;align-items:center;justify-content:center;min-height:56px;border:0;border-radius:999px;background:var(--neon);color:#04210F;font:800 15px 'DM Sans',sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 24px rgba(61,255,143,.3);width:100%}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,.copiar:focus-visible{outline:3px solid var(--amarillo);outline-offset:3px}
+.copiar{background:none;border:1px solid var(--humo);color:var(--hueso);border-radius:999px;min-height:48px;font:500 14px 'DM Sans',sans-serif;cursor:pointer;width:100%}
+.nota{font:500 12px/1.6 'JetBrains Mono',ui-monospace,monospace;color:var(--gris)}
+.nota b{color:var(--hueso);font-weight:500}
+.franja{height:10px;background:repeating-linear-gradient(90deg,var(--amarillo) 0 28px,transparent 28px 56px);margin-top:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="app" class="est-rojo">
+  <h1>Estás en el navegador equivocado</h1>
+  <div class="sem">
+    <div class="luces" aria-hidden="true"><span class="luz r"></span><span class="luz a"></span><span class="luz v"></span></div>
+    <div class="pasos" aria-live="polite">
+      <div class="paso p1"><b>Rojo</b>Este navegador no te deja unirte al grupo.</div>
+      <div class="paso p2"><b>Amarillo</b>Abriendo Chrome…</div>
+      <div class="paso p3"><b>Verde</b>Chrome abre el grupo de testers.</div>
+    </div>
+  </div>
+  <button class="btn" type="button" id="abrir">Abrir en Chrome →</button>
+  <button class="copiar" type="button" id="copiar">Copiar enlace del grupo</button>
+  <p class="nota" id="nota">¿No abrió? Toca <b>⋮</b> y elige <b>«Abrir en el navegador»</b>, o copia el enlace y pégalo en Chrome.</p>
+  <div class="franja" aria-hidden="true"></div>
+</main>
+<script>
+(function(){
+  var GRUPO='https://groups.google.com/g/checa-test';
+  var ua=navigator.userAgent||'';
+  var android=/Android/i.test(ua), ios=/iPhone|iPad|iPod/i.test(ua);
+  var interno=/FBAN|FBAV|Instagram|TikTok|musical_ly|BytedanceWebview|Line\/|Snapchat|Twitter|; wv\)/i.test(ua);
+  var app=document.getElementById('app');
+  function estado(e){app.className='est-'+e}
+  function destino(){
+    if(android) return 'intent://groups.google.com/g/checa-test#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(GRUPO)+';end';
+    if(ios) return 'googlechromes://groups.google.com/g/checa-test';
+    return GRUPO;
+  }
+  function abrir(){
+    estado('amarillo');
+    try{window.checaTrack&&window.checaTrack('abrir_chrome',{desde:interno?'interno':'normal'})}catch(e){}
+    window.location.href=destino();
+  }
+  // Si Chrome se abre, esta página pasa a segundo plano.
+  document.addEventListener('visibilitychange',function(){if(document.hidden)estado('verde')});
+  window.addEventListener('pagehide',function(){estado('verde')});
+  document.getElementById('abrir').addEventListener('click',abrir);
+  document.getElementById('copiar').addEventListener('click',function(){
+    var b=this;
+    function listo(){b.textContent='✓ Enlace copiado: pégalo en Chrome'}
+    try{navigator.clipboard.writeText(GRUPO).then(listo,function(){window.prompt('Copia este enlace',GRUPO)})}
+    catch(e){window.prompt('Copia este enlace',GRUPO)}
+  });
+  if(!interno){ window.location.replace(GRUPO); return; }   // ya está en un navegador normal
+  setTimeout(abrir,900);                                      // en el navegador de una app, intenta salir solo
+})();
+</script>
+</body>
+</html>
