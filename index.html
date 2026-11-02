@@ -234,6 +234,19 @@ input[type=range]{width:100%;accent-color:var(--hueso);height:28px}
 .tc p{color:var(--gris-texto);font-size:.94rem}
 .tc.hl{border-color:var(--hueso)}
 
+/* Casos de uso */
+.cases{display:grid;gap:18px}
+@media(min-width:960px){.cases{grid-template-columns:repeat(3,1fr)}}
+.case{border:1px solid var(--borde);border-radius:var(--radio-tarjeta);padding:28px;background:var(--tablero);display:flex;flex-direction:column;gap:12px}
+.case .k{font:700 .7rem/1 var(--fuente-datos);letter-spacing:.12em;text-transform:uppercase;color:var(--gris-texto)}
+.case h3{font-size:1.45rem;letter-spacing:-.035em;line-height:1.05}
+.case p{color:var(--gris-texto);font-size:.96rem}
+.case .viz{margin-top:auto;padding-top:14px}
+.mp.r .bd{background:var(--rechazar);color:var(--texto-sobre-rechazar)}
+.why{display:inline-block;margin-top:6px;font:700 .62rem/1 var(--fuente-datos);border:1px solid var(--rechazar);color:var(--hueso);background:#3A1414;padding:4px 8px;border-radius:999px;letter-spacing:.04em}
+.case .out{margin-top:12px;font:700 .8rem/1.4 var(--fuente-datos);color:var(--hueso)}
+.case .out span{color:var(--gris-texto);font-weight:500}
+
 /* Precios */
 .plans{display:grid;gap:18px;align-items:stretch}
 @media(min-width:960px){.plans{grid-template-columns:repeat(3,1fr)}}
@@ -514,6 +527,41 @@ footer{border-top:1px solid var(--borde);padding:56px 0 36px;color:var(--gris-te
       <div class="tc rv"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Solo en Uber y DiDi</h3><p>Si otra app se queja, pausas el lector con un toque.</p></div>
       <div class="tc hl rv"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></div><h3>Garantía de 7 días</h3><p>Si pagas y no lee las ofertas en tu teléfono, te devolvemos tu dinero.</p></div>
     </div>
+  </div>
+</section>
+
+<!-- CASOS DE USO (números de ejemplo, no son clientes) -->
+<section id="casos" style="padding-top:0">
+  <div class="wrap">
+    <div class="head rv">
+      <span class="eyebrow">Casos de uso</span>
+      <h2 class="h2">Así te ayuda en tu día.</h2>
+      <p class="sub">Tres situaciones de todos los días y lo que Checa te dice en cada una.</p>
+    </div>
+    <div class="cases">
+      <div class="case rv">
+        <span class="k">Recogida lejana</span>
+        <h3>Te mandan lejos por el pasajero</h3>
+        <p>La tarifa se ve bien, pero son 4.5 km solo para llegar. Si pasa tu recogida máxima, Checa lo manda a rojo y te dice por qué.</p>
+        <div class="viz"><div class="mp r"><div class="bd">RECHAZAR</div><div class="bb"><b>$49</b><span>Viaje $70 · Gasolina −$21</span><br><span class="why">Recogida 4.5 km</span></div></div></div>
+      </div>
+      <div class="case rv">
+        <span class="k">Tablet con las dos apps</span>
+        <h3>La tarifa más alta no siempre gana</h3>
+        <p>Llegan dos ofertas juntas. La de $88 es más larga; la de $76 te deja más y en menos tiempo. Checa marca la mejor.</p>
+        <div class="viz duo">
+          <div class="mp y"><div class="bd">CONSIDERAR</div><div class="bb"><b>$56</b><span>Viaje $88 · $182/h</span></div></div>
+          <div class="mp best"><div class="bd">ACEPTAR</div><div class="bb"><b>$60</b><span>Viaje $76 · $253/h</span><br><span class="star">★ Mejor</span></div></div>
+        </div>
+      </div>
+      <div class="case rv">
+        <span class="k">Hora pico</span>
+        <h3>Llega una con ⚡ 1.6x</h3>
+        <p>Con la tarifa dinámica, Checa te confirma en un segundo que sí vale la pena, sin hacer la cuenta en la cabeza.</p>
+        <div class="viz"><div class="mp"><div class="bd">ACEPTAR</div><div class="bb"><b>$119</b><span>Viaje $145 · Gasolina −$26</span></div></div><p class="out">$348/h · $11/km <span>· 13.2 km total</span></p></div>
+      </div>
+    </div>
+    <p class="note">Números de ejemplo · 12 km/l, $24/l, metas $150/h y $8/km, recogida máx. 3 km</p>
   </div>
 </section>
 
