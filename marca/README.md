@@ -11,3 +11,13 @@ Aprobada el 17 oct 2026. Ya se aplica a la web (17 oct 2026); aún no a la app.
 - **PNG:** `png/icono-32|180|192|512.png`, generados de `icono-app.svg`.
 - **Láminas de diseño (reglas del logo, tipografía, voz, recursos, plantillas, subtítulos, movimiento, pop-up, marcas ajenas, material de venta y tarjeta de marca):** en el artifact «Checa: identidad de marca».
 - **Sonido:** carpeta `sonido/` con los efectos oficiales (aprobados el 17 oct 2026): logo y aceptar con campanas, y considerar, rechazar, pop-up, número y sello del «tablero del auto». Sintetizados con `generar_sonidos.py`. Reglas en `sonido/README.md`.
+
+## Posicionamiento y mensajes (nov 2026)
+- **Emoción:** tranquilidad económica a través del control. No se venden funciones; se vende la transformación (antes: incertidumbre al aceptar viajes; después: información para decidir y control de la jornada).
+- **Eslogan:** «Tu trabajo vale. Asegúrate de que cada viaje también.»
+- **Promesa:** Trabaja con más control. Decide con información. Cuida lo que ganas.
+- **Pilares:** tranquilidad · control · seguridad económica · libertad.
+- **Mensajes prioritarios:** «Facturar no es lo mismo que ganar» · «No aceptes viajes a ciegas» · «Tu tiempo también cuesta» · «Tú decides qué viajes merecen la pena» · «Trabaja con números, no con suposiciones».
+- **Tono:** directo, cercano al lenguaje de los conductores, práctico, transparente; sin prometer ganancias garantizadas.
+- **Planes:** Básico $119 (30 d) · Estratega $589 (180 d, el que se impulsa) · Pro $1,059 (365 d).
+- Detalle completo: `marketing/plan/identidad-comercial.md` en el repo `jeal1498/APK-CHECA`.
