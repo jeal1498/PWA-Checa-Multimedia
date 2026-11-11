@@ -25,10 +25,11 @@
 </div></header>
 <main class="wrap legal">
 <h1>Aviso de privacidad</h1>
-<p class="muted">Última actualización: 4 de noviembre de 2026</p>
+<p class="muted">Última actualización: 11 de noviembre de 2026</p>
 <h2>Qué datos usa Checa</h2>
 <ul>
-<li><strong>Ofertas de viaje en pantalla.</strong> Con el servicio de Accesibilidad y la captura de pantalla de Android, Checa lee la oferta (tarifa, distancias, tiempos) para calcular $/km, $/hora y ganancia neta. Esta lectura se hace <strong>100 % en tu teléfono, sin internet</strong>. Las ofertas leídas y tu historial de ofertas no se envían a ningún servidor ni se comparten con terceros.</li>
+<li><strong>Ofertas de viaje en pantalla.</strong> Con el servicio de Accesibilidad y la captura de pantalla de Android, Checa lee la oferta (tarifa, distancias, tiempos) para calcular $/km, $/hora y ganancia neta. La lectura se hace <strong>en tu teléfono</strong> y el pop-up sale sin esperar a internet. Las capturas de pantalla y tu historial de ofertas no se envían a ningún servidor.</li>
+<li><strong>Verificación de la lectura.</strong> Si iniciaste sesión, para verificar que la lectura de cada oferta sea correcta Checa envía a nuestro servidor solo el monto, los minutos y los kilómetros de la oferta (nunca direcciones, nombres ni datos del pasajero), junto con la versión de la app. Si la verificación no coincide, guardamos ese caso para mejorar el lector. También guardamos cuántas ofertas recibiste por día y cuánto tardó la verificación, sin el detalle de cada viaje. Estos datos se borran al eliminar tu cuenta. Un proveedor de procesamiento trabaja con ellos solo por cuenta de Checa.</li>
 <li><strong>Cuenta.</strong> Inicias sesión con tu cuenta de Google. Al hacerlo, Google comparte con nuestro servicio de autenticación (Supabase) los datos básicos de tu perfil, como tu correo y, si tu cuenta los tiene, tu nombre. Usamos tu correo para identificar tu cuenta y tu paquete.</li>
 <li><strong>Paquete y equipos.</strong> Consultamos el estado de tu licencia y guardamos el correo, un código de cada equipo vinculado (derivado de un identificador del dispositivo; no es tu número de teléfono), su marca y modelo, el nombre que tú le pongas y la fecha de último uso para aplicar el límite de dispositivos.</li>
 <li><strong>Viajes que marcas como aceptados («Mi día»).</strong> Si inicias sesión, los viajes que tú marcas como aceptados (app, fecha y hora, tarifa, km, gasolina y ganancia neta) se guardan en Supabase para sumar tu día y tu semana en tus equipos y en Clientela. Sin cuenta, se quedan solo en el teléfono.</li>
@@ -42,7 +43,7 @@
 <li><strong>Datos técnicos del reconocimiento de texto.</strong> Checa usa ML Kit, un componente de Google, para reconocer el texto de las ofertas; el reconocimiento se ejecuta en tu teléfono. Según la documentación de Google, ML Kit puede enviar a Google datos técnicos de diagnóstico y uso (como marca y modelo del equipo, versión de Android y de la app, identificadores por instalación, métricas de rendimiento y códigos de error), cifrados en tránsito, y no los transfiere a terceros.</li>
 </ul>
 <h2>Permiso de Accesibilidad y captura de pantalla</h2>
-<p>Cuando activas el lector, Checa usa el servicio de Accesibilidad para leer el texto visible de las ofertas dentro de Uber y DiDi y reconocer la tarifa, la distancia y el tiempo. El contenido se procesa en el teléfono para calcular los resultados; Checa no lo envía a sus servidores ni lo comparte con terceros. Para iniciar la lectura de pantalla, también debes tocar «Iniciar lectura» y aceptar el aviso del sistema Android. Mientras la lectura está activa, la captura de pantalla analiza en el teléfono todo lo que se muestra en la pantalla, no solo Uber o DiDi, para encontrar ofertas; lo que no es una oferta se descarta y nada se envía a ningún servidor. Si activas «Guardar pantallas de ofertas», los datos de diagnóstico se guardan únicamente en el teléfono durante un máximo de 7 días y pueden incluir información personal visible en la pantalla. Puedes desactivar esta opción y borrar esos datos desde la app. Checa no acepta ni rechaza viajes por ti.</p>
+<p>Cuando activas el lector, Checa usa el servicio de Accesibilidad para leer el texto visible de las ofertas dentro de Uber y DiDi y reconocer la tarifa, la distancia y el tiempo. El contenido se procesa en el teléfono para calcular los resultados; a nuestro servidor solo van los números de la oferta descritos en «Verificación de la lectura». Para iniciar la lectura de pantalla, también debes tocar «Iniciar lectura» y aceptar el aviso del sistema Android. Mientras la lectura está activa, la captura de pantalla analiza en el teléfono todo lo que se muestra en la pantalla, no solo Uber o DiDi, para encontrar ofertas; lo que no es una oferta se descarta y no se envía a ningún servidor. Si activas «Guardar pantallas de ofertas», los datos de diagnóstico se guardan únicamente en el teléfono durante un máximo de 7 días y pueden incluir información personal visible en la pantalla. Puedes desactivar esta opción y borrar esos datos desde la app. Checa no acepta ni rechaza viajes por ti.</p>
 <h2>Esta página web</h2>
 <p>Para saber qué funciona en la página, anotamos de forma anónima las visitas y los botones que se tocan (por ejemplo, Descargar), el tipo de equipo (Android, iPhone o computadora) y el sitio desde donde llegaste. No usamos cookies ni guardamos tu nombre, correo o dirección IP en esa anotación.</p>
 <h2>Registro en la beta</h2>
@@ -53,7 +54,7 @@
 <ul>
 <li>No lee tus mensajes, contraseñas ni datos bancarios.</li>
 <li>No toca botones ni acepta o rechaza viajes por ti.</li>
-<li>No vendemos datos personales ni compartimos ofertas de viaje. Los datos de cuenta, ajustes, resumen de Mejores horas, viajes aceptados y contactos SOS se procesan en Supabase solo para tu cuenta; nadie más los ve.</li>
+<li>No vendemos datos personales ni compartimos ofertas de viaje. Los datos de cuenta, ajustes, resumen de Mejores horas, viajes aceptados, contactos SOS y la verificación de la lectura se procesan en Supabase solo para tu cuenta; nadie más los ve.</li>
 </ul>
 <p>Si una app de banco se bloquea, puedes pausar el lector en Checa: Ajustes → Apps de banco → Pausar lector.</p>
 <h2>Tus derechos</h2>
