@@ -1,0 +1,2 @@
+// Llave pública «anon» del proyecto (la misma que usa la web y la app). NUNCA pongas aquí la llave service_role.
+window.CHECA_CONFIG = { url: "https://gqsadclvftkzwrihfipz.supabase.co", anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxc2FkY2x2ZnRrendyaWhmaXB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NDY5NTEsImV4cCI6MjEwNzMyMjk1MX0.yLcJBXuE8kz_PXiUpCL_7ArDoINhce6NbbsBo2NMQTc" };
