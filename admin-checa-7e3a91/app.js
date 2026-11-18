@@ -322,8 +322,50 @@
   var VEREDICTOS = ["", "referencia_doble", "referencia_adjudicada", "referencia_humana", "conflicto_humano", "solo_ia", "heredado_no_revisado", "sin_veredicto"];
   function valor(id) { return F[id] ? F[id] : null; }
 
+  // ---------- Errores: tarjetas con la comparación a la vista ----------
+  var VER_ET = { solo_ia: ["SOLO IA", "aviso"], conflicto_humano: ["CONFLICTO", "mal"], referencia_doble: ["CON REFERENCIA", "ok"], referencia_adjudicada: ["CON REFERENCIA", "ok"],
+                 referencia_humana: ["CON REFERENCIA", "ok"], heredado_no_revisado: ["HEREDADO", "nd"], sin_veredicto: ["SIN VEREDICTO", "nd"] };
+  var CHIPS = [["", "Todos"], ["solo_ia", "Solo IA"], ["conflicto_humano", "Conflicto"], ["referencia_humana", "Con referencia"]];
+  function etiquetaVeredicto(v) { var x = VER_ET[v] || [v ? String(v).toUpperCase() : "SIN DATO", "nd"]; return el("span", { clase: "vb " + x[1], texto: x[0] }); }
+  function tkm(l) { return [l.tarifa === null || l.tarifa === undefined ? "—" : "$" + l.tarifa, l.km === null || l.km === undefined ? "—" : l.km + " km", l.min === null || l.min === undefined ? "—" : l.min + "'"]; }
+  function clave3(l) { return [l.tarifa, l.km, l.min].map(txt).join("|"); }
+  // Qué casillas no coinciden: con referencia humana, lo que se aparta de ella; sin ella, lector contra IA.
+  function marcas(lec, ia, hu) {
+    var L = clave3(lec), I = ia.oferta === false ? "no_oferta" : clave3(ia);
+    if (hu) { var H = clave3(hu); return { l: L !== H, i: I !== H, h: L !== H && I !== H }; }
+    return { l: L !== I, i: L !== I, h: false };
+  }
+  function casilla(titulo, lineas, marca) { return el("div", { clase: "casilla" + (marca ? " dif" : "") }, [el("small", { texto: titulo })].concat(lineas.map(function (t) { return el("div", { texto: t }); }))); }
+  function comparar3(lec, ia, hu) {
+    var m = marcas(lec, ia, hu);
+    return el("div", { clase: "comp3", id: "comparar" }, [
+      casilla("Lector", tkm(lec), m.l),
+      casilla("IA", ia.oferta === false ? ["no era oferta"] : tkm(ia), m.i),
+      casilla("Humano", hu ? (hu.clase && hu.tarifa === undefined ? [hu.clase] : tkm(hu)) : ["sin referencia"], m.h)]);
+  }
+  function tarjetaError(f) {
+    var lec = f.lector_lectura || {}, ia = f.ia_lectura || {}, hu = f.referencia || null;
+    var m = marcas(lec, ia, hu);
+    function una(t, l) { return l; }
+    return el("article", { clase: "error-tarjeta", "data-id": String(f.id) }, [
+      el("div", { clase: "error-cab" }, [el("a", { href: "#errores/" + f.id, clase: "enlace", texto: "#" + f.id, onclick: function (ev) {
+          if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ev.preventDefault(); ir("errores", String(f.id)); return; }
+          ev.preventDefault(); var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
+          document.querySelectorAll(".error-tarjeta.sel").forEach(function (x) { x.classList.remove("sel"); }); ev.target.closest(".error-tarjeta").classList.add("sel");
+          expediente(l, f.id); l.scrollTop = 0; } }),
+        el("span", { clase: "detalle", texto: txt(f.tipo) + " · " + txt(f.app) + " " + txt(f.version) }), el("span", { clase: "detalle fecha", texto: (f.creado || "").slice(0, 16).replace("T", " ") })]),
+      comparar3(lec, ia, hu),
+      el("div", { clase: "error-pie" }, [etiquetaVeredicto(f.estado_veredicto), el("span", { clase: "detalle", texto: f.tiene_captura ? "con captura" : "sin captura" })])]);
+  }
+  function pasosSeg(estado) {
+    var k = ESTADOS_SEG.indexOf(estado);
+    return el("div", { clase: "pasos-seg", role: "img", "aria-label": "Seguimiento: " + String(estado).replace(/_/g, " ") + ", paso " + (k + 1) + " de " + ESTADOS_SEG.length },
+      ESTADOS_SEG.map(function (s, i) { return el("i", { clase: i <= k ? "hecho" : "" }); }));
+  }
   async function errores(c) {
     if (param) return expediente(c, Number(param));
+    c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Veredicto" }, CHIPS.map(function (ch) {
+      return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-estado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-estado"] = ch[0]; pag.errores = 1; pintar(); } }); })));
     c.appendChild(filtrosBase([opciones("f-tipo", "Tipo", ["", "diferencia", "rescate", "desacuerdo", "reporte"]), opciones("f-estado", "Veredicto", VEREDICTOS)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_errores", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
@@ -332,34 +374,26 @@
     if (!d) return;
     var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle del error", hidden: "" });
     var dividido = el("div", { clase: "dividido" }, [lista, lado]); c.appendChild(dividido); var cpad = c; c = lista;
-    c.appendChild(tabla([["Error", function (f) { return el("a", { href: "#errores/" + f.id, clase: "enlace", texto: "#" + f.id, onclick: function (ev) {
-        if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ev.preventDefault(); ir("errores", String(f.id)); return; }
-        ev.preventDefault(); var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false; expediente(l, f.id); l.scrollTop = 0; } }); }], ["Fecha", function (f) { return (f.creado || "").slice(0, 16); }],
-      ["Tipo", function (f) { return f.tipo; }], ["App", function (f) { return f.app; }],
-      ["Versión", function (f) { return enlace(txt(f.version), "versiones"); }],
-      ["Lector", function (f) { var l = f.lector_lectura || {}; return [l.tarifa, l.km, l.min].map(txt).join(" · "); }],
-      ["IA", function (f) { var l = f.ia_lectura || {}; return l.oferta === false ? "no era oferta" : [l.tarifa, l.km, l.min].map(txt).join(" · "); }],
-      ["Veredicto", function (f) { return f.estado_veredicto; }],
-      ["Referencia humana", function (f) { var x = f.referencia; return x ? [x.clase, x.tarifa, x.km, x.min].map(txt).join(" · ") : null; }],
-      ["Captura", function (f) { return f.tiene_captura ? "sí (acceso restringido)" : "no"; }]], d.filas));
+    c.appendChild(el("div", { clase: "error-lista", id: "errores-lista" }, d.filas.length ? d.filas.map(tarjetaError) : [el("div", { clase: "vacio", texto: "Sin errores con estos filtros." })]));
     c.appendChild(paginas("errores", d));
     c = cpad;
   }
   var ESTADOS_SEG = ["nuevo", "pendiente_de_revision", "en_investigacion", "causa_identificada", "corregido", "verificado", "cerrado"];
   var CAUSAS = ["", "ocr", "interpretacion", "tarjeta_equivocada", "pantalla_cambio", "ia", "dato_ambiguo", "otra"];
   async function expediente(c, id) {
-    c.appendChild(el("button", { id: "volver", texto: "‹ Errores", onclick: function () { ir("errores"); } }));
+    c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Errores", texto: "‹ Errores", onclick: function () { ir("errores"); } }));
     var e = await llamar("admin_error", { id: id });
     if (!e) return;
-    c.appendChild(el("h1", { id: "exp-titulo", texto: "Error #" + e.id + " · " + e.app + " · " + e.version }));
+    c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { id: "exp-titulo", texto: "Error #" + e.id + " · " + e.app + " · " + e.version }), (e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : null]));
     c.appendChild(el("div", { clase: "detalle", texto: "Clasificación: " + e.clasificacion + " · tipo " + e.tipo + " · conductor " + e.conductor + " · " + (e.creado || "").slice(0, 19) }));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
-    c.appendChild(el("div", { clase: "comparar", id: "comparar" }, [
-      el("div", { clase: "tarjeta" }, [el("strong", { texto: "Lector (OCR + Parser)" }), el("div", { texto: [lec.tarifa, lec.km, lec.min].map(txt).join(" · ") })]),
-      el("div", { clase: "tarjeta" }, [el("strong", { texto: "IA (revisión)" }), el("div", { texto: ia.oferta === false ? "no era oferta" : [ia.tarifa, ia.km, ia.min].map(txt).join(" · ") })]),
-      el("div", { clase: "tarjeta" }, [el("strong", { texto: "Veredicto humano" }), el("div", { texto: hu.estado || "—" }),
-        el("div", { texto: hu.clase ? [hu.clase, hu.tarifa, hu.km, hu.min].map(txt).join(" · ") : "sin referencia" })]),
-      el("div", { clase: "tarjeta" }, [el("strong", { texto: "Veredicto heredado" }), el("div", { texto: txt(e.veredicto_heredado) }), el("div", { clase: "detalle", texto: "no es verdad humana" })])]));
+    var refE = hu && hu.clase ? hu : null;
+    c.appendChild(el("h2", { texto: "Qué leyó cada quien" }));
+    c.appendChild(comparar3(lec, ia, refE));
+    var mE = marcas(lec, ia, refE);
+    if (!refE && (mE.l || mE.i)) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Lector e IA no coinciden. Falta un veredicto humano para saber cuál acierta." }));
+    else if (refE && mE.h) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Ni el lector ni la IA coinciden con la referencia humana." }));
+    c.appendChild(el("div", { clase: "detalle", texto: "Veredicto humano: " + txt(hu.estado) + " · heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
     c.appendChild(el("h2", { texto: "Evidencia original" }));
     c.appendChild(el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe") + " (" + e.evidencia.captura_acceso + ") · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }));
     var en = e.enlace;
@@ -369,17 +403,19 @@
     c.appendChild(el("h2", { texto: "Relacionados" }));
     c.appendChild(el("div", { clase: "enlaces" }, [enlace("Versión " + e.version + " (" + e.relacionados.misma_version + " errores)", "versiones"), enlace("Conductor " + e.conductor + " (" + e.relacionados.mismo_conductor + ")", "dispositivos"),
       enlace("Auditoría IA", "ia")]));
-    c.appendChild(el("h2", { texto: "Seguimiento: " + e.estado_seguimiento }));
+    c.appendChild(el("h2", { texto: "Seguimiento: " + String(e.estado_seguimiento).replace(/_/g, " ") }));
+    c.appendChild(pasosSeg(e.estado_seguimiento));
+    c.appendChild(tabla([["Fecha", function (h) { return (h.creado || "").slice(0, 19); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
+      ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía."));
     if (yo && yo.rol === "revisor") {
-      c.appendChild(el("div", { clase: "filtros", id: "seguimiento" }, [opciones("s-estado", "Estado", ESTADOS_SEG.slice(1)), opciones("s-causa", "Causa", CAUSAS),
+      c.appendChild(el("div", { clase: "filtros barra-accion", id: "seguimiento" }, [opciones("s-estado", "Estado", ESTADOS_SEG.slice(1)), opciones("s-causa", "Causa", CAUSAS),
         el("label", {}, ["Nota", el("input", { id: "s-nota", maxlength: "300", size: "30" })]),
         el("button", { id: "s-guardar", texto: "Registrar", onclick: async function () {
           var r = await llamar("admin_seguimiento", { id: id, estado: document.getElementById("s-estado").value, causa: document.getElementById("s-causa").value || null,
             nota: document.getElementById("s-nota").value || null });
           if (r) pintar(); } })]));
     } else { c.appendChild(el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })); }
-    c.appendChild(tabla([["Fecha", function (h) { return (h.creado || "").slice(0, 19); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
-      ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía."));
+
   }
 
   // ---------- 03 Ofertas ----------
