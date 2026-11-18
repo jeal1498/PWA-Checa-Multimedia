@@ -194,3 +194,24 @@ details.filtros-hoja > summary { padding:0 12px; border:1px solid var(--borde); 
   .lado:not([hidden]) { display:block; position:sticky; top:62px; max-height:calc(100vh - 80px); overflow:auto; background:var(--tablero); border:1px solid var(--borde); border-radius:14px; padding:12px 14px; }
   .lado #volver { display:none; }
 }
+
+/* ===== Inicio híbrido: triage + cadena de lectura ===== */
+.cadena { background:var(--tablero); border:1px solid var(--borde); border-radius:16px; padding:12px; margin:10px 0; }
+.cadena-cab { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.cadena-cab h2 { margin:0 0 8px; }
+.pasos { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:2px; }
+.paso { display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 0 6px; min-height:56px; border:0; background:transparent; font-size:12px; color:var(--tenue); border-radius:10px; overflow:hidden; }
+.paso .punto { width:18px; height:18px; }
+.paso.sel { background:var(--panel); color:var(--texto); font-weight:700; }
+.paso.mal .punto, .paso.aviso .punto { box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent); }
+.paso-detalle { margin-top:8px; padding-top:8px; border-top:1px dashed var(--borde); display:flex; flex-direction:column; gap:4px; }
+.paso-detalle .enlace { min-height:44px; display:flex; align-items:center; font-weight:700; }
+.tarjetas.tres { grid-template-columns:repeat(3, minmax(0,1fr)); }
+.graficas.una { grid-template-columns:1fr; margin-top:10px; }
+details.completo { margin-top:16px; border-top:1px solid var(--borde); padding-top:8px; }
+details.completo > summary { display:flex; align-items:center; min-height:48px; font-size:14px; font-weight:700; color:var(--texto); }
+details.mas-alertas > summary { display:flex; align-items:center; min-height:44px; }
+@media (max-width:760px) { .tarjetas.tres { gap:6px; } .tarjetas.tres .tarjeta { padding:8px; } .tarjetas.tres .valor { font-size:19px; } .paso { font-size:11.5px; } }
+@media (max-width:420px) { .tarjetas.tres { grid-template-columns:repeat(3, minmax(0,1fr)); } .tarjetas.tres .detalle { font-size:11px; } }
+@media (min-width:1000px) and (orientation:landscape) { .inicio-cols { display:grid; } }
+.graficas.una .svg { max-height:220px; }
