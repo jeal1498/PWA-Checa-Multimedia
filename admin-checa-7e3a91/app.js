@@ -380,6 +380,26 @@
   }
   var ESTADOS_SEG = ["nuevo", "pendiente_de_revision", "en_investigacion", "causa_identificada", "corregido", "verificado", "cerrado"];
   var CAUSAS = ["", "ocr", "interpretacion", "tarjeta_equivocada", "pantalla_cambio", "ia", "dato_ambiguo", "otra"];
+  // Captura del error: se descarga con tu sesión (el bucket sigue privado) y se muestra sin dejar enlace.
+  async function verCaptura(id, boton) {
+    var etiqueta = boton.textContent; boton.disabled = true; boton.textContent = "Cargando captura…"; aviso("");
+    var url = null;
+    try {
+      var r = await cli.storage.from("capturas").download(id + ".webp");
+      if (r.error || !r.data) { aviso(r.error && /not.?found|404|Object/i.test(String(r.error.message || r.error)) ? "La captura ya no existe." : "No se pudo cargar la captura: " + ((r.error && r.error.message) || "sin permiso")); boton.disabled = false; boton.textContent = etiqueta; return; }
+      url = URL.createObjectURL(r.data);
+    } catch (e) { aviso("No se pudo cargar la captura."); boton.disabled = false; boton.textContent = etiqueta; return; }
+    boton.disabled = false; boton.textContent = etiqueta;
+    var previo = document.activeElement;
+    function cerrar() { visor.remove(); URL.revokeObjectURL(url); document.removeEventListener("keydown", tecla); if (previo && previo.focus) previo.focus(); }
+    function tecla(ev) { if (ev.key === "Escape") cerrar(); }
+    var img = el("img", { src: url, alt: "Captura del error " + id, clase: "visor-img" });
+    img.addEventListener("click", function () { img.classList.toggle("ampliada"); });
+    var cierre = el("button", { type: "button", clase: "visor-cierre", "aria-label": "Cerrar captura", texto: "✕", onclick: cerrar });
+    var visor = el("div", { id: "visor", role: "dialog", "aria-modal": "true", "aria-label": "Captura del error " + id }, [
+      el("div", { clase: "visor-cab" }, [el("b", { texto: "Captura · Error #" + id }), el("span", { clase: "detalle", texto: "Toca la imagen para ampliar" }), cierre]), el("div", { clase: "visor-marco" }, [img])]);
+    document.body.appendChild(visor); document.addEventListener("keydown", tecla); cierre.focus();
+  }
   async function expediente(c, id) {
     c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Errores", texto: "‹ Errores", onclick: function () { ir("errores"); } }));
     var e = await llamar("admin_error", { id: id });
@@ -395,7 +415,8 @@
     else if (refE && mE.h) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Ni el lector ni la IA coinciden con la referencia humana." }));
     c.appendChild(el("div", { clase: "detalle", texto: "Veredicto humano: " + txt(hu.estado) + " · heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
     c.appendChild(el("h2", { texto: "Evidencia original" }));
-    c.appendChild(el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe") + " (" + e.evidencia.captura_acceso + ") · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }));
+    c.appendChild(el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe (se borra sola a los 7 días)") + " · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }));
+    if (e.evidencia.captura) c.appendChild(el("button", { type: "button", id: "ver-captura", clase: "ver-captura", texto: "Ver captura", onclick: function (ev) { verCaptura(e.id, ev.currentTarget); } }));
     var en = e.enlace;
     c.appendChild(el("div", { clase: "detalle", id: "enlace", texto: en
       ? "Enlace: fotograma " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · huella sha256 " + txt(en.captura_sha256)
