@@ -439,3 +439,8 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 
 .pop-extra { font:600 11px "DM Sans", system-ui, sans-serif; color:var(--tenue); overflow-wrap:anywhere; }
 .rev-nota { margin:8px 0 0; padding:6px 10px; border:1px dashed var(--borde); border-radius:10px; }
+
+/* ===== Interruptores de la IA ===== */
+.ia-fila { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--panel); } .ia-fila > div { min-width:0; }
+.ia-sw { min-height:48px; padding:0 12px; font-weight:800; } .ia-sw[aria-pressed="true"] { border-color:var(--verde); color:var(--verde); } .ia-sw[aria-pressed="false"] { border-color:var(--rojo); color:var(--rojo); }
+.ia-modo { border-top:1px dashed var(--borde); padding-top:8px; display:flex; flex-direction:column; gap:2px; }
