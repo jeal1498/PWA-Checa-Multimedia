@@ -380,18 +380,18 @@
   }
   var ESTADOS_SEG = ["nuevo", "pendiente_de_revision", "en_investigacion", "causa_identificada", "corregido", "verificado", "cerrado"];
   var CAUSAS = ["", "ocr", "interpretacion", "tarjeta_equivocada", "pantalla_cambio", "ia", "dato_ambiguo", "otra"];
-  // Captura del error: se descarga con tu sesión (el bucket sigue privado) y se muestra sin dejar enlace.
-  async function verCaptura(id, boton) {
-    var etiqueta = boton.textContent; boton.disabled = true; boton.textContent = "Cargando captura…"; aviso("");
-    var url = null;
+  // Captura del error: se descarga con tu sesión (el bucket sigue privado) y se muestra en su cuadro, sin dejar enlace.
+  async function cargarCaptura(id) {
+    aviso("");
     try {
       var r = await cli.storage.from("capturas").download(id + ".webp");
-      if (r.error || !r.data) { aviso(r.error && /not.?found|404|Object/i.test(String(r.error.message || r.error)) ? "La captura ya no existe." : "No se pudo cargar la captura: " + ((r.error && r.error.message) || "sin permiso")); boton.disabled = false; boton.textContent = etiqueta; return; }
-      url = URL.createObjectURL(r.data);
-    } catch (e) { aviso("No se pudo cargar la captura."); boton.disabled = false; boton.textContent = etiqueta; return; }
-    boton.disabled = false; boton.textContent = etiqueta;
+      if (r.error || !r.data) { aviso(r.error && /not.?found|404|Object/i.test(String(r.error.message || r.error)) ? "La captura ya no existe." : "No se pudo cargar la captura: " + ((r.error && r.error.message) || "sin permiso")); return null; }
+      return URL.createObjectURL(r.data);
+    } catch (e) { aviso("No se pudo cargar la captura."); return null; }
+  }
+  function abrirVisor(url, id) {
     var previo = document.activeElement;
-    function cerrar() { visor.remove(); URL.revokeObjectURL(url); document.removeEventListener("keydown", tecla); if (previo && previo.focus) previo.focus(); }
+    function cerrar() { visor.remove(); document.removeEventListener("keydown", tecla); if (previo && previo.focus) previo.focus(); }
     function tecla(ev) { if (ev.key === "Escape") cerrar(); }
     var img = el("img", { src: url, alt: "Captura del error " + id, clase: "visor-img" });
     img.addEventListener("click", function () { img.classList.toggle("ampliada"); });
@@ -400,43 +400,88 @@
       el("div", { clase: "visor-cab" }, [el("b", { texto: "Captura · Error #" + id }), el("span", { clase: "detalle", texto: "Toca la imagen para ampliar" }), cierre]), el("div", { clase: "visor-marco" }, [img])]);
     document.body.appendChild(visor); document.addEventListener("keydown", tecla); cierre.focus();
   }
+  function marcoCaptura(e) {
+    var marco = el("div", { clase: "marco-captura vacio", id: "marco-captura" });
+    function vacio(texto, conBoton) {
+      marco.textContent = ""; marco.classList.add("vacio");
+      var centro = el("div", { clase: "marco-centro" }, [conBoton ? el("button", { type: "button", id: "ver-captura", clase: "ver-captura", texto: "Ver captura", onclick: cargar }) : null, el("span", { texto: texto })]);
+      marco.appendChild(centro);
+    }
+    async function cargar(ev) {
+      var b = ev.currentTarget; b.disabled = true; b.textContent = "Cargando…";
+      marco.classList.add("cargando");
+      var url = await cargarCaptura(e.id);
+      marco.classList.remove("cargando");
+      if (!url) { vacio("No se pudo cargar.", true); return; }
+      marco.textContent = ""; marco.classList.remove("vacio");
+      var img = el("img", { src: url, alt: "Captura del error " + e.id, clase: "captura-img" });
+      img.addEventListener("load", function () { if (img.naturalWidth && img.naturalHeight) marco.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight; });
+      img.addEventListener("click", function () { abrirVisor(url, e.id); });
+      marco.appendChild(img);
+      marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(url, e.id); } }));
+      if (e.creado) marco.appendChild(el("span", { clase: "marco-hora", texto: (e.creado || "").slice(11, 16) }));
+    }
+    if (e.evidencia && e.evidencia.captura) vacio("Se carga aquí", true); else vacio("Sin captura (se borra sola a los 7 días).", false);
+    return marco;
+  }
+  function hojaSeguimiento(id, estadoActual) {
+    var viejo = document.getElementById("hoja-seg"); if (viejo) viejo.remove();
+    function cerrar() { h.remove(); }
+    var sEst = opciones("s-estado", "Estado", ESTADOS_SEG.slice(1)), sCau = opciones("s-causa", "Causa", CAUSAS);
+    var h = el("div", { id: "hoja-seg", role: "dialog", "aria-modal": "true", "aria-label": "Registrar seguimiento", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Registrar seguimiento" }),
+        el("div", { clase: "dos-col" }, [sEst, sCau]),
+        el("label", {}, ["Nota (opcional)", el("input", { id: "s-nota", maxlength: "300", autocomplete: "off" })]),
+        el("button", { id: "s-guardar", type: "button", clase: "primario", texto: "Guardar", onclick: async function () { await guardarSeguimiento(id); } })])]);
+    document.body.appendChild(h);
+    var sel = h.querySelector("#s-estado"); if (sel) sel.focus();
+  }
+  async function guardarSeguimiento(id) {
+    var r = await llamar("admin_seguimiento", { id: id, estado: document.getElementById("s-estado").value, causa: document.getElementById("s-causa").value || null,
+      nota: document.getElementById("s-nota").value || null });
+    var h = document.getElementById("hoja-seg"); if (h) h.remove();
+    if (r) pintar();
+  }
   async function expediente(c, id) {
+    var enLado = c.id === "lado";
     c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Errores", texto: "‹ Errores", onclick: function () { ir("errores"); } }));
     var e = await llamar("admin_error", { id: id });
     if (!e) return;
-    c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { id: "exp-titulo", texto: "Error #" + e.id + " · " + e.app + " · " + e.version }), (e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : null]));
-    c.appendChild(el("div", { clase: "detalle", texto: "Clasificación: " + e.clasificacion + " · tipo " + e.tipo + " · conductor " + e.conductor + " · " + (e.creado || "").slice(0, 19) }));
+    c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { id: "exp-titulo", texto: "Error #" + e.id }), (e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : null]));
+    c.appendChild(el("div", { clase: "detalle", texto: txt(e.app) + " " + txt(e.version) + " · " + txt(e.tipo) + " · conductor " + txt(e.conductor) + " · " + (e.creado || "").slice(0, 16).replace("T", " ") }));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
-    var refE = hu && hu.clase ? hu : null;
-    c.appendChild(el("h2", { texto: "Qué leyó cada quien" }));
-    c.appendChild(comparar3(lec, ia, refE));
-    var mE = marcas(lec, ia, refE);
+    var refE = hu && hu.clase ? hu : null, mE = marcas(lec, ia, refE);
+    var humano = refE ? (refE.tarifa === undefined ? [refE.clase] : tkm(refE)) : ["sin referencia"];
+    function val(t, lineas, dif) { return el("div", { clase: "val" + (dif ? " dif" : "") }, [el("small", { texto: t })].concat(lineas.map(function (x) { return el("div", { texto: x }); }))); }
+    c.appendChild(el("div", { clase: "duo", id: "comparar" }, [marcoCaptura(e), el("div", { clase: "vals" }, [val("Lector", tkm(lec), mE.l), val("IA", ia.oferta === false ? ["no era oferta"] : tkm(ia), mE.i), val("Humano", humano, mE.h)])]));
     if (!refE && (mE.l || mE.i)) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Lector e IA no coinciden. Falta un veredicto humano para saber cuál acierta." }));
     else if (refE && mE.h) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Ni el lector ni la IA coinciden con la referencia humana." }));
-    c.appendChild(el("div", { clase: "detalle", texto: "Veredicto humano: " + txt(hu.estado) + " · heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
-    c.appendChild(el("h2", { texto: "Evidencia original" }));
-    c.appendChild(el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe (se borra sola a los 7 días)") + " · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }));
-    if (e.evidencia.captura) c.appendChild(el("button", { type: "button", id: "ver-captura", clase: "ver-captura", texto: "Ver captura", onclick: function (ev) { verCaptura(e.id, ev.currentTarget); } }));
-    var en = e.enlace;
-    c.appendChild(el("div", { clase: "detalle", id: "enlace", texto: en
-      ? "Enlace: fotograma " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · huella sha256 " + txt(en.captura_sha256)
-      : "Sin enlace por fotograma (caso anterior a la 10.82 o sin lectura registrada): no se puede comprobar la huella." }));
-    c.appendChild(el("h2", { texto: "Relacionados" }));
-    c.appendChild(el("div", { clase: "enlaces" }, [enlace("Versión " + e.version + " (" + e.relacionados.misma_version + " errores)", "versiones"), enlace("Conductor " + e.conductor + " (" + e.relacionados.mismo_conductor + ")", "dispositivos"),
-      enlace("Auditoría IA", "ia")]));
-    c.appendChild(el("h2", { texto: "Seguimiento: " + String(e.estado_seguimiento).replace(/_/g, " ") }));
+    c.appendChild(el("div", { clase: "detalle", texto: "Veredicto heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
+    c.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Seguimiento" }), el("span", { clase: "detalle", texto: String(e.estado_seguimiento).replace(/_/g, " ") })]));
     c.appendChild(pasosSeg(e.estado_seguimiento));
-    c.appendChild(tabla([["Fecha", function (h) { return (h.creado || "").slice(0, 19); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
-      ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía."));
+    c.appendChild(el("div", { clase: "enlaces" }, [enlace("Versión " + e.version + " (" + e.relacionados.misma_version + ")", "versiones"), enlace("Conductor " + e.conductor + " (" + e.relacionados.mismo_conductor + ")", "dispositivos"), enlace("Auditoría IA", "ia")]));
+    var en = e.enlace;
+    c.appendChild(el("details", { clase: "tecnico", id: "tecnico" }, [el("summary", { texto: "Detalle técnico" }), el("div", { clase: "tecnico-cuerpo" }, [
+      el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe (se borra sola a los 7 días)") + " · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }),
+      el("div", { clase: "detalle", texto: "Clasificación: " + txt(e.clasificacion) }),
+      el("div", { clase: "detalle", id: "enlace", texto: en
+        ? "Enlace: fotograma " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · huella sha256 " + txt(en.captura_sha256)
+        : "Sin enlace por fotograma (caso anterior a la 10.82 o sin lectura registrada): no se puede comprobar la huella." })])]));
+    c.appendChild(el("details", { clase: "tecnico", id: "historial" }, [el("summary", { texto: "Historial (" + (e.historial || []).length + ")" }), el("div", { clase: "tecnico-cuerpo" }, [
+      tabla([["Fecha", function (h) { return (h.creado || "").slice(0, 19); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
+        ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía.")])]));
+    // Registro de seguimiento: inline en el panel lateral; barra corta + hoja en teléfono y tableta vertical.
     if (yo && yo.rol === "revisor") {
-      c.appendChild(el("div", { clase: "filtros barra-accion", id: "seguimiento" }, [opciones("s-estado", "Estado", ESTADOS_SEG.slice(1)), opciones("s-causa", "Causa", CAUSAS),
-        el("label", {}, ["Nota", el("input", { id: "s-nota", maxlength: "300", size: "30" })]),
-        el("button", { id: "s-guardar", texto: "Registrar", onclick: async function () {
-          var r = await llamar("admin_seguimiento", { id: id, estado: document.getElementById("s-estado").value, causa: document.getElementById("s-causa").value || null,
-            nota: document.getElementById("s-nota").value || null });
-          if (r) pintar(); } })]));
+      if (enLado) {
+        c.appendChild(el("div", { clase: "filtros", id: "seguimiento" }, [opciones("s-estado", "Estado", ESTADOS_SEG.slice(1)), opciones("s-causa", "Causa", CAUSAS),
+          el("label", {}, ["Nota", el("input", { id: "s-nota", maxlength: "300", size: "30" })]),
+          el("button", { id: "s-guardar", texto: "Registrar", onclick: function () { guardarSeguimiento(id); } })]));
+      } else {
+        c.appendChild(el("div", { clase: "barra-seg", id: "seguimiento" }, [el("div", { clase: "barra-seg-t" }, [el("span", { texto: "Seguimiento" }), el("b", { texto: String(e.estado_seguimiento).replace(/_/g, " ") })]),
+          el("button", { type: "button", id: "abrir-registro", clase: "primario", texto: "Registrar", onclick: function () { hojaSeguimiento(id, e.estado_seguimiento); } })]));
+      }
     } else { c.appendChild(el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })); }
-
   }
 
   // ---------- 03 Ofertas ----------
