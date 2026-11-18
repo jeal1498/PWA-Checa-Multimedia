@@ -436,3 +436,6 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 .rev-ia-caja .rotulo { font:800 14px "DM Sans", system-ui, sans-serif; }
 .rev-ia-acciones { display:flex; gap:8px; flex-wrap:wrap; } .rev-ia-acciones button { flex:1; min-height:44px; font-weight:700; }
 .opcion-rev.sugerida { border-color:var(--texto); box-shadow:inset 0 -3px 0 var(--texto); }
+
+.pop-extra { font:600 11px "DM Sans", system-ui, sans-serif; color:var(--tenue); overflow-wrap:anywhere; }
+.rev-nota { margin:8px 0 0; padding:6px 10px; border:1px dashed var(--borde); border-radius:10px; }

@@ -730,9 +730,12 @@
       if (estado.url) { var img = el("img", { src: estado.url, alt: "Captura de la oferta " + it.id, clase: "captura-img" }); img.addEventListener("click", function () { abrirVisor(estado.url, it.id); }); marco.appendChild(img);
         marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(estado.url, it.id); } })); }
       else marco.appendChild(el("div", { clase: "marco-centro" }, [el("span", { texto: "La captura ya no está disponible." })]));
-      marco.appendChild(el("span", { clase: "marco-hora", texto: (it.creado || "").slice(11, 16) + " · " + txt(it.app) }));
-      function tile(nom, val) { return el("div", { clase: "pop-tile " + it.nivel }, [el("div", { clase: "pop-nom", texto: nom }), el("div", { clase: "pop-val", texto: val })]); }
-      cuerpo.appendChild(el("div", { clase: "duo", id: "rev-actual" }, [marco, el("div", { clase: "metr" }, [tile("Mostró el pop-up", rotulo[1].toUpperCase()), tile("Tarifa", pop.tarifa === null ? "—" : "$" + pop.tarifa), tile("Distancia", pop.km === null ? "—" : pop.km + " km"), tile("Tiempo", pop.min === null ? "—" : pop.min + " min")])]));
+      marco.appendChild(el("span", { clase: "marco-hora", texto: (it.creado || "").slice(11, 16) + " · " + txt(it.app) + (it.version ? " · " + it.version : "") }));
+      function tile(nom, val, extra) { return el("div", { clase: "pop-tile " + it.nivel }, [el("div", { clase: "pop-nom", texto: nom }), el("div", { clase: "pop-val", texto: val }), extra ? el("div", { clase: "pop-extra", texto: extra }) : null]); }
+      var L = it.local || {}, I = it.ia || {};
+      function rec(k, u) { var a1 = L[k], b1 = I[k]; if (a1 === undefined && b1 === undefined) return null; return "recogida · Lector " + (a1 === undefined ? "—" : a1) + " " + u + (b1 === undefined ? "" : " · IA " + b1 + " " + u); }
+      cuerpo.appendChild(el("div", { clase: "duo", id: "rev-actual" }, [marco, el("div", { clase: "metr" }, [tile("Pop-up en la oferta", rotulo[1].toUpperCase()), tile("Tarifa leída", pop.tarifa === null ? "—" : "$" + pop.tarifa), tile("Distancia leída", pop.km === null ? "—" : pop.km + " km", rec("recKm", "km")), tile("Tiempo leído", pop.min === null ? "—" : pop.min + " min", rec("recMin", "min"))])]));
+      cuerpo.appendChild(el("div", { clase: "detalle rev-nota", id: "rev-nota-ayuda", texto: "Los valores salen de lo que leyó la app, no del recuadro de la captura. Si la captura dice otra cosa (por ejemplo los minutos), la captura manda: usa «Valores mal»." }));
       var off = !esRevisor || estado.ocupado;
       cuerpo.appendChild(el("div", { clase: "rev-botones" }, [
         el("button", { type: "button", id: "rev-correcta", clase: "rb ok", disabled: off ? "" : null, onclick: function () { guardar({ resultado: "correcta" }); } }, [el("big", { texto: "✓" }), "Correcta"]),
