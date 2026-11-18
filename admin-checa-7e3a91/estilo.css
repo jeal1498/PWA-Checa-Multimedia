@@ -244,3 +244,23 @@ details.mas-alertas > summary { display:flex; align-items:center; min-height:44p
   .barra-accion { bottom:calc(64px + env(safe-area-inset-bottom)); margin-inline:-14px; border-radius:0; border-width:1px 0 0; box-shadow:0 -6px 20px #0002; }
   .barra-accion label, .barra-accion input, .barra-accion select { width:100%; }
 }
+
+/* ===== Ofertas: barra de resultados, calidad y eventos ===== */
+.h-fila { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.barra-res { margin-bottom:8px; }
+.barra { display:flex; height:14px; border-radius:7px; overflow:hidden; gap:2px; background:var(--panel); }
+.barra i { display:block; height:100%; }
+.leyenda { display:flex; flex-wrap:wrap; gap:4px 12px; margin:8px 0 4px; font-size:13px; color:var(--tenue); }
+.leyenda span { display:inline-flex; align-items:center; gap:5px; } .leyenda i { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.tarjetas.dos { grid-template-columns:repeat(2, minmax(0,1fr)); }
+details.mas-metricas { margin:10px 0; } details.mas-metricas > summary { display:flex; align-items:center; min-height:44px; font-weight:700; color:var(--texto); font-size:14px; }
+.evento { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; }
+.evento.sel, .evento.abierto { box-shadow:0 0 0 2px var(--texto); }
+.evento-cab { width:100%; text-align:left; border:0; background:transparent; padding:10px; display:flex; flex-direction:column; gap:6px; min-height:56px; border-radius:12px; }
+.evento-fila { display:flex; align-items:center; gap:8px; } .evento-fila .der { margin-left:auto; }
+.evento-valor { display:flex; align-items:center; gap:8px; font:800 15px "JetBrains Mono", ui-monospace, monospace; }
+.evento-valor .punto { width:12px; height:12px; }
+.mini { display:flex; gap:3px; } .mini i { width:22px; height:5px; border-radius:3px; background:var(--luz-v); } .mini i.x { background:var(--luz-r); } .mini i.s { background:var(--borde); }
+.evento-detalle { padding:0 10px 12px; display:flex; flex-direction:column; gap:8px; border-top:1px dashed var(--borde); padding-top:10px; margin:0 0 0; }
+.etapas-lista { display:flex; flex-direction:column; gap:4px; }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:13px; } .kv span { color:var(--tenue); } .kv b { font-weight:600; overflow-wrap:anywhere; }
