@@ -215,3 +215,32 @@ details.mas-alertas > summary { display:flex; align-items:center; min-height:44p
 @media (max-width:420px) { .tarjetas.tres { grid-template-columns:repeat(3, minmax(0,1fr)); } .tarjetas.tres .detalle { font-size:11px; } }
 @media (min-width:1000px) and (orientation:landscape) { .inicio-cols { display:grid; } }
 .graficas.una .svg { max-height:220px; }
+
+/* ===== Errores: tarjetas, chips, comparación y barra de acción ===== */
+.chips { display:flex; gap:6px; overflow-x:auto; margin-bottom:10px; padding-bottom:2px; scrollbar-width:none; }
+.chips::-webkit-scrollbar { display:none; }
+.chip { flex:none; border-radius:999px; padding:0 14px; min-height:40px; font-size:13px; font-weight:600; color:var(--tenue); }
+.chip[aria-pressed="true"] { color:var(--texto); border-color:var(--texto); font-weight:800; box-shadow:inset 0 -2px 0 var(--texto); }
+.error-lista { display:flex; flex-direction:column; gap:8px; }
+.error-tarjeta { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; }
+.error-tarjeta.sel { box-shadow:0 0 0 2px var(--texto); }
+.error-cab { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .error-cab .fecha { margin-left:auto; }
+.error-cab .enlace { font-weight:800; font-size:15px; min-height:32px; display:inline-flex; align-items:center; }
+.error-pie { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.comp3 { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:4px; }
+.casilla { background:var(--fondo); border-radius:8px; padding:6px 8px; font:700 12px/1.4 "JetBrains Mono", ui-monospace, monospace; min-width:0; overflow-wrap:anywhere; }
+.casilla small { display:block; font:700 11px "DM Sans", system-ui, sans-serif; color:var(--tenue); text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; }
+.casilla.dif { background:color-mix(in srgb, var(--rojo) 14%, var(--tablero)); color:var(--rojo); }
+.vb { font-size:12px; font-weight:800; border:1px solid var(--c, var(--gris)); color:var(--c, var(--gris)); border-radius:6px; padding:1px 8px; }
+.vb.ok { --c:var(--verde); } .vb.aviso { --c:var(--amarillo); } .vb.mal { --c:var(--rojo); } .vb.nd { --c:var(--gris); }
+.aviso-cmp { margin:8px 0; padding:8px 10px; border:1px solid var(--amarillo); border-radius:8px; color:var(--amarillo); background:color-mix(in srgb, var(--amarillo) 10%, var(--tablero)); }
+.exp-cab { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.volver { margin-bottom:8px; }
+.pasos-seg { display:flex; gap:3px; margin:6px 0 12px; }
+.pasos-seg i { flex:1; height:6px; border-radius:3px; background:var(--borde); }
+.pasos-seg i.hecho { background:var(--texto); }
+.barra-accion { position:sticky; bottom:0; z-index:4; background:var(--tablero); border:1px solid var(--borde); border-radius:12px 12px 0 0; padding:10px 12px; margin-top:16px; }
+@media (max-width:760px) {
+  .barra-accion { bottom:calc(64px + env(safe-area-inset-bottom)); margin-inline:-14px; border-radius:0; border-width:1px 0 0; box-shadow:0 -6px 20px #0002; }
+  .barra-accion label, .barra-accion input, .barra-accion select { width:100%; }
+}
