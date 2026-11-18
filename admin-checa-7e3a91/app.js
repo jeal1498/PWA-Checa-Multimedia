@@ -78,7 +78,7 @@
     if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : "Filtro inválido: " + d.error); return null; }
     return d;
   }
-  function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.replaceState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } pintar(); }
+  function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } window.scrollTo(0, 0); pintar(); }
   function enlace(texto, v, p) { return el("a", { href: "#" + v + (p ? "/" + p : ""), clase: "enlace", texto: texto, onclick: function (ev) { ev.preventDefault(); ir(v, p); } }); }
 
   // ---------- componentes visuales ----------
@@ -452,12 +452,38 @@
   var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
   var TITULOS = {}; MODULOS.forEach(function (m) { TITULOS[m[0]] = m[1]; });
 
+  // Hoja inferior «Más» (solo teléfono): módulos restantes, tema y salir.
+  function hoja(abrir) {
+    var h = document.getElementById("hoja");
+    if (h) h.remove();
+    var mas = document.getElementById("t-mas");
+    if (mas) mas.setAttribute("aria-expanded", String(!!abrir));
+    if (!abrir) return;
+    function cerrar() { hoja(false); if (mas) mas.focus(); }
+    var items = MODULOS.filter(function (m) { return ["inicio", "errores", "ofertas"].indexOf(m[0]) < 0; }).map(function (m) {
+      return el("button", { type: "button", clase: "item", "aria-current": m[0] === vista ? "page" : null, onclick: function () { hoja(false); ir(m[0]); } }, [icono(m[0]), el("span", { texto: m[1] })]); });
+    items.push(el("button", { type: "button", clase: "item", onclick: function () { document.getElementById("tema").click(); cerrar(); } }, [el("span", { texto: temaActual() === "dark" ? "Modo claro" : "Modo oscuro" })]));
+    items.push(el("button", { type: "button", clase: "item peligro", onclick: function () { document.getElementById("salir").click(); } }, [el("span", { texto: "Salir" })]));
+    var hoja_ = el("div", { id: "hoja", role: "dialog", "aria-modal": "true", "aria-label": "Más opciones", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } },
+      [el("div", { clase: "velo", onclick: cerrar }), el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" })].concat(items))]);
+    document.body.appendChild(hoja_);
+    var p = hoja_.querySelector(".item"); if (p) p.focus();
+  }
+
   async function pintar() {
+    hoja(false);
     var raiz = document.getElementById("raiz");
     raiz.textContent = "";
-    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, MODULOS.map(function (m) {
-      return el("button", { id: "t-" + m[0], "aria-selected": String(m[0] === vista), "aria-label": m[1], onclick: function () { ir(m[0]); } },
-        [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); }));
+    var PRINCIPALES = ["inicio", "errores", "ofertas"];
+    var enMas = PRINCIPALES.indexOf(vista) < 0;
+    var botones = MODULOS.map(function (m) {
+      var activo = m[0] === vista;
+      return el("button", { id: "t-" + m[0], type: "button", role: "tab", clase: PRINCIPALES.indexOf(m[0]) < 0 ? "sec" : "", "aria-selected": String(activo), "aria-current": activo ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
+        [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); });
+    var masIco = sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "currentColor" }, [sv("circle", { cx: "5", cy: "12", r: "1.6" }), sv("circle", { cx: "12", cy: "12", r: "1.6" }), sv("circle", { cx: "19", cy: "12", r: "1.6" })]);
+    botones.push(el("button", { id: "t-mas", type: "button", clase: "mas", "aria-haspopup": "dialog", "aria-expanded": "false", "aria-selected": String(enMas), "aria-label": "Más módulos y cuenta", onclick: function () { hoja(true); } },
+      [masIco, el("span", { clase: "corto", texto: "Más" })]));
+    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, [el("div", { role: "tablist", "aria-label": "Módulos", clase: "pestanas" }, botones)]);
     var c = el("section", { id: "vista-" + vista, clase: "contenido" });
     raiz.appendChild(nav); raiz.appendChild(c);
     await VISTAS[vista](c);
@@ -489,6 +515,10 @@
   function aplicarTema(t) { document.documentElement.setAttribute("data-theme", t); var b = document.getElementById("tema"); if (b) b.textContent = t === "dark" ? "Modo claro" : "Modo oscuro"; }
   try { var gt = localStorage.getItem("checa-tema"); if (gt === "dark" || gt === "light") document.documentElement.setAttribute("data-theme", gt); } catch (e) { /* sin almacenamiento */ }
 
+  window.addEventListener("popstate", function () {
+    var h = (location.hash || "").replace(/^#/, "").split("/");
+    if (cli && VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; pintar(); }
+  });
   window.Admin = { iniciar: iniciar, aviso: aviso, pintar: pintar };
 
   document.addEventListener("DOMContentLoaded", function () {
