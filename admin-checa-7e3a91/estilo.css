@@ -174,3 +174,23 @@ header #quien { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min
   #hoja .item.peligro { color:var(--rojo); }
   #hoja .ico { width:22px; height:22px; }
 }
+
+/* ===== Fase 3: datos, filtros, estado y panel dividido ===== */
+.estado-barra { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--tenue); margin-bottom:8px; }
+.estado-barra #est-texto { flex:1; }
+.estado-barra button { min-height:40px; padding:4px 12px; }
+.lectura { font-size:13px; color:var(--texto); min-height:20px; }
+.toque { cursor:pointer; }
+details.datos summary, details.filtros-hoja > summary { display:flex; align-items:center; min-height:44px; font-size:14px; font-weight:600; color:var(--texto); text-decoration:none; }
+details.datos .tabla { margin-top:6px; }
+details.filtros-hoja { margin:0 0 12px; }
+details.filtros-hoja > summary { padding:0 12px; border:1px solid var(--borde); border-radius:10px; background:var(--tablero); list-style:none; cursor:pointer; margin-bottom:8px; }
+@media (min-width:761px) { details.filtros-hoja > summary { display:none; } }
+.dividido { display:block; }
+.lado { display:none; }
+@media (min-width:1000px) and (orientation:landscape) {
+  .dividido { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-items:start; }
+  .dividido:has(.lado:not([hidden])) { grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); }
+  .lado:not([hidden]) { display:block; position:sticky; top:62px; max-height:calc(100vh - 80px); overflow:auto; background:var(--tablero); border:1px solid var(--borde); border-radius:14px; padding:12px 14px; }
+  .lado #volver { display:none; }
+}
