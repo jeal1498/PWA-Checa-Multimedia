@@ -611,14 +611,29 @@
     c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { texto: "Revisar ofertas" }), el("span", { clase: "vb ok", texto: "10.82" })]));
     var esRevisor = !!(yo && yo.rol === "revisor");
     var cuerpo = el("div", { id: "rev-cuerpo" }); c.appendChild(cuerpo);
-    var estado = { items: [], pend: {}, rev: {}, actual: null, url: null, blob: null, ultima: null, ocupado: false };
-    function soltar() { if (estado.url) { URL.revokeObjectURL(estado.url); estado.url = null; } estado.blob = null; }
+    var estado = { items: [], pend: {}, rev: {}, actual: null, url: null, blob: null, ultima: null, ocupado: false, sug: null, pidiendo: false, prec: null };
+    function soltar() { if (estado.url) { URL.revokeObjectURL(estado.url); estado.url = null; } estado.blob = null; estado.sug = null; estado.pidiendo = false; }
 
     async function cargarCola() {
       var d = await llamar("admin_capturas_pendientes", { p_nivel: revNivel, p_limite: 10 });
       if (!d) return false;
       estado.pend = d.pendientes || {}; estado.rev = d.revisadas || {}; estado.items = d.items || [];
       return true;
+    }
+    async function cargarPrecision() { var d = await llamar("admin_ia_precision"); estado.prec = d && !d.error ? d : null; }
+    async function pedirIA() {
+      var it = estado.actual; if (!it || estado.pidiendo) return;
+      estado.pidiendo = true; aviso(""); pintarRev();
+      var r = null;
+      try { r = await cli.functions.invoke("admin-leer-captura", { body: { nombre: it.nombre } }); } catch (e) { r = { error: e }; }
+      estado.pidiendo = false;
+      if (estado.actual !== it) return;
+      if (r && r.data && r.data.ok) estado.sug = Object.assign({ modelo: r.data.modelo }, r.data.lectura);
+      else {
+        var st = r && r.error && r.error.context && r.error.context.status;
+        aviso(st === 403 ? "No autorizado para leer capturas." : st === 404 ? "La captura ya no existe." : st === 503 ? "La lectura con IA no está activa (falta la clave de DeepSeek)." : st === 502 ? "La IA no pudo leer esta captura (revisa el saldo de DeepSeek)." : "No se pudo pedir la sugerencia a la IA.");
+      }
+      pintarRev();
     }
     async function siguiente() {
       soltar(); estado.actual = estado.items.shift() || null;
@@ -633,9 +648,10 @@
       if (estado.ocupado || !estado.actual) return; estado.ocupado = true; pintarRev();
       var it = estado.actual, sha = estado.blob ? await huella(estado.blob) : null;
       var p = { p_captura_ok_id: it.id, p_resultado: args.resultado, p_motivo: args.motivo || null, p_tarifa: args.tarifa || null, p_km: args.km || null, p_min: args.min || null, p_nota: args.nota || null, p_evidencia_sha256: sha };
+      if (estado.sug) p.p_ia_sugerencia = estado.sug;
       var r = await llamar("admin_revisar_captura", p);
       estado.ocupado = false;
-      if (r && r.id) { estado.ultima = it; estado.pend[it.nivel] = Math.max(0, (estado.pend[it.nivel] || 0) - 1); estado.rev[it.nivel] = (estado.rev[it.nivel] || 0) + 1; await siguiente(); }
+      if (r && r.id) { var conSug = !!estado.sug; estado.ultima = it; estado.pend[it.nivel] = Math.max(0, (estado.pend[it.nivel] || 0) - 1); estado.rev[it.nivel] = (estado.rev[it.nivel] || 0) + 1; if (conSug) await cargarPrecision(); await siguiente(); }
       else pintarRev();
     }
     async function deshacer() {
@@ -653,11 +669,11 @@
         el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: titulo })].concat(hijos).concat(onGuardar ? [el("button", { id: "rev-guardar", type: "button", clase: "primario", texto: textoGuardar || "Guardar y siguiente", onclick: function () { if (onGuardar()) cerrar(); } })] : []))]);
       document.body.appendChild(h); var f = h.querySelector("input, button.opcion-rev"); if (f) f.focus();
     }
-    function hojaValores(it) {
-      var pop = popDeNombre(it.nombre);
+    function hojaValores(it, base) {
+      var pop = base || popDeNombre(it.nombre);
       function campo(id, t, u, v) { return el("label", { clase: "campo-v" }, [el("span", { texto: t + " (" + u + ")" }), el("input", { id: id, inputmode: "decimal", autocomplete: "off", value: v === null ? "" : String(v) })]); }
       var nota = el("input", { id: "rev-nota", maxlength: "280", autocomplete: "off" });
-      hoja("Valores correctos", [el("div", { clase: "detalle", texto: "Lo que mostró el pop-up: $" + txt(pop.tarifa) + " · " + txt(pop.km) + " km · " + txt(pop.min) + " min" }),
+      hoja("Valores correctos", [el("div", { clase: "detalle", texto: (base ? "Valores sugeridos por la IA: $" : "Lo que mostró el pop-up: $") + txt(pop.tarifa) + " · " + txt(pop.km) + " km · " + txt(pop.min) + " min" }),
         el("div", { clase: "campos-v" }, [campo("rev-t", "Tarifa", "$", pop.tarifa), campo("rev-k", "Distancia", "km", pop.km), campo("rev-m", "Tiempo", "min", pop.min)]),
         el("label", { clase: "campo-v" }, [el("span", { texto: "Nota (opcional)" }), nota]), el("div", { clase: "aviso-cmp", id: "rev-error", hidden: "" })], function () {
         function n(id) { return parseFloat(document.getElementById(id).value.replace(",", ".")); }
@@ -665,9 +681,9 @@
         if (!(t > 0 && k > 0 && m > 0)) { var e = document.getElementById("rev-error"); e.textContent = "Escribe tarifa, distancia y tiempo correctos (mayores que cero)."; e.hidden = false; return false; }
         guardar({ resultado: "valores_mal", tarifa: t, km: k, min: m, nota: nota.value }); return true; });
     }
-    function hojaFalso() {
+    function hojaFalso(sugerido) {
       hoja("Falso positivo: ¿qué pasó?", REV_MOTIVOS.map(function (m) {
-        return el("button", { type: "button", clase: "opcion-rev", onclick: function () { document.getElementById("hoja-rev").remove(); guardar({ resultado: "falso_positivo", motivo: m[0] }); } }, [el("b", { texto: m[1] }), el("small", { texto: m[2] })]); }), null);
+        return el("button", { type: "button", clase: "opcion-rev" + (sugerido === m[0] ? " sugerida" : ""), onclick: function () { document.getElementById("hoja-rev").remove(); guardar({ resultado: "falso_positivo", motivo: m[0] }); } }, [el("b", { texto: m[1] }), el("small", { texto: m[2] })]); }), null);
     }
     function pintarRev() {
       cuerpo.textContent = "";
@@ -678,6 +694,8 @@
       var barra = el("i"); barra.style.width = Math.min(100, (estado.rev[revNivel] || 0) / REV_META * 100) + "%";
       cuerpo.appendChild(el("div", { clase: "rev-prog" }, [el("div", { clase: "rev-prog-t" }, [el("span", { texto: "Revisadas de la 10.82" }), el("b", { texto: hechas + " de " + tot })]), el("div", { clase: "pbar" }, [barra]),
         el("div", { clase: "rev-prog-t" }, [el("span", { texto: "Meta: " + REV_META + " por color" }), el("span", { texto: REV_COLORES.filter(function (k) { return k[0] === revNivel; })[0][1] + " " + (estado.rev[revNivel] || 0) + "/" + REV_META })])]));
+      var P = estado.prec;
+      if (P && P.n > 0) cuerpo.appendChild(el("div", { clase: "rev-ia-prec", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · muestra insuficiente (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }));
       var it = estado.actual;
       if (!it) { cuerpo.appendChild(el("div", { clase: "vacio", id: "rev-vacio", texto: "No hay capturas pendientes de este color. Cuando la app suba más, aparecerán aquí." })); return; }
       var rotulo = REV_COLORES.filter(function (k) { return k[0] === it.nivel; })[0], pop = popDeNombre(it.nombre);
@@ -693,9 +711,25 @@
         el("button", { type: "button", id: "rev-correcta", clase: "rb ok", disabled: off ? "" : null, onclick: function () { guardar({ resultado: "correcta" }); } }, [el("big", { texto: "✓" }), "Correcta"]),
         el("button", { type: "button", id: "rev-valores", clase: "rb vm", disabled: off ? "" : null, onclick: function () { hojaValores(it); } }, [el("big", { texto: "✎" }), "Valores mal"]),
         el("button", { type: "button", id: "rev-falso", clase: "rb fp", disabled: off ? "" : null, onclick: function () { hojaFalso(); } }, [el("big", { texto: "✕" }), "Falso positivo"])]));
+      var S = estado.sug;
+      if (!S) cuerpo.appendChild(el("button", { type: "button", id: "rev-ia", clase: "rev-ia-pedir", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo con la IA…" : "Pedir sugerencia a la IA", onclick: pedirIA }));
+      else {
+        var cmp = function (nom, ia, pv, tol) { var ok = ia !== null && pv !== null && Math.abs(ia - pv) <= tol; return el("div", { clase: "mt-fila" + (ok ? "" : " x") }, [el("span", { texto: nom }), el("b", { texto: (ia === null ? "—" : ia) + (ok ? " ✓" : " ✕") })]); };
+        var vigente = S.estado === "vigente", motivoSug = S.estado === "sin_oferta" ? "no_oferta" : "vencida";
+        cuerpo.appendChild(el("div", { clase: "rev-ia-caja", id: "rev-ia-caja" }, [
+          el("div", { clase: "pop-nom", texto: "Sugerencia de la IA (" + txt(S.modelo) + ") · confianza " + txt(S.confianza) }),
+          el("div", { clase: "rotulo", texto: vigente ? "Oferta vigente" : S.estado === "vencida" ? "Oferta vencida" : S.estado === "aceptada" ? "Ya aceptada o tomada" : "No es una oferta" }),
+          vigente ? el("div", {}, [cmp("Tarifa", S.tarifa, pop.tarifa, 0.01), cmp("Distancia", S.km, pop.km, 0.15), cmp("Tiempo", S.min, pop.min, 1)]) : null,
+          S.nota ? el("div", { clase: "detalle", texto: S.nota }) : null,
+          el("div", { clase: "detalle", texto: vigente ? "✓ coincide con el pop-up; ✕ difiere. Tú decides." : "Si coincide con lo que ves, márcalo como falso positivo. Tú decides." }),
+          el("div", { clase: "rev-ia-acciones" }, [
+            vigente && S.tarifa !== null && S.km !== null && S.min !== null ? el("button", { type: "button", id: "rev-ia-usar", texto: "Usar sus valores", disabled: off ? "" : null, onclick: function () { hojaValores(it, { tarifa: S.tarifa, km: S.km, min: S.min }); } }) : null,
+            !vigente ? el("button", { type: "button", id: "rev-ia-falso", texto: "Marcar falso positivo", disabled: off ? "" : null, onclick: function () { hojaFalso(motivoSug); } }) : null])]));
+      }
       cuerpo.appendChild(el("div", { clase: "rev-pie" }, [el("span", { clase: "detalle", texto: esRevisor ? "Un toque en «Correcta» pasa a la siguiente." : "Tu rol es de solo lectura: no puedes revisar." }),
         el("button", { type: "button", id: "rev-deshacer", texto: "↶ Deshacer", disabled: estado.ultima && !estado.ocupado ? null : "", onclick: deshacer })]));
     }
+    await cargarPrecision();
     if (await cargarCola()) await siguiente();
   }
 
