@@ -708,37 +708,59 @@
   }
 
   // ---------- 07 Configuración ----------
+  function bytesLeg(n) { if (n === null || n === undefined) return "—"; n = Number(n); return n >= 1073741824 ? (n / 1073741824).toFixed(1) + " GB" : n >= 1048576 ? Math.round(n / 1048576) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B"; }
+  function acordeon(id, titulo, sub, cifra, hijos, abierto) {
+    var d = el("details", { clase: "acc", id: id }, [el("summary", {}, [el("span", { clase: "acc-t" }, [el("b", { texto: titulo }), el("small", { texto: sub })]), el("span", { clase: "acc-cifra", texto: cifra })])].concat([el("div", { clase: "acc-cuerpo" }, hijos)]));
+    if (abierto) d.open = true; return d;
+  }
+  function filaKV(t, v, tono) { return el("div", { clase: "kv-fila" }, [el("span", { texto: t }), el("b", { clase: tono || "", texto: txt(v) })]); }
   async function config(c) {
     c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Configuración" }), selPeriodo(pintar)]));
     skeleton(c);
     var r = rango(), g = await llamar("admin_config"), k = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta }), b = await llamar("admin_bitacora", { pagina: 1 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
-    if (g) {
-      c.appendChild(el("h2", { texto: "Usuarios y permisos" }));
-      c.appendChild(el("div", { clase: "detalle", texto: "Tú: " + g.yo.admin + " · rol " + g.yo.rol }));
-      c.appendChild(tabla([["Administrador", function (x) { return x.admin; }], ["Rol", function (x) { return x.rol; }], ["Alta", function (x) { return (x.alta || "").slice(0, 10); }]], g.administradores));
-      c.appendChild(el("div", { clase: "detalle", texto: "Permisos — lector: " + g.permisos.lector.join(", ") + " · revisor: " + g.permisos.revisor.join(", ") + ". Las altas se hacen a mano en el editor SQL." }));
-      c.appendChild(el("h2", { texto: "Retención y almacenamiento" }));
-      c.appendChild(el("div", { clase: "tarjetas" }, [["Capturas almacenadas", g.almacenamiento.capturas_objetos], ["Bytes de capturas", g.almacenamiento.capturas_bytes], ["Lecturas guardadas", g.almacenamiento.lecturas_filas],
-        ["Lecturas vencidas", g.retencion.lecturas_vencidas], ["Retención de lecturas (días)", g.retencion.lecturas_dias], ["Retención de capturas (días)", g.retencion.capturas_dias]].map(function (x) {
-        return el("div", { clase: "tarjeta" }, [el("div", { clase: "detalle", texto: x[0] }), el("div", { clase: "valor", texto: txt(x[1]) })]); })));
-      c.appendChild(el("div", { clase: "detalle", texto: g.retencion.nota }));
-      c.appendChild(el("h2", { texto: "Alertas: reglas y umbrales" }));
-      c.appendChild(tabla([["Regla", function (x) { return x.regla; }], ["Umbral", function (x) { return x.umbral; }], ["Gravedad", function (x) { return x.gravedad; }]], g.umbrales_alertas));
-      c.appendChild(el("div", { clase: "detalle", texto: "Umbrales editables: " + (g.umbrales_editables ? "sí" : "no (fijos y documentados; cambiarlos requiere una migración)") + " · esquema " + g.esquema }));
-    }
+    var ancho = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
+    var cont = el("div", { clase: "config-cols" }), izq = el("div", { clase: "config-col" }), der = el("div", { clase: "config-col" });
+    // 1 · Costo de la IA
     if (k) {
-      c.appendChild(el("h2", { texto: "Costos de la IA" }));
-      c.appendChild(tabla([["Modelo", function (x) { return x.modelo; }], ["Consultas", function (x) { return x.consultas; }], ["Tokens entrada", function (x) { return x.tokens_entrada; }],
-        ["Tokens salida", function (x) { return x.tokens_salida; }], ["USD", function (x) { return x.usd; }], ["ms IA (mediana)", function (x) { return x.ms_ia_p50; }]], k.por_modelo, "Sin consumo en el periodo."));
-      c.appendChild(tabla([["Modelo", function (x) { return x.modelo; }], ["USD / M tokens entrada", function (x) { return x.usd_mtok_entrada; }], ["USD / M tokens salida", function (x) { return x.usd_mtok_salida; }]], k.tarifas));
-      c.appendChild(el("div", { clase: "detalle", texto: k.nota }));
+      var total = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0), tok = function (n) { return n === null || n === undefined ? "—" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : String(n); };
+      var ti = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.tokens_entrada || 0); }, 0), ts = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.tokens_salida || 0); }, 0);
+      izq.appendChild(acordeon("cfg-costos", "Costo de la IA", "periodo elegido", (k.por_modelo || []).length ? "$" + total.toFixed(2) : "—", [
+        (k.por_modelo || []).length ? el("div", {}, (k.por_modelo || []).map(function (x) { return filaKV(x.modelo + " · " + x.consultas + " consultas", "$" + Number(x.usd || 0).toFixed(2)); })) : el("div", { clase: "vacio", texto: "Sin consumo en el periodo." }),
+        (k.por_modelo || []).length ? el("div", { clase: "detalle", texto: "Tokens: " + tok(ti) + " entrada · " + tok(ts) + " salida." }) : null,
+        el("details", { clase: "sub" }, [el("summary", { texto: "Tarifas por modelo" }), el("div", {}, (k.tarifas || []).map(function (x) { return filaKV(x.modelo, "$" + x.usd_mtok_entrada + " entrada · $" + x.usd_mtok_salida + " salida (por M tokens)"); }))]),
+        k.nota ? el("div", { clase: "detalle", texto: k.nota }) : null], ancho));
     }
+    if (g) {
+      var al = g.almacenamiento || {}, rt = g.retencion || {};
+      // 2 · Almacenamiento y retención
+      izq.appendChild(acordeon("cfg-almacenamiento", "Almacenamiento", "capturas y lecturas", bytesLeg(al.capturas_bytes), [
+        filaKV("Capturas guardadas", txt(al.capturas_objetos) + " · " + bytesLeg(al.capturas_bytes)), filaKV("Lecturas guardadas", al.lecturas_filas),
+        filaKV("Lecturas vencidas", rt.lecturas_vencidas, rt.lecturas_vencidas > 0 ? "aviso-t" : ""),
+        el("div", { clase: "detalle", texto: "Se conservan " + txt(rt.lecturas_dias) + " días las lecturas y " + txt(rt.capturas_dias) + " días las capturas." }), rt.nota ? el("div", { clase: "detalle", texto: rt.nota }) : null], ancho));
+      // 3 · Alertas
+      var um = g.umbrales_alertas || [];
+      der.appendChild(acordeon("cfg-alertas", "Alertas", "reglas y umbrales", String(um.length), [
+        um.length ? el("div", {}, um.map(function (x) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: x.regla }), el("small", { texto: txt(x.umbral) })]), el("span", { clase: "sev " + x.gravedad, texto: GRAVEDAD[x.gravedad] || String(x.gravedad).toUpperCase() })]); })) : el("div", { clase: "vacio", texto: "Sin reglas." }),
+        el("div", { clase: "detalle", texto: "Umbrales editables: " + (g.umbrales_editables ? "sí" : "no (fijos y documentados; cambiarlos requiere una migración)") + " · esquema " + g.esquema })], ancho));
+      // 4 · Usuarios y permisos
+      var ad = g.administradores || [], pm = g.permisos || {};
+      der.appendChild(acordeon("cfg-usuarios", "Usuarios y permisos", "tú eres " + txt((g.yo || {}).rol), String(ad.length), [
+        el("div", { clase: "fila" }, [el("b", { texto: "Tú: " + txt((g.yo || {}).admin) }), el("span", { clase: "rol", texto: String((g.yo || {}).rol || "").toUpperCase() })]),
+        el("div", {}, ad.map(function (x) { return filaKV(x.admin + " · " + x.rol, "desde " + (x.alta || "").slice(0, 10)); })),
+        el("div", { clase: "etiquetas fila" }, ["lector", "revisor"].map(function (rl) { return el("span", { clase: "chipv", texto: rl + ": " + (pm[rl] || []).join(", ") }); })),
+        el("div", { clase: "detalle", texto: "Las altas se hacen a mano en el editor SQL." })], ancho));
+    }
+    // 5 · Historial
     if (b) {
-      c.appendChild(el("h2", { texto: "Historial de acciones" }));
-      c.appendChild(tabla([["Fecha", function (f) { return (f.creado || "").slice(0, 19); }], ["Admin", function (f) { return f.admin; }], ["Acción", function (f) { return f.accion; }],
-        ["Resultado", function (f) { return f.resultado; }], ["Filas", function (f) { return f.filas; }]], b.filas));
+      var fs = b.filas || [];
+      var fila = function (f) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: (f.creado || "").slice(0, 16).replace("T", " ") + " · " + txt(f.admin) }), el("small", { texto: txt(f.accion) })]), el("span", { clase: "sev nd", texto: txt(f.resultado) + (f.filas !== null && f.filas !== undefined ? " · " + f.filas : "") })]); };
+      var resto = fs.slice(10);
+      der.appendChild(acordeon("cfg-historial", "Historial de acciones", "consultas registradas", String(fs.length), [
+        fs.length ? el("div", {}, fs.slice(0, 10).map(fila)) : el("div", { clase: "vacio", texto: "Sin acciones registradas." }),
+        resto.length ? el("details", { clase: "sub" }, [el("summary", { texto: "Ver " + resto.length + " más" }), el("div", {}, resto.map(fila))]) : null], false));
     }
+    cont.appendChild(izq); cont.appendChild(der); c.appendChild(cont);
   }
 
   var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
