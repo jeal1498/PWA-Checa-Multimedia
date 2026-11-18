@@ -446,7 +446,7 @@
   // ---------- Veredicto humano: la referencia que usan Auditoría IA, Versiones y Ofertas ----------
   var CLASES_V = [["oferta", "Oferta"], ["no_oferta", "No es oferta"], ["varias", "Varias ofertas"], ["ilegible", "Ilegible"], ["cambio_pantalla", "Cambió la pantalla"]];
   var CONFIANZAS_V = [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]];
-  function hojaVeredicto(e, lec, ia, sug) {
+  function hojaVeredicto(e, lec, ia, sug, guardarSug) {
     var viejo = document.getElementById("hoja-ver"); if (viejo) viejo.remove();
     var conf = "alta", err = el("div", { clase: "aviso-cmp", id: "ver-error", hidden: "" });
     function cerrar() { h.remove(); }
@@ -469,7 +469,7 @@
       if (of && !(t > 0 && k > 0 && m > 0)) { err.textContent = "Escribe la tarifa, la distancia y el tiempo correctos (mayores que cero)."; err.hidden = false; return; }
       guardar.disabled = true; guardar.textContent = "Guardando…";
       var r = await llamar("admin_veredicto", { objetivo: "error_lector", objetivo_id: String(e.id), clase: selClase.value, tarifa: of ? t : null, km: of ? k : null, min: of ? m : null,
-        confianza: conf, evidencia_sha256: e.enlace.captura_sha256, nota: nota.value || null });
+        confianza: conf, evidencia_sha256: e.enlace.captura_sha256, nota: nota.value || null, ia_sugerencia: guardarSug || null });
       if (r && r.id) { h.remove(); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
     } });
     var h = el("div", { id: "hoja-ver", role: "dialog", "aria-modal": "true", "aria-label": "Dar veredicto", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
@@ -516,9 +516,10 @@
     if (difieren.length) c.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-diferencia", texto: (iguales.length ? legibleCap(lista(iguales)) + (iguales.length > 1 ? " iguales; " : " igual; ") : "") + lista(difieren) + (difieren.length > 1 ? " distintos." : " distinto.") + (refE ? "" : " Falta un veredicto humano para saber cuál acierta.") }));
     // Sugerencia de la IA que lee la imagen (DeepSeek): una captura a la vez, solo si la captura existe. La decisión es de la persona.
     if (e.evidencia && e.evidencia.captura) {
-      var cajaIA = el("div", { id: "ia-vision" });
+      var cajaIA = el("div", { id: "ia-vision" }), sugErr = null, precErr = null;
       var pintarIA = function (sug, pidiendo) {
-        cajaIA.textContent = "";
+        sugErr = sug; cajaIA.textContent = "";
+        if (precErr && precErr.n > 0) cajaIA.appendChild(el("div", { clase: "rev-ia-prec", id: "ia-precision-errores", texto: "Errores revisados con la IA de imagen: " + precErr.n + " (de ellos " + precErr.ofertas + " eran ofertas). La IA de imagen acertó " + precErr.vision + " de " + precErr.n + "; en las ofertas: IA de imagen " + precErr.vision_ofertas + ", Lector " + precErr.lector_ofertas + ", IA de texto " + precErr.texto_ofertas + " de " + precErr.ofertas + (precErr.n < (precErr.minimo || 30) ? " · muestra insuficiente (menos de " + (precErr.minimo || 30) + ")" : "") }));
         if (!sug) { cajaIA.appendChild(el("button", { type: "button", id: "ver-ia", clase: "rev-ia-pedir", disabled: pidiendo ? "" : null, texto: pidiendo ? "Leyendo con la IA…" : "Pedir sugerencia a la IA", onclick: async function () {
           pintarIA(null, true); aviso("");
           var r = null; try { r = await cli.functions.invoke("admin-leer-captura", { body: { nombre: e.id + ".webp" } }); } catch (x) { r = { error: x }; }
@@ -535,13 +536,14 @@
           el("div", { clase: "rotulo", texto: vigente ? "Oferta vigente" : sug.estado === "vencida" ? "Oferta vencida" : sug.estado === "aceptada" ? "Ya aceptada o tomada" : "No es una oferta" })]
           .concat(filas.map(function (f) { return el("div", {}, [fila(f[0], f[1], f[2]), el("div", { clase: "detalle", texto: quien(f[3], f[1], f[4]) })]); }))
           .concat([sug.nota ? el("div", { clase: "detalle", texto: sug.nota }) : null, el("div", { clase: "detalle", texto: "Es una sugerencia: tú decides." }),
-            yo && yo.rol === "revisor" && e.enlace && e.enlace.captura_sha256 ? el("button", { type: "button", id: "ia-usar", texto: vigente ? "Dar veredicto con sus valores" : "Dar veredicto: no es oferta", onclick: function () { hojaVeredicto(e, lec, ia, sug); } }) : null])));
+            yo && yo.rol === "revisor" && e.enlace && e.enlace.captura_sha256 ? el("button", { type: "button", id: "ia-usar", texto: vigente ? "Dar veredicto con sus valores" : "Dar veredicto: no es oferta", onclick: function () { hojaVeredicto(e, lec, ia, sug, sug); } }) : null])));
       };
+      var pr = await llamar("admin_ia_precision_errores"); precErr = pr && !pr.error ? pr : null;
       pintarIA(null, false); c.appendChild(cajaIA);
     }
     if (yo && yo.rol === "revisor") {
       var sha = e.enlace && e.enlace.captura_sha256;
-      c.appendChild(el("button", { type: "button", id: "dar-veredicto", clase: "dar-veredicto", texto: "Dar veredicto", disabled: sha ? null : "", onclick: function () { hojaVeredicto(e, lec, ia); } }));
+      c.appendChild(el("button", { type: "button", id: "dar-veredicto", clase: "dar-veredicto", texto: "Dar veredicto", disabled: sha ? null : "", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } }));
       if (!sha) c.appendChild(el("div", { clase: "detalle", id: "sin-huella", texto: "No se puede dar veredicto: este caso no tiene la huella de la captura (caso anterior a la 10.82 o sin lectura registrada)." }));
     }
     c.appendChild(el("div", { clase: "detalle", texto: "Veredicto heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
