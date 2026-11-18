@@ -75,7 +75,7 @@
     try { r = await cli.rpc(fn, args || {}); } catch (e) { aviso("Sin conexión con el servidor. Intenta de nuevo."); return null; }
     if (r.error) { aviso("Error del servidor: " + (r.error.message || r.error.code || "desconocido")); return null; }
     var d = r.data;
-    if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : d.error === "veredicto_invalido" ? "El veredicto no es válido: revisa los valores (la oferta necesita tarifa, distancia y tiempo mayores que cero)." : d.error === "objetivo_o_evidencia" ? "Falta la huella de la captura: este caso no admite veredicto." : "Filtro inválido: " + d.error); return null; }
+    if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : d.error === "veredicto_invalido" ? "El veredicto no es válido: revisa los valores (la oferta necesita tarifa, distancia y tiempo mayores que cero)." : d.error === "revision_invalida" ? "La revisión no es válida: revisa los valores o el motivo." : d.error === "objetivo_o_evidencia" ? "Falta la huella de la captura: este caso no admite veredicto." : "Filtro inválido: " + d.error); return null; }
     return d;
   }
   function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } window.scrollTo(0, 0); pintar(); }
@@ -596,7 +596,111 @@
       el("div", { clase: "mini", "aria-hidden": "true" }, (f.etapas || []).map(function (e) { return el("i", { clase: claseEtapa(e.estado) }); }))]);
     art.appendChild(cab); return art;
   }
+  // ---------- Revisar ofertas: capturas de ofertas aceptar / considerar / rechazar (desde la 10.82) ----------
+  var REV_COLORES = [["rojo", "Rechazar", "var(--luz-r)"], ["amarillo", "Considerar", "var(--luz-a)"], ["verde", "Aceptar", "var(--luz-v)"]];
+  var REV_META = 30;
+  var REV_MOTIVOS = [["no_oferta", "No era una oferta", "mapa, aviso, otra pantalla"], ["vencida", "Oferta vencida o aceptada", "ya no estaba disponible"],
+                     ["otra_tarjeta", "Era otra tarjeta", "mostró los datos de otra oferta"], ["ilegible", "No se ve bien", "la captura no permite decidir"]];
+  var revNivel = "rojo";
+  // Lo que mostró el pop-up sale del nombre: ok-<color>-<tarifa>-<km>-<min>-<ms>-n<id>.webp
+  function popDeNombre(n) { var m = /^ok-[a-z]+-([\d.]+)-([\d.]+)-([\d.]+)-/.exec(n || ""); return m ? { tarifa: Number(m[1]), km: Number(m[2]), min: Number(m[3]) } : { tarifa: null, km: null, min: null }; }
+  async function huella(blob) { try { var b = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()); return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); } catch (e) { return null; } }
+
+  async function revisar(c) {
+    c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Ofertas", texto: "‹ Ofertas", onclick: function () { ir("ofertas"); } }));
+    c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { texto: "Revisar ofertas" }), el("span", { clase: "vb ok", texto: "10.82" })]));
+    var esRevisor = !!(yo && yo.rol === "revisor");
+    var cuerpo = el("div", { id: "rev-cuerpo" }); c.appendChild(cuerpo);
+    var estado = { items: [], pend: {}, rev: {}, actual: null, url: null, blob: null, ultima: null, ocupado: false };
+    function soltar() { if (estado.url) { URL.revokeObjectURL(estado.url); estado.url = null; } estado.blob = null; }
+
+    async function cargarCola() {
+      var d = await llamar("admin_capturas_pendientes", { p_nivel: revNivel, p_limite: 10 });
+      if (!d) return false;
+      estado.pend = d.pendientes || {}; estado.rev = d.revisadas || {}; estado.items = d.items || [];
+      return true;
+    }
+    async function siguiente() {
+      soltar(); estado.actual = estado.items.shift() || null;
+      if (!estado.actual) { await cargarCola(); estado.actual = estado.items.shift() || null; }
+      if (estado.actual) {
+        var r = await cli.storage.from("capturas").download(estado.actual.nombre).catch(function () { return { error: true }; });
+        if (r && r.data) { estado.blob = r.data; estado.url = URL.createObjectURL(r.data); }
+      }
+      pintarRev();
+    }
+    async function guardar(args, borrarUltima) {
+      if (estado.ocupado || !estado.actual) return; estado.ocupado = true; pintarRev();
+      var it = estado.actual, sha = estado.blob ? await huella(estado.blob) : null;
+      var p = { p_captura_ok_id: it.id, p_resultado: args.resultado, p_motivo: args.motivo || null, p_tarifa: args.tarifa || null, p_km: args.km || null, p_min: args.min || null, p_nota: args.nota || null, p_evidencia_sha256: sha };
+      var r = await llamar("admin_revisar_captura", p);
+      estado.ocupado = false;
+      if (r && r.id) { estado.ultima = it; estado.pend[it.nivel] = Math.max(0, (estado.pend[it.nivel] || 0) - 1); estado.rev[it.nivel] = (estado.rev[it.nivel] || 0) + 1; await siguiente(); }
+      else pintarRev();
+    }
+    async function deshacer() {
+      if (estado.ocupado || !estado.ultima) return; estado.ocupado = true; pintarRev();
+      var it = estado.ultima, r = await llamar("admin_revisar_captura", { p_captura_ok_id: it.id, p_resultado: "anulada" });
+      estado.ocupado = false;
+      if (r && r.id) { estado.ultima = null; if (estado.actual) estado.items.unshift(estado.actual); estado.actual = it; estado.pend[it.nivel] = (estado.pend[it.nivel] || 0) + 1; estado.rev[it.nivel] = Math.max(0, (estado.rev[it.nivel] || 0) - 1);
+        soltar(); var rr = await cli.storage.from("capturas").download(it.nombre).catch(function () { return { error: true }; }); if (rr && rr.data) { estado.blob = rr.data; estado.url = URL.createObjectURL(rr.data); } }
+      pintarRev();
+    }
+    function hoja(titulo, hijos, onGuardar, textoGuardar) {
+      var viejo = document.getElementById("hoja-rev"); if (viejo) viejo.remove();
+      function cerrar() { h.remove(); }
+      var h = el("div", { id: "hoja-rev", role: "dialog", "aria-modal": "true", "aria-label": titulo, onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [el("div", { clase: "velo", onclick: cerrar }),
+        el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: titulo })].concat(hijos).concat(onGuardar ? [el("button", { id: "rev-guardar", type: "button", clase: "primario", texto: textoGuardar || "Guardar y siguiente", onclick: function () { if (onGuardar()) cerrar(); } })] : []))]);
+      document.body.appendChild(h); var f = h.querySelector("input, button.opcion-rev"); if (f) f.focus();
+    }
+    function hojaValores(it) {
+      var pop = popDeNombre(it.nombre);
+      function campo(id, t, u, v) { return el("label", { clase: "campo-v" }, [el("span", { texto: t + " (" + u + ")" }), el("input", { id: id, inputmode: "decimal", autocomplete: "off", value: v === null ? "" : String(v) })]); }
+      var nota = el("input", { id: "rev-nota", maxlength: "280", autocomplete: "off" });
+      hoja("Valores correctos", [el("div", { clase: "detalle", texto: "Lo que mostró el pop-up: $" + txt(pop.tarifa) + " · " + txt(pop.km) + " km · " + txt(pop.min) + " min" }),
+        el("div", { clase: "campos-v" }, [campo("rev-t", "Tarifa", "$", pop.tarifa), campo("rev-k", "Distancia", "km", pop.km), campo("rev-m", "Tiempo", "min", pop.min)]),
+        el("label", { clase: "campo-v" }, [el("span", { texto: "Nota (opcional)" }), nota]), el("div", { clase: "aviso-cmp", id: "rev-error", hidden: "" })], function () {
+        function n(id) { return parseFloat(document.getElementById(id).value.replace(",", ".")); }
+        var t = n("rev-t"), k = n("rev-k"), m = n("rev-m");
+        if (!(t > 0 && k > 0 && m > 0)) { var e = document.getElementById("rev-error"); e.textContent = "Escribe tarifa, distancia y tiempo correctos (mayores que cero)."; e.hidden = false; return false; }
+        guardar({ resultado: "valores_mal", tarifa: t, km: k, min: m, nota: nota.value }); return true; });
+    }
+    function hojaFalso() {
+      hoja("Falso positivo: ¿qué pasó?", REV_MOTIVOS.map(function (m) {
+        return el("button", { type: "button", clase: "opcion-rev", onclick: function () { document.getElementById("hoja-rev").remove(); guardar({ resultado: "falso_positivo", motivo: m[0] }); } }, [el("b", { texto: m[1] }), el("small", { texto: m[2] })]); }), null);
+    }
+    function pintarRev() {
+      cuerpo.textContent = "";
+      cuerpo.appendChild(el("div", { clase: "rev-colores", role: "group", "aria-label": "Color del pop-up" }, REV_COLORES.map(function (k) {
+        return el("button", { type: "button", clase: "rev-color", "aria-pressed": String(revNivel === k[0]), onclick: async function () { revNivel = k[0]; soltar(); estado.items = []; estado.ultima = null; await cargarCola(); await siguiente(); } },
+          [(function () { var p = el("i", { "aria-hidden": "true" }); p.style.background = k[2]; return p; })(), el("span", { texto: k[1] }), el("b", { texto: String(estado.pend[k[0]] || 0) })]); })));
+      var tot = REV_COLORES.reduce(function (s, k) { return s + (estado.pend[k[0]] || 0) + (estado.rev[k[0]] || 0); }, 0), hechas = REV_COLORES.reduce(function (s, k) { return s + (estado.rev[k[0]] || 0); }, 0);
+      var barra = el("i"); barra.style.width = Math.min(100, (estado.rev[revNivel] || 0) / REV_META * 100) + "%";
+      cuerpo.appendChild(el("div", { clase: "rev-prog" }, [el("div", { clase: "rev-prog-t" }, [el("span", { texto: "Revisadas de la 10.82" }), el("b", { texto: hechas + " de " + tot })]), el("div", { clase: "pbar" }, [barra]),
+        el("div", { clase: "rev-prog-t" }, [el("span", { texto: "Meta: " + REV_META + " por color" }), el("span", { texto: REV_COLORES.filter(function (k) { return k[0] === revNivel; })[0][1] + " " + (estado.rev[revNivel] || 0) + "/" + REV_META })])]));
+      var it = estado.actual;
+      if (!it) { cuerpo.appendChild(el("div", { clase: "vacio", id: "rev-vacio", texto: "No hay capturas pendientes de este color. Cuando la app suba más, aparecerán aquí." })); return; }
+      var rotulo = REV_COLORES.filter(function (k) { return k[0] === it.nivel; })[0], pop = popDeNombre(it.nombre);
+      var marco = el("div", { clase: "marco-captura" + (estado.url ? "" : " vacio"), id: "marco-captura" });
+      if (estado.url) { var img = el("img", { src: estado.url, alt: "Captura de la oferta " + it.id, clase: "captura-img" }); img.addEventListener("click", function () { abrirVisor(estado.url, it.id); }); marco.appendChild(img);
+        marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(estado.url, it.id); } })); }
+      else marco.appendChild(el("div", { clase: "marco-centro" }, [el("span", { texto: "La captura ya no está disponible." })]));
+      marco.appendChild(el("span", { clase: "marco-hora", texto: (it.creado || "").slice(11, 16) + " · " + txt(it.app) }));
+      function tile(nom, val) { return el("div", { clase: "pop-tile " + it.nivel }, [el("div", { clase: "pop-nom", texto: nom }), el("div", { clase: "pop-val", texto: val })]); }
+      cuerpo.appendChild(el("div", { clase: "duo", id: "rev-actual" }, [marco, el("div", { clase: "metr" }, [tile("Mostró el pop-up", rotulo[1].toUpperCase()), tile("Tarifa", pop.tarifa === null ? "—" : "$" + pop.tarifa), tile("Distancia", pop.km === null ? "—" : pop.km + " km"), tile("Tiempo", pop.min === null ? "—" : pop.min + " min")])]));
+      var off = !esRevisor || estado.ocupado;
+      cuerpo.appendChild(el("div", { clase: "rev-botones" }, [
+        el("button", { type: "button", id: "rev-correcta", clase: "rb ok", disabled: off ? "" : null, onclick: function () { guardar({ resultado: "correcta" }); } }, [el("big", { texto: "✓" }), "Correcta"]),
+        el("button", { type: "button", id: "rev-valores", clase: "rb vm", disabled: off ? "" : null, onclick: function () { hojaValores(it); } }, [el("big", { texto: "✎" }), "Valores mal"]),
+        el("button", { type: "button", id: "rev-falso", clase: "rb fp", disabled: off ? "" : null, onclick: function () { hojaFalso(); } }, [el("big", { texto: "✕" }), "Falso positivo"])]));
+      cuerpo.appendChild(el("div", { clase: "rev-pie" }, [el("span", { clase: "detalle", texto: esRevisor ? "Un toque en «Correcta» pasa a la siguiente." : "Tu rol es de solo lectura: no puedes revisar." }),
+        el("button", { type: "button", id: "rev-deshacer", texto: "↶ Deshacer", disabled: estado.ultima && !estado.ocupado ? null : "", onclick: deshacer })]));
+    }
+    if (await cargarCola()) await siguiente();
+  }
+
   async function ofertas(c) {
+    c.appendChild(el("a", { href: "#revisar", id: "ir-revisar", clase: "boton-enlace revisar-entrada", texto: "Revisar capturas de ofertas (aceptar, considerar, rechazar)", onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
       return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-resultado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-resultado"] = ch[0]; pag.ofertas = 1; pintar(); } }); })));
     c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"]), opciones("f-estado", "Veredicto", VEREDICTOS)]));
@@ -889,7 +993,7 @@
     cont.appendChild(izq); cont.appendChild(der); c.appendChild(cont);
   }
 
-  var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
+  var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, revisar: revisar, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
   var TITULOS = {}; MODULOS.forEach(function (m) { TITULOS[m[0]] = m[1]; });
 
   // Hoja inferior «Más» (solo teléfono): módulos restantes, tema y salir.
@@ -929,10 +1033,10 @@
     hoja(false);
     var raiz = document.getElementById("raiz");
     raiz.textContent = "";
-    var PRINCIPALES = ["inicio", "errores", "ofertas"];
-    var enMas = PRINCIPALES.indexOf(vista) < 0;
+    var PRINCIPALES = ["inicio", "errores", "ofertas"], vSel = vista === "revisar" ? "ofertas" : vista;
+    var enMas = PRINCIPALES.indexOf(vSel) < 0;
     var botones = MODULOS.map(function (m) {
-      var activo = m[0] === vista;
+      var activo = m[0] === vSel;
       return el("button", { id: "t-" + m[0], type: "button", role: "tab", clase: PRINCIPALES.indexOf(m[0]) < 0 ? "sec" : "", "aria-selected": String(activo), "aria-current": activo ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
         [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); });
     var masIco = sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "currentColor" }, [sv("circle", { cx: "5", cy: "12", r: "1.6" }), sv("circle", { cx: "12", cy: "12", r: "1.6" }), sv("circle", { cx: "19", cy: "12", r: "1.6" })]);
