@@ -299,13 +299,27 @@
   }
 
   // ---------- 02 Errores ----------
+  // Versiones de la app desde la 10.82 (lista desplegable); las nuevas se agregan solas al verse en los datos.
+  var VERSIONES = ["10.84", "10.83", "10.82"], versionesCargadas = false;
+  function versionNum(v) { var p = String(v).split("."); return Number(p[0]) * 1000 + Number(p[1] || 0); }
+  function versionesOpc() {
+    return [el("option", { value: "", texto: "Todas" })].concat(VERSIONES.map(function (v) { return el("option", { value: v, texto: v }); }));
+  }
+  async function cargarVersiones(sel) {
+    if (versionesCargadas) return; versionesCargadas = true;
+    var d = await llamar("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T00:00:00Z" });
+    if (!d || !d.versiones) return;
+    d.versiones.forEach(function (x) { var v = String(x.version || ""); if (/^\d+\.\d+$/.test(v) && versionNum(v) >= 10082 && VERSIONES.indexOf(v) < 0) VERSIONES.push(v); });
+    VERSIONES.sort(function (a, b) { return versionNum(b) - versionNum(a); });
+    var actual = sel.value; sel.textContent = ""; versionesOpc().forEach(function (o) { sel.appendChild(o); }); sel.value = actual;
+  }
   function filtrosBase(extra) {
     var r = rango();
     var nodo = el("div", { clase: "filtros" }, [
       el("label", {}, ["Desde", el("input", { id: "f-desde", type: "date", value: r.desde.slice(0, 10) })]),
       el("label", {}, ["Hasta", el("input", { id: "f-hasta", type: "date", value: r.hasta.slice(0, 10) })]),
       el("label", {}, ["App", el("select", { id: "f-app" }, [el("option", { value: "", texto: "Todas" }), el("option", { value: "uber", texto: "Uber" }), el("option", { value: "didi", texto: "DiDi" })])]),
-      el("label", {}, ["Versión", el("input", { id: "f-version", placeholder: "Ej. 10.81", size: "6", inputmode: "decimal", enterkeyhint: "search", autocomplete: "off" })])].concat(extra || []).concat([
+      el("label", {}, ["Versión", el("select", { id: "f-version" }, versionesOpc())])].concat(extra || []).concat([
       el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; dias = 7; pag.errores = pag.ofertas = 1; pintar(); } })]));
     ["f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = nodo.querySelector("#" + id); if (x && F[id] !== undefined) x.value = F[id]; });
     // 10.84 (propuesta B): los filtros se aplican solos al cambiar y el activo se resalta.
@@ -315,9 +329,8 @@
     }
     nodo.querySelectorAll("input, select").forEach(function (x) {
       x.addEventListener("change", aplicar);
-      if (x.id === "f-version") x.addEventListener("keydown", function (ev) { if (ev.key === "Enter") aplicar(); });
       if (x.tagName === "SELECT" && x.value) x.parentNode.classList.add("act");
-      if (x.id === "f-version" && x.value) x.parentNode.classList.add("act");
+      if (x.id === "f-version") cargarVersiones(x);
     });
     var n = Object.keys(F).filter(function (k) { return F[k] && k.indexOf("f-") === 0 && k !== "f-desde" && k !== "f-hasta"; }).length;
     var pleg = el("details", { clase: "filtros-hoja" }, [el("summary", { texto: "Filtros" + (n ? " (" + n + ")" : "") }), nodo]);
