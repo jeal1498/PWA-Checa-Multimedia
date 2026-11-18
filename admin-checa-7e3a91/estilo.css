@@ -403,3 +403,28 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 .campos-v { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; } .campo-v { display:flex; flex-direction:column; gap:2px; font-size:12px; color:var(--tenue); min-width:0; } .campo-v input, .campo-v select { width:100%; font-size:16px; }
 .seg3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; } .seg3 button[aria-pressed="true"] { background:var(--texto); color:var(--fondo); border-color:var(--texto); font-weight:800; }
 .campo-v[hidden], #ver-error[hidden], [hidden].aviso-cmp { display:none !important; }
+
+/* ===== Revisar ofertas ===== */
+.revisar-entrada { margin:0 0 10px; font-size:14px; text-align:center; padding:0 12px; }
+.rev-colores { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; margin:8px 0; }
+.rev-color { min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-radius:12px; font-weight:800; font-size:12px; }
+.rev-color i { width:14px; height:14px; border-radius:50%; display:block; } .rev-color b { font:800 16px "JetBrains Mono", ui-monospace, monospace; }
+.rev-color[aria-pressed="true"] { border-color:var(--texto); box-shadow:inset 0 -3px 0 var(--texto); }
+.rev-prog { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.rev-prog-t { display:flex; justify-content:space-between; font-size:12px; color:var(--tenue); } .rev-prog-t b { color:var(--texto); font-size:13px; }
+.pbar { height:8px; border-radius:4px; background:var(--panel); overflow:hidden; } .pbar i { display:block; height:100%; background:var(--texto); }
+.pop-tile { border-radius:12px; border:1px solid var(--borde); padding:8px 10px; display:flex; flex-direction:column; justify-content:center; gap:2px; flex:1; background:var(--tablero); min-width:0; }
+.pop-tile.rojo { background:color-mix(in srgb, var(--luz-r) 14%, var(--tablero)); border-color:color-mix(in srgb, var(--luz-r) 45%, var(--borde)); }
+.pop-tile.amarillo { background:color-mix(in srgb, var(--luz-a) 18%, var(--tablero)); border-color:color-mix(in srgb, var(--luz-a) 55%, var(--borde)); }
+.pop-tile.verde { background:color-mix(in srgb, var(--luz-v) 14%, var(--tablero)); border-color:color-mix(in srgb, var(--luz-v) 45%, var(--borde)); }
+.pop-nom { font:800 11px "DM Sans", system-ui, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--tenue); } .pop-val { font:800 15px "JetBrains Mono", ui-monospace, monospace; overflow-wrap:anywhere; }
+.rev-botones { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; margin:10px 0 6px; }
+.rb { min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; font-weight:800; font-size:12px; line-height:1.2; border-radius:12px; text-align:center; } .rb big { font-size:20px; line-height:1; }
+.rb.ok { border-color:var(--verde); color:var(--verde); } .rb.vm { border-color:var(--amarillo); color:var(--amarillo); } .rb.fp { border-color:var(--rojo); color:var(--rojo); }
+.rev-pie { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+#hoja-rev { position:fixed; inset:0; z-index:30; } #hoja-rev .velo { position:absolute; inset:0; background:rgba(12,12,16,.5); }
+#hoja-rev .panel-hoja { position:absolute; left:0; right:0; bottom:0; max-width:560px; max-height:92vh; overflow:auto; margin:0 auto; background:var(--tablero); border-radius:22px 22px 0 0; padding:10px 16px calc(16px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:8px; box-shadow:0 -8px 30px #0004; }
+#hoja-rev .asa { width:40px; height:4px; border-radius:2px; background:var(--borde); align-self:center; flex:none; } #hoja-rev h2 { margin:0; }
+.opcion-rev { min-height:56px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; text-align:center; } .opcion-rev small { color:var(--tenue); font-size:12px; }
+@media (min-width:1000px) and (orientation:landscape) { #rev-actual .marco-captura { max-height:62vh; } }
+@media (max-width:760px) { .rev-botones { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom)); background:var(--fondo); padding:8px 0; margin:6px 0 0; z-index:3; box-shadow:0 -8px 12px var(--fondo); } }
