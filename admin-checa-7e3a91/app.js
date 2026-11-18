@@ -419,39 +419,87 @@
   }
 
   // ---------- 03 Ofertas ----------
+  var RES = { oferta: ["OFERTA", "ok"], no_oferta: ["NO OFERTA", "nd"], descartada: ["DESCARTADA", "nd"], duplicada: ["DUPLICADA", "nd"], varias: ["VARIAS", "aviso"],
+              abstencion: ["ABSTENCIÓN", "aviso"], timeout: ["TIMEOUT", "mal"], error: ["ERROR", "mal"] };
+  var RES_CHIPS = [["", "Todos"], ["abstencion", "Abstención"], ["error", "Error"], ["duplicada", "Duplicada"]];
+  var RES_BARRA = [["Oferta", ["oferta"], "var(--luz-v)"], ["No oferta", ["no_oferta", "descartada"], "var(--gris)"], ["Duplicada", ["duplicada", "varias"], "var(--amarillo)"],
+                   ["Abstención", ["abstencion"], "var(--luz-a)"], ["Error o timeout", ["error", "timeout"], "var(--luz-r)"]];
+  function etiquetaResultado(r) { var x = RES[r] || [r ? String(r).toUpperCase() : "—", "nd"]; return el("span", { clase: "vb " + x[1], texto: x[0] }); }
+  function claseEtapa(s) { s = String(s || "").toLowerCase(); return /err|fall|time|rech|no_/.test(s) ? "x" : /ok|exit|complet|correct|hecho|listo|proces/.test(s) ? "" : "s"; }
+  function barraResultados(filas, total) {
+    var n = filas.length; if (!n) return null;
+    var cuenta = RES_BARRA.map(function (g) { return filas.filter(function (f) { return g[1].indexOf(f.resultado) >= 0; }).length; });
+    return el("section", { clase: "barra-res", id: "resultados" }, [
+      el("div", { clase: "h-fila" }, [el("h2", { texto: "Qué pasó con las lecturas" }), el("span", { clase: "detalle", texto: total ? total + " en total" : "" })]),
+      el("div", { clase: "barra", role: "img", "aria-label": RES_BARRA.map(function (g, k) { return g[0] + " " + Math.round(cuenta[k] / n * 100) + "%"; }).join(", ") },
+        RES_BARRA.map(function (g, k) { if (!cuenta[k]) return null; var s = el("i"); s.style.width = (cuenta[k] / n * 100) + "%"; s.style.background = g[2]; return s; })),
+      el("div", { clase: "leyenda" }, RES_BARRA.map(function (g, k) { var p = el("i"); p.style.background = g[2]; return el("span", {}, [p, g[0] + " " + Math.round(cuenta[k] / n * 100) + "%"]); })),
+      el("div", { clase: "detalle", texto: "Calculado con los " + n + " eventos de esta página." + (total && total > n ? " El total del periodo no está disponible todavía." : "") })]);
+  }
+  function metricaTarjeta(x) {
+    var PROP = ["duplicadas", "abstenciones", "captura_exacta", "con_referencia_humana", "precision_humana", "falsos_positivos_humana", "mezcla_tarjetas_humana", "acuerdo_ia_lector", "banco_heredado"];
+    var v = x.valor === null || x.valor === undefined ? "—" : (PROP.indexOf(x.clave) >= 0 ? pct(x.valor) : String(x.valor));
+    return el("div", { clase: "tarjeta", "data-clave": x.clave, title: x.formula + " · población: " + x.poblacion + " · fuente: " + x.fuente }, [
+      el("div", { clase: "detalle", texto: x.nombre }), el("div", { clase: "valor", texto: v }),
+      el("div", { clase: "detalle", texto: (x.k !== null && x.k !== undefined ? x.k + " / " : "") + "n = " + txt(x.n) }),
+      el("span", { clase: "etiqueta " + (x.estado === "suficiente" ? "ok" : x.estado === "no_medible" ? "mal" : "aviso"), texto: x.estado.replace("_", " ") }),
+      x.motivo ? el("div", { clase: "detalle", texto: x.motivo }) : null]);
+  }
+  function detalleEvento(f) {
+    var ref = f.referencia;
+    return el("div", { clase: "evento-detalle" }, [
+      el("div", { clase: "etapas-lista" }, (f.etapas || []).map(function (e) { return el("div", { clase: "fila" }, [el("span", { clase: "punto " + (claseEtapa(e.estado) === "x" ? "mal" : claseEtapa(e.estado) === "s" ? "nd" : "ok") }), el("span", { texto: e.etapa + " · " + e.estado })]); })),
+      el("div", { clase: "kv" }, [["Lector", f.lector], ["Captura", f.captura_vinculo], ["Veredicto", f.estado_veredicto], ["Referencia humana", ref ? [ref.clase, ref.tarifa, ref.km, ref.min].map(txt).join(" · ") : null], ["Conductor", f.conductor]].reduce(function (acc, p) {
+        acc.push(el("span", { texto: p[0] }), el("b", { texto: txt(p[1]) })); return acc; }, [])),
+      enlace("Ver errores", "errores")]);
+  }
+  function tarjetaEvento(f) {
+    var cuerpo = null;
+    var art = el("article", { clase: "evento", "data-res": f.resultado });
+    var cab = el("button", { type: "button", clase: "evento-cab", "aria-expanded": "false", onclick: function () {
+      if (window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches) {
+        var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
+        document.querySelectorAll(".evento.sel").forEach(function (x) { x.classList.remove("sel"); }); art.classList.add("sel");
+        l.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { texto: "Evento · " + (f.ts_evento || "").slice(11, 16) }), etiquetaResultado(f.resultado)])); l.appendChild(detalleEvento(f)); l.scrollTop = 0; return;
+      }
+      if (cuerpo) { cuerpo.remove(); cuerpo = null; cab.setAttribute("aria-expanded", "false"); art.classList.remove("abierto"); }
+      else { cuerpo = detalleEvento(f); art.appendChild(cuerpo); cab.setAttribute("aria-expanded", "true"); art.classList.add("abierto"); } } }, [
+      el("div", { clase: "evento-fila" }, [el("b", { texto: (f.ts_evento || "").slice(11, 16) }), etiquetaResultado(f.resultado), el("span", { clase: "detalle der", texto: txt(f.app) + " " + txt(f.version_app) })]),
+      el("div", { clase: "evento-valor" }, [punto(f.nivel), el("span", { texto: [f.tarifa, f.km, f.min].every(function (x) { return x === null || x === undefined; }) ? "—" : tkm({ tarifa: f.tarifa, km: f.km, min: f.min }).join(" · ") })]),
+      f.motivo ? el("div", { clase: "detalle", texto: f.motivo }) : null,
+      el("div", { clase: "mini", "aria-hidden": "true" }, (f.etapas || []).map(function (e) { return el("i", { clase: claseEtapa(e.estado) }); }))]);
+    art.appendChild(cab); return art;
+  }
   async function ofertas(c) {
+    c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
+      return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-resultado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-resultado"] = ch[0]; pag.ofertas = 1; pintar(); } }); })));
     c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"]), opciones("f-estado", "Veredicto", VEREDICTOS)]));
     skeleton(c);
     var r = rango(), m = await llamar("admin_metricas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version") });
     var d = await llamar("admin_ofertas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
       resultado: valor("f-resultado"), estado_veredicto: valor("f-estado"), pagina: pag.ofertas, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
+    var b = d ? barraResultados(d.filas || [], d.total) : null; if (b) c.appendChild(b);
     if (m) {
+      var ms = m.metricas || [];
+      var clave = ["precision_humana", "captura_exacta"], destac = clave.map(function (k) { return ms.filter(function (x) { return x.clave === k; })[0]; }).filter(Boolean);
+      if (destac.length) { c.appendChild(el("h2", { texto: "Calidad contra humano" })); c.appendChild(el("div", { clase: "tarjetas dos", id: "calidad" }, destac.map(metricaTarjeta))); }
       var grupos = { operacion: "Operación (telemetría)", calidad_humana: "Calidad contra referencia humana", acuerdo_ia: "Acuerdo IA / lector (no es exactitud)", banco_historico: "Banco histórico (etiquetas heredadas)" };
-      var PROP = ["duplicadas", "abstenciones", "captura_exacta", "con_referencia_humana", "precision_humana", "falsos_positivos_humana", "mezcla_tarjetas_humana", "acuerdo_ia_lector", "banco_heredado"];
+      var mas = el("details", { clase: "mas-metricas", id: "mas-metricas" }, [el("summary", { texto: "Más métricas" })]);
       Object.keys(grupos).forEach(function (g) {
-        var ms = (m.metricas || []).filter(function (x) { return x.grupo === g; });
-        if (!ms.length) return;
-        c.appendChild(el("h2", { texto: grupos[g] }));
-        c.appendChild(el("div", { clase: "tarjetas" }, ms.map(function (x) {
-          var v = x.valor === null || x.valor === undefined ? "—" : (PROP.indexOf(x.clave) >= 0 ? pct(x.valor) : String(x.valor));
-          return el("div", { clase: "tarjeta", "data-clave": x.clave, title: x.formula + " · población: " + x.poblacion + " · fuente: " + x.fuente }, [
-            el("div", { clase: "detalle", texto: x.nombre }), el("div", { clase: "valor", texto: v }),
-            el("div", { clase: "detalle", texto: (x.k !== null && x.k !== undefined ? x.k + " / " : "") + "n = " + txt(x.n) }),
-            el("span", { clase: "etiqueta " + (x.estado === "suficiente" ? "ok" : x.estado === "no_medible" ? "mal" : "aviso"), texto: x.estado.replace("_", " ") }),
-            x.motivo ? el("div", { clase: "detalle", texto: x.motivo }) : null]); })));
+        var gs = ms.filter(function (x) { return x.grupo === g; });
+        if (!gs.length) return;
+        mas.appendChild(el("h2", { texto: grupos[g] }));
+        mas.appendChild(el("div", { clase: "tarjetas" }, gs.map(metricaTarjeta)));
       });
+      c.appendChild(mas);
     }
     if (!d) return;
     c.appendChild(el("h2", { texto: "Eventos de lectura" }));
-    c.appendChild(tabla([["Fecha", function (f) { return (f.ts_evento || "").slice(0, 19); }], ["App", function (f) { return f.app; }],
-      ["Versión", function (f) { return f.version_app; }], ["Lector", function (f) { return f.lector; }], ["Resultado", function (f) { return f.resultado; }],
-      ["Motivo", function (f) { return f.motivo; }], ["Tarifa · km · min", function (f) { return [f.tarifa, f.km, f.min].map(txt).join(" · "); }],
-      ["Semáforo", function (f) { return f.nivel; }], ["Captura", function (f) { return f.captura_vinculo; }], ["Veredicto", function (f) { return f.estado_veredicto; }],
-      ["Referencia humana", function (f) { var x = f.referencia; return x ? [x.clase, x.tarifa, x.km, x.min].map(txt).join(" · ") : null; }],
-      ["Etapas", function (f) { return (f.etapas || []).map(function (e) { return e.etapa + ":" + e.estado; }).join(" › "); }],
-      ["Conductor", function (f) { return f.conductor; }]], d.filas));
-    c.appendChild(paginas("ofertas", d));
+    var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle del evento", hidden: "" });
+    c.appendChild(el("div", { clase: "dividido" }, [lista, lado]));
+    lista.appendChild(el("div", { clase: "error-lista", id: "eventos" }, (d.filas || []).length ? d.filas.map(tarjetaEvento) : [el("div", { clase: "vacio", texto: "Sin eventos con estos filtros." })]));
+    lista.appendChild(paginas("ofertas", d));
   }
 
   // ---------- 04 Versiones ----------
