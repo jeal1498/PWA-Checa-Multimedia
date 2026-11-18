@@ -264,3 +264,26 @@ details.mas-metricas { margin:10px 0; } details.mas-metricas > summary { display
 .evento-detalle { padding:0 10px 12px; display:flex; flex-direction:column; gap:8px; border-top:1px dashed var(--borde); padding-top:10px; margin:0 0 0; }
 .etapas-lista { display:flex; flex-direction:column; gap:4px; }
 .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:13px; } .kv span { color:var(--tenue); } .kv b { font-weight:600; overflow-wrap:anywhere; }
+
+/* ===== Versiones ===== */
+.ver-layout { display:flex; flex-direction:column-reverse; gap:12px; }
+.panel-cmp { background:var(--tablero); border:1px solid var(--borde); border-radius:14px; padding:12px; align-self:stretch; }
+.panel-cmp h2 { margin:0 0 8px; }
+.vcomp { display:grid; border:1px solid var(--borde); border-radius:12px; overflow:hidden; }
+.vcomp > div { padding:8px 10px; border-top:1px solid var(--panel); display:flex; flex-direction:column; justify-content:center; min-width:0; }
+.vc-h { background:var(--panel); font-weight:800; font-size:12px; color:var(--tenue); border-top:0 !important; }
+.vc-l { font-size:13px; }
+.vc-v { font:700 13px "JetBrains Mono", ui-monospace, monospace; }
+.vc-v small { font:600 11px "DM Sans", system-ui, sans-serif; color:var(--tenue); }
+.vc-v.mejor { color:var(--verde); } .vc-v.peor { color:var(--rojo); }
+.version-tarjeta { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; }
+.version-tarjeta.sel { box-shadow:0 0 0 2px var(--texto); }
+.version-cab { display:flex; align-items:center; gap:8px; } .version-cab b { font:800 17px "JetBrains Mono", ui-monospace, monospace; }
+.comparar-btn { margin-left:auto; display:flex; align-items:center; gap:8px; padding:0 10px; }
+.cb { width:22px; height:22px; border:2px solid var(--texto); border-radius:6px; display:grid; place-items:center; font-weight:800; font-size:14px; }
+.comparar-btn[aria-pressed="true"] .cb { background:var(--texto); color:var(--fondo); }
+#quitar-cmp { min-height:40px; }
+@media (min-width:1000px) and (orientation:landscape) {
+  .ver-layout { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-items:start; flex-direction:row; }
+  .panel-cmp { position:sticky; top:62px; order:2; }
+}

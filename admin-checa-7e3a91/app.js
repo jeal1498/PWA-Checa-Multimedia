@@ -504,35 +504,76 @@
 
   // ---------- 04 Versiones ----------
   var elegidas = {};
+  var MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  function corto(f) { if (!f) return "—"; var d = new Date(f); return isNaN(d) ? String(f).slice(0, 10) : d.getUTCDate() + " " + MESES[d.getUTCMonth()]; }
+  function tasa(x, y) { return y ? x / y : null; }
+  function calidadV(v) { return tasa(v.coinciden, v.con_referencia); }
+  var FILAS_CMP = [
+    ["Calidad humana", function (v) { return calidadV(v); }, function (v) { return v.con_referencia >= 30; }, "mayor", function (v) { return v.con_referencia ? pct(calidadV(v)) : "sin referencia"; }, function (v) { return "n=" + v.con_referencia; }],
+    ["Error de proceso", function (v) { return tasa(v.errores_proceso, v.lecturas); }, function (v) { return v.lecturas >= 30; }, "menor", function (v) { return pct(tasa(v.errores_proceso, v.lecturas)); }, null],
+    ["Error del lector", function (v) { return tasa(v.errores_lector, v.lecturas); }, function (v) { return v.lecturas >= 30; }, "menor", function (v) { return pct(tasa(v.errores_lector, v.lecturas)); }, null],
+    ["ms pop-up (mediana)", function (v) { return v.ms_popup_p50; }, null, null, function (v) { return txt(v.ms_popup_p50); }, null],
+    ["Casos con referencia", function (v) { return v.con_referencia; }, null, null, function (v) { return txt(v.con_referencia); }, null]];
+  // Tabla lado a lado. Solo se resalta la mejor y la peor si todas las versiones tienen muestra suficiente (n ≥ 30).
+  function tablaComparar(sel) {
+    var cab = [el("div", { clase: "vc-h" })].concat(sel.map(function (v) { return el("div", { clase: "vc-h", texto: v.version }); }));
+    var celdas = [];
+    FILAS_CMP.forEach(function (f) {
+      var vals = sel.map(f[1]), ok = f[2] && sel.every(f[2]) && vals.every(function (x) { return x !== null && x !== undefined; });
+      var mejor = null, peor = null;
+      if (ok && f[3]) { var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals); if (mx !== mn) { mejor = f[3] === "mayor" ? mx : mn; peor = f[3] === "mayor" ? mn : mx; } }
+      celdas.push(el("div", { clase: "vc-l", texto: f[0] }));
+      sel.forEach(function (v, k) {
+        var cls = "vc-v" + (mejor !== null && vals[k] === mejor ? " mejor" : mejor !== null && vals[k] === peor ? " peor" : "");
+        celdas.push(el("div", { clase: cls }, [f[4](v), f[5] ? el("small", { texto: f[5](v) }) : null]));
+      });
+    });
+    var g = el("div", { clase: "vcomp", role: "table", "aria-label": "Comparación de versiones" }, cab.concat(celdas));
+    g.style.gridTemplateColumns = "1.2fr " + sel.map(function () { return "1fr"; }).join(" ");
+    return g;
+  }
+  function tarjetaVersion(v, onCambio) {
+    var cal = v.con_referencia ? pct(calidadV(v)) : "—", on = !!elegidas[v.version];
+    var boton = el("button", { type: "button", clase: "comparar-btn", "aria-pressed": String(on), "aria-label": "Comparar versión " + v.version, "data-version": v.version,
+      onclick: function () { elegidas[v.version] = !elegidas[v.version]; onCambio(); } }, [el("span", { texto: "Comparar" }), el("span", { clase: "cb", "aria-hidden": "true", texto: on ? "✓" : "" })]);
+    return el("article", { clase: "version-tarjeta" + (on ? " sel" : ""), "data-version": v.version }, [
+      el("div", { clase: "version-cab" }, [el("b", { texto: v.version }), el("span", { clase: "detalle", texto: "desde " + corto(v.primera) }), boton]),
+      el("div", { clase: "comp3" }, [casilla("Calidad", [cal], false), casilla("Error", [pct(tasa(v.errores_proceso, v.lecturas))], false), casilla("ms", [txt(v.ms_popup_p50)], false)]),
+      el("div", { clase: v.con_referencia < 30 ? "aviso-cmp" : "detalle", texto: v.con_referencia < 30 ? "Solo " + v.con_referencia + " casos con referencia: aún sin conclusión." : v.con_referencia + " casos con referencia" }),
+      el("div", { clase: "detalle", texto: v.lecturas + " lecturas · " + v.conductores + " conductores · " + v.errores_lector + " errores del lector" })]);
+  }
   async function versiones(c) {
-    c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Versiones" }), selPeriodo(pintar)]));
+    function cabecera() { return el("div", { clase: "encabezado" }, [el("h1", { texto: "Versiones" }), selPeriodo(pintar)]); }
+    c.appendChild(cabecera());
     skeleton(c);
     var r = rango(), d = await llamar("admin_versiones", { desde: r.desde, hasta: r.hasta });
-    c.textContent = ""; c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Versiones" }), selPeriodo(pintar)]));
+    var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    c.appendChild(tabla([["Comparar", function (v) { return el("input", { type: "checkbox", "data-version": v.version, checked: elegidas[v.version] ? "" : null,
-        onchange: function (ev) { elegidas[v.version] = ev.target.checked; pintarComparacion(d.versiones, cmp); } }); }],
-      ["Versión", function (v) { return v.version; }], ["Primera lectura", function (v) { return (v.primera || "").slice(0, 10); }], ["Lecturas", function (v) { return v.lecturas; }],
-      ["Errores de proceso", function (v) { return v.errores_proceso; }], ["Errores del lector", function (v) { return v.errores_lector; }],
-      ["Con referencia", function (v) { return v.con_referencia; }],
-      ["Coinciden (humano)", function (v) { return v.con_referencia ? v.coinciden + " / " + v.con_referencia + " = " + pct(v.coinciden / v.con_referencia) : "sin referencia"; }],
-      ["ms pop-up (mediana)", function (v) { return v.ms_popup_p50; }], ["Conductores", function (v) { return v.conductores; }]], d.versiones));
-    var cmp = el("div", { id: "comparacion" });
-    c.appendChild(el("h2", { texto: "Comparar versiones" })); c.appendChild(cmp);
-    c.appendChild(el("div", { clase: "detalle", texto: d.nota_comparacion }));
-    pintarComparacion(d.versiones, cmp);
-  }
-  function pintarComparacion(vs, cont) {
-    cont.textContent = "";
-    var sel = vs.filter(function (v) { return elegidas[v.version]; });
-    if (sel.length < 2) { cont.appendChild(el("div", { clase: "vacio", texto: "Marca dos o más versiones para compararlas." })); return; }
-    var aviso2 = [];
-    sel.forEach(function (v) { if (v.con_referencia < 30) aviso2.push("La " + v.version + " tiene solo " + v.con_referencia + " casos con referencia (< 30): no se puede declarar mejora ni regresión."); });
-    cont.appendChild(tabla([["Versión", function (v) { return v.version; }], ["Lecturas", function (v) { return v.lecturas; }], ["Casos con referencia", function (v) { return v.con_referencia; }],
-      ["Calidad (humana)", function (v) { return v.con_referencia ? pct(v.coinciden / v.con_referencia) : "sin referencia"; }],
-      ["Tasa de error de proceso", function (v) { return pct(v.lecturas ? v.errores_proceso / v.lecturas : null); }], ["ms pop-up", function (v) { return v.ms_popup_p50; }]], sel));
-    cont.appendChild(el("div", { id: "aviso-comparacion", clase: aviso2.length ? "alerta media" : "detalle",
-      texto: aviso2.length ? aviso2.join(" ") : "Todas las versiones elegidas tienen n ≥ 30 con referencia. Aun así, los casos no son los mismos en cada versión: confirma la cobertura antes de concluir." }));
+    var vs = (d.versiones || []).slice().sort(function (x, y) { return String(y.primera || "").localeCompare(String(x.primera || "")); });
+    if (!vs.length) { c.appendChild(el("div", { clase: "vacio", texto: "Sin versiones en este periodo." })); return; }
+    var panel = el("section", { id: "comparacion", clase: "panel-cmp", "aria-live": "polite" });
+    var lista = el("div", { clase: "error-lista", id: "versiones-lista" });
+    function pintarTodo() {
+      var sel = vs.filter(function (v) { return elegidas[v.version]; }), manual = sel.length >= 2;
+      var usar = manual ? sel.slice(0, 3) : vs.slice(0, 2);
+      panel.textContent = "";
+      if (usar.length < 2) { panel.appendChild(el("div", { clase: "vacio", texto: "Hace falta más de una versión para comparar." })); }
+      else {
+        panel.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: manual ? "Comparando " + usar.length + " versiones" : "Nueva contra anterior" }),
+          manual ? el("button", { type: "button", id: "quitar-cmp", texto: "Quitar", onclick: function () { elegidas = {}; pintarTodo(); } }) : el("span", { clase: "detalle", texto: usar[0].version + " · " + usar[1].version })]));
+        panel.appendChild(tablaComparar(usar));
+        var cortas = usar.filter(function (v) { return v.con_referencia < 30; });
+        panel.appendChild(el("div", { id: "aviso-comparacion", clase: cortas.length ? "aviso-cmp" : "detalle",
+          texto: cortas.length ? cortas.map(function (v) { return "La " + v.version + " tiene solo " + v.con_referencia + " casos con referencia (< 30): no se puede declarar mejora ni regresión."; }).join(" ")
+            : "Todas las versiones tienen n ≥ 30 con referencia. Aun así, los casos no son los mismos en cada versión: confirma la cobertura antes de concluir." }));
+        if (manual && sel.length > 3) panel.appendChild(el("div", { clase: "detalle", texto: "Se comparan las 3 primeras versiones marcadas." }));
+      }
+      lista.textContent = "";
+      vs.forEach(function (v) { lista.appendChild(tarjetaVersion(v, pintarTodo)); });
+    }
+    pintarTodo();
+    c.appendChild(el("div", { clase: "ver-layout" }, [el("div", {}, [el("div", { clase: "h-fila" }, [el("h2", { texto: "Todas las versiones" }), el("span", { clase: "detalle", texto: String(vs.length) })]), lista]), panel]));
+    if (d.nota_comparacion) c.appendChild(el("div", { clase: "detalle", texto: d.nota_comparacion }));
   }
 
   // ---------- 05 Conductores y dispositivos ----------
