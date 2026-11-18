@@ -523,7 +523,7 @@
         if (!sug) { cajaIA.appendChild(el("button", { type: "button", id: "ver-ia", clase: "rev-ia-pedir", disabled: pidiendo ? "" : null, texto: pidiendo ? "Leyendo con la IA…" : "Pedir sugerencia a la IA", onclick: async function () {
           pintarIA(null, true); aviso("");
           var r = null; try { r = await cli.functions.invoke("admin-leer-captura", { body: { nombre: e.id + ".webp" } }); } catch (x) { r = { error: x }; }
-          if (r && r.data && r.data.ok) { pintarIA(Object.assign({ modelo: r.data.modelo }, r.data.lectura), false); return; }
+          if (r && r.data && r.data.ok) { pintarIA(Object.assign({ modelo: r.data.modelo, ms: r.data.ms, tokens: r.data.tokens }, r.data.lectura), false); return; }
           var st = r && r.error && r.error.context && r.error.context.status;
           aviso(st === 403 ? "No autorizado para leer capturas." : st === 404 ? "La captura ya no existe." : st === 503 ? "La lectura con IA no está activa (falta la clave de DeepSeek)." : st === 502 ? "La IA no pudo leer esta captura (revisa el saldo de DeepSeek)." : "No se pudo pedir la sugerencia a la IA.");
           pintarIA(null, false); } })); return; }
@@ -532,7 +532,7 @@
         var fila = function (nom, valor, f, k, tol) { return el("div", { clase: "mt-fila" }, [el("span", { texto: nom }), el("b", { texto: valor === null ? "—" : f(valor) })].concat([])); };
         var filas = vigente ? [["Tarifa", sug.tarifa, function (v) { return "$" + v; }, "tarifa", 0.01], ["Distancia", sug.km, function (v) { return v + " km"; }, "km", 0.15], ["Tiempo", sug.min, function (v) { return v + " min"; }, "min", 1]] : [];
         cajaIA.appendChild(el("div", { clase: "rev-ia-caja" }, [
-          el("div", { clase: "pop-nom", texto: "Sugerencia de la IA que lee la imagen (" + txt(sug.modelo) + ") · confianza " + txt(sug.confianza) }),
+          el("div", { clase: "pop-nom", texto: "Sugerencia de la IA que lee la imagen (" + txt(sug.modelo) + ") · confianza " + txt(sug.confianza) + (sug.ms ? " · tardó " + (sug.ms / 1000).toFixed(1) + " s" : "") }),
           el("div", { clase: "rotulo", texto: vigente ? "Oferta vigente" : sug.estado === "vencida" ? "Oferta vencida" : sug.estado === "aceptada" ? "Ya aceptada o tomada" : "No es una oferta" })]
           .concat(filas.map(function (f) { return el("div", {}, [fila(f[0], f[1], f[2]), el("div", { clase: "detalle", texto: quien(f[3], f[1], f[4]) })]); }))
           .concat([sug.nota ? el("div", { clase: "detalle", texto: sug.nota }) : null, el("div", { clase: "detalle", texto: "Es una sugerencia: tú decides." }),
@@ -657,7 +657,7 @@
       try { r = await cli.functions.invoke("admin-leer-captura", { body: { nombre: it.nombre } }); } catch (e) { r = { error: e }; }
       estado.pidiendo = false;
       if (estado.actual !== it) return;
-      if (r && r.data && r.data.ok) estado.sug = Object.assign({ modelo: r.data.modelo }, r.data.lectura);
+      if (r && r.data && r.data.ok) estado.sug = Object.assign({ modelo: r.data.modelo, ms: r.data.ms, tokens: r.data.tokens }, r.data.lectura);
       else {
         var st = r && r.error && r.error.context && r.error.context.status;
         aviso(st === 403 ? "No autorizado para leer capturas." : st === 404 ? "La captura ya no existe." : st === 503 ? "La lectura con IA no está activa (falta la clave de DeepSeek)." : st === 502 ? "La IA no pudo leer esta captura (revisa el saldo de DeepSeek)." : "No se pudo pedir la sugerencia a la IA.");
@@ -749,7 +749,7 @@
         var cmp = function (nom, ia, pv, tol) { var ok = ia !== null && pv !== null && Math.abs(ia - pv) <= tol; return el("div", { clase: "mt-fila" + (ok ? "" : " x") }, [el("span", { texto: nom }), el("b", { texto: (ia === null ? "—" : ia) + (ok ? " ✓" : " ✕") })]); };
         var vigente = S.estado === "vigente", motivoSug = S.estado === "sin_oferta" ? "no_oferta" : "vencida";
         cuerpo.appendChild(el("div", { clase: "rev-ia-caja", id: "rev-ia-caja" }, [
-          el("div", { clase: "pop-nom", texto: "Sugerencia de la IA (" + txt(S.modelo) + ") · confianza " + txt(S.confianza) }),
+          el("div", { clase: "pop-nom", texto: "Sugerencia de la IA (" + txt(S.modelo) + ") · confianza " + txt(S.confianza) + (S.ms ? " · tardó " + (S.ms / 1000).toFixed(1) + " s" : "") }),
           el("div", { clase: "rotulo", texto: vigente ? "Oferta vigente" : S.estado === "vencida" ? "Oferta vencida" : S.estado === "aceptada" ? "Ya aceptada o tomada" : "No es una oferta" }),
           vigente ? el("div", {}, [cmp("Tarifa", S.tarifa, pop.tarifa, 0.01), cmp("Distancia", S.km, pop.km, 0.15), cmp("Tiempo", S.min, pop.min, 1)]) : null,
           S.nota ? el("div", { clase: "detalle", texto: S.nota }) : null,
