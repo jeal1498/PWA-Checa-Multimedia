@@ -185,7 +185,11 @@ details.datos summary, details.filtros-hoja > summary { display:flex; align-item
 details.datos .tabla { margin-top:6px; }
 details.filtros-hoja { margin:0 0 12px; }
 details.filtros-hoja > summary { padding:0 12px; border:1px solid var(--borde); border-radius:10px; background:var(--tablero); list-style:none; cursor:pointer; margin-bottom:8px; }
-@media (min-width:761px) { details.filtros-hoja > summary { display:none; } }
+details.filtros-hoja > summary { display:none; }
+/* Propuesta B: etiquetas pequeñas, filtro activo resaltado, sin botón Aplicar. */
+.filtros label { font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+.filtros label.act input, .filtros label.act select { border-color:var(--texto); }
+.filtros #f-limpiar { background:none; border:0; text-decoration:underline; color:var(--tenue); font-size:13px; min-height:32px; }
 .dividido { display:block; }
 .lado { display:none; }
 @media (min-width:1000px) and (orientation:landscape) {

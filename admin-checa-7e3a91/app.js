@@ -306,14 +306,22 @@
       el("label", {}, ["Hasta", el("input", { id: "f-hasta", type: "date", value: r.hasta.slice(0, 10) })]),
       el("label", {}, ["App", el("select", { id: "f-app" }, [el("option", { value: "", texto: "Todas" }), el("option", { value: "uber", texto: "Uber" }), el("option", { value: "didi", texto: "DiDi" })])]),
       el("label", {}, ["Versión", el("input", { id: "f-version", placeholder: "Ej. 10.81", size: "6", inputmode: "decimal", enterkeyhint: "search", autocomplete: "off" })])].concat(extra || []).concat([
-      el("button", { id: "f-aplicar", texto: "Aplicar", onclick: function () {
-        ["f-desde", "f-hasta", "f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = document.getElementById(id); if (x) F[id] = x.value; });
-        F.desde = F["f-desde"] || null; F.hasta = F["f-hasta"] || null; pag.errores = pag.ofertas = 1; pintar(); } }),
       el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; dias = 7; pag.errores = pag.ofertas = 1; pintar(); } })]));
     ["f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = nodo.querySelector("#" + id); if (x && F[id] !== undefined) x.value = F[id]; });
+    // 10.84 (propuesta B): los filtros se aplican solos al cambiar y el activo se resalta.
+    function aplicar() {
+      ["f-desde", "f-hasta", "f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = document.getElementById(id); if (x) F[id] = x.value; });
+      F.desde = F["f-desde"] || null; F.hasta = F["f-hasta"] || null; pag.errores = pag.ofertas = 1; pintar();
+    }
+    nodo.querySelectorAll("input, select").forEach(function (x) {
+      x.addEventListener("change", aplicar);
+      if (x.id === "f-version") x.addEventListener("keydown", function (ev) { if (ev.key === "Enter") aplicar(); });
+      if (x.tagName === "SELECT" && x.value) x.parentNode.classList.add("act");
+      if (x.id === "f-version" && x.value) x.parentNode.classList.add("act");
+    });
     var n = Object.keys(F).filter(function (k) { return F[k] && k.indexOf("f-") === 0 && k !== "f-desde" && k !== "f-hasta"; }).length;
     var pleg = el("details", { clase: "filtros-hoja" }, [el("summary", { texto: "Filtros" + (n ? " (" + n + ")" : "") }), nodo]);
-    if (!(window.matchMedia && matchMedia("(max-width:760px)").matches)) pleg.open = true;
+    pleg.open = true;
     return pleg;
   }
   function opciones(id, etiqueta, vals) {
@@ -372,9 +380,10 @@
       tipo: valor("f-tipo"), estado_veredicto: valor("f-estado"), pagina: pag.errores, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
+    var chipAct = c.querySelector('.chip[aria-pressed="true"]'); if (chipAct) chipAct.textContent += " · " + d.total;
     var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle del error", hidden: "" });
     var dividido = el("div", { clase: "dividido" }, [lista, lado]); c.appendChild(dividido); var cpad = c; c = lista;
-    c.appendChild(el("div", { clase: "error-lista", id: "errores-lista" }, d.filas.length ? d.filas.map(tarjetaError) : [el("div", { clase: "vacio", texto: "Sin errores con estos filtros." })]));
+    c.appendChild(el("div", { clase: "error-lista", id: "errores-lista" }, d.filas.length ? d.filas.map(tarjetaError) : [el("div", { clase: "vacio", texto: "Sin errores con estos filtros. Prueba quitar la versión o ampliar las fechas." })]));
     c.appendChild(paginas("errores", d));
     c = cpad;
   }
