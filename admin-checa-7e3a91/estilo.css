@@ -373,3 +373,13 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 #hoja-seg h2 { margin:0; } #hoja-seg label { display:flex; flex-direction:column; font-size:12px; color:var(--tenue); gap:2px; } #hoja-seg .dos-col { display:grid; grid-template-columns:1fr 1fr; gap:8px; } #hoja-seg select, #hoja-seg input { width:100%; font-size:16px; }
 .lado .duo { grid-template-columns:42% minmax(0,1fr); }
 @media (min-width:1000px) and (orientation:landscape) { .marco-captura { max-height:58vh; } }
+
+/* ===== Valores con su nombre: Tarifa, Distancia, Tiempo ===== */
+.metr { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.mt { background:var(--tablero); border:1px solid var(--borde); border-radius:10px; padding:6px 8px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.mt.dif { background:color-mix(in srgb, var(--rojo) 10%, var(--tablero)); border-color:color-mix(in srgb, var(--rojo) 40%, var(--borde)); }
+.mt-nom { display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; font:800 12px "DM Sans", system-ui, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--tenue); }
+.mt-nom em { font-style:normal; font-size:12px; letter-spacing:0; text-transform:none; } .mt-nom em.ok { color:var(--verde); } .mt-nom em.no { color:var(--rojo); }
+.mt-fila { display:flex; justify-content:space-between; gap:8px; font:700 13px/1.5 "JetBrains Mono", ui-monospace, monospace; }
+.mt-fila span { font:600 12px "DM Sans", system-ui, sans-serif; color:var(--tenue); } .mt-fila b { overflow-wrap:anywhere; text-align:right; }
+.mt-fila.x b { color:var(--rojo); } .mt-fila.nada b { color:var(--tenue); font-weight:600; }

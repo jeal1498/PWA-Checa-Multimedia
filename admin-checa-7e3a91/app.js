@@ -400,6 +400,7 @@
       el("div", { clase: "visor-cab" }, [el("b", { texto: "Captura · Error #" + id }), el("span", { clase: "detalle", texto: "Toca la imagen para ampliar" }), cierre]), el("div", { clase: "visor-marco" }, [img])]);
     document.body.appendChild(visor); document.addEventListener("keydown", tecla); cierre.focus();
   }
+  function legibleCap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
   function marcoCaptura(e) {
     var marco = el("div", { clase: "marco-captura vacio", id: "marco-captura" });
     function vacio(texto, conBoton) {
@@ -452,11 +453,25 @@
     c.appendChild(el("div", { clase: "detalle", texto: txt(e.app) + " " + txt(e.version) + " · " + txt(e.tipo) + " · conductor " + txt(e.conductor) + " · " + (e.creado || "").slice(0, 16).replace("T", " ") }));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
     var refE = hu && hu.clase ? hu : null, mE = marcas(lec, ia, refE);
-    var humano = refE ? (refE.tarifa === undefined ? [refE.clase] : tkm(refE)) : ["sin referencia"];
-    function val(t, lineas, dif) { return el("div", { clase: "val" + (dif ? " dif" : "") }, [el("small", { texto: t })].concat(lineas.map(function (x) { return el("div", { texto: x }); }))); }
-    c.appendChild(el("div", { clase: "duo", id: "comparar" }, [marcoCaptura(e), el("div", { clase: "vals" }, [val("Lector", tkm(lec), mE.l), val("IA", ia.oferta === false ? ["no era oferta"] : tkm(ia), mE.i), val("Humano", humano, mE.h)])]));
-    if (!refE && (mE.l || mE.i)) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Lector e IA no coinciden. Falta un veredicto humano para saber cuál acierta." }));
-    else if (refE && mE.h) c.appendChild(el("div", { clase: "aviso-cmp", texto: "Ni el lector ni la IA coinciden con la referencia humana." }));
+    var iaNo = ia.oferta === false;
+    var METR = [["Tarifa", "tarifa", function (v) { return "$" + v; }], ["Distancia", "km", function (v) { return v + " km"; }], ["Tiempo", "min", function (v) { return v + " min"; }]];
+    function nulo(v) { return v === null || v === undefined; }
+    function bloque(m) {
+      var k = m[1], f = m[2], L = lec[k], I = iaNo ? undefined : ia[k], H = refE ? refE[k] : undefined;
+      var tieneH = refE && !nulo(H), difL, difI, estado = null;
+      if (tieneH) { difL = !nulo(L) && String(L) !== String(H); difI = !iaNo && !nulo(I) && String(I) !== String(H); estado = (difL || difI || iaNo) ? "dif" : "ok"; }
+      else if (!iaNo && !nulo(L) && !nulo(I)) { difL = difI = String(L) !== String(I); estado = difL ? "dif" : "ok"; }
+      else if (iaNo) { difL = false; difI = true; estado = "dif"; }
+      var fila = function (nom, v, dif, texto) { return el("div", { clase: "mt-fila" + (dif ? " x" : "") }, [el("span", { texto: nom }), el("b", { texto: texto !== undefined ? texto : nulo(v) ? "—" : f(v) })]); };
+      return { m: m[0], estado: estado, nodo: el("div", { clase: "mt" + (estado === "dif" ? " dif" : ""), "data-metrica": k }, [
+        el("div", { clase: "mt-nom" }, [el("span", { texto: m[0] }), estado ? el("em", { clase: estado === "ok" ? "ok" : "no", texto: estado === "ok" ? "✓ iguales" : "✕ difieren" }) : null]),
+        fila("Lector", L, difL), fila("IA", I, difI, iaNo ? "no era oferta" : undefined), el("div", { clase: "mt-fila nada" }, [el("span", { texto: "Humano" }), el("b", { texto: refE ? (nulo(H) ? (refE.clase || "—") : f(H)) : "—" })])]) };
+    }
+    var bl = METR.map(bloque);
+    c.appendChild(el("div", { clase: "duo", id: "comparar" }, [marcoCaptura(e), el("div", { clase: "metr" }, bl.map(function (x) { return x.nodo; }))]));
+    var iguales = bl.filter(function (x) { return x.estado === "ok"; }).map(function (x) { return x.m.toLowerCase(); }), difieren = bl.filter(function (x) { return x.estado === "dif"; }).map(function (x) { return x.m.toLowerCase(); });
+    function lista(xs) { return xs.length > 1 ? xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1] : xs[0]; }
+    if (difieren.length) c.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-diferencia", texto: (iguales.length ? legibleCap(lista(iguales)) + (iguales.length > 1 ? " iguales; " : " igual; ") : "") + lista(difieren) + (difieren.length > 1 ? " distintos." : " distinto.") + (refE ? "" : " Falta un veredicto humano para saber cuál acierta.") }));
     c.appendChild(el("div", { clase: "detalle", texto: "Veredicto heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
     c.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Seguimiento" }), el("span", { clase: "detalle", texto: String(e.estado_seguimiento).replace(/_/g, " ") })]));
     c.appendChild(pasosSeg(e.estado_seguimiento));
