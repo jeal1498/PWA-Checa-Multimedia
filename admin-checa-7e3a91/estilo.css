@@ -305,3 +305,15 @@ details.mas-metricas { margin:10px 0; } details.mas-metricas > summary { display
   .panel-eq { display:block; }
 }
 .equipo-tarjeta .version-cab b { font:800 15px "DM Sans", system-ui, sans-serif; }
+
+/* ===== Auditoría IA ===== */
+.ia-cols { display:flex; flex-direction:column; gap:4px; } .ia-col { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.quien { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:10px; }
+.fila-quien { display:grid; grid-template-columns:78px minmax(0,1fr) auto; gap:10px; align-items:center; font-size:13px; }
+.tr { height:14px; border-radius:7px; background:var(--panel); overflow:hidden; } .tr i { display:block; height:100%; border-radius:7px; background:var(--texto); } .tr i.gr { background:var(--gris); }
+.valor-q { font:800 15px "JetBrains Mono", ui-monospace, monospace; text-align:right; min-width:56px; } .valor-q small { display:block; font:600 11px "DM Sans", system-ui, sans-serif; color:var(--tenue); }
+.lista-barras { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:4px 12px; }
+.fila-barra { display:grid; grid-template-columns:minmax(0,1fr) 72px 32px; gap:10px; align-items:center; padding:9px 0; font-size:13px; } .fila-barra + .fila-barra { border-top:1px solid var(--panel); }
+.fila-barra .tr { height:8px; } .fila-barra .n { font-family:"JetBrains Mono", ui-monospace, monospace; text-align:right; }
+.boton-enlace { min-height:48px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:var(--texto); color:var(--fondo); font-weight:800; text-decoration:none; margin-top:4px; }
+@media (min-width:1000px) and (orientation:landscape) { .ia-cols { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; } }

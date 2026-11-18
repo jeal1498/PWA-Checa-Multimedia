@@ -652,25 +652,59 @@
   }
 
   // ---------- 06 Auditoría IA ----------
+  function legible(k) { var s = String(k).replace(/_/g, " "); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function barraFila(nombre, n, max, color, gris) {
+    var tr = el("div", { clase: "tr" }), i = el("i", { clase: gris ? "gr" : "" });
+    i.style.width = (max ? Math.max(3, n / max * 100) : 0) + "%"; if (color) i.style.background = color; tr.appendChild(i);
+    return [tr, i];
+  }
+  function listaBarras(obj, vacio, colorDe) {
+    var ks = Object.keys(obj || {}).sort(function (x, y) { return obj[y] - obj[x]; });
+    if (!ks.length) return el("div", { clase: "vacio", texto: vacio });
+    var max = obj[ks[0]];
+    return el("div", { clase: "lista-barras" }, ks.map(function (k) {
+      var b = barraFila(k, obj[k], max, colorDe ? colorDe(k) : null, false);
+      return el("div", { clase: "fila-barra" }, [el("span", { texto: legible(k) }), b[0], el("b", { clase: "n", texto: String(obj[k]) })]); }));
+  }
   async function ia(c) {
     c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Auditoría IA" }), selPeriodo(pintar)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_ia", { desde: r.desde, hasta: r.hasta });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    c.appendChild(el("div", { clase: "tarjetas" }, [["Casos de errores_lector", d.casos], ["Con referencia humana", d.con_referencia_humana],
-      ["Acuerdo IA/lector", d.acuerdo_ia_lector.n ? d.acuerdo_ia_lector.coinciden + " / " + d.acuerdo_ia_lector.n + " (no es exactitud)" : "sin datos"]].map(function (x) {
+    var cols = el("div", { clase: "ia-cols" });
+    var izq = el("div", { clase: "ia-col" }), der = el("div", { clase: "ia-col" });
+    izq.appendChild(el("div", { clase: "tarjetas dos", id: "ia-casos" }, [["Casos revisados", d.casos], ["Con referencia humana", d.con_referencia_humana]].map(function (x) {
       return el("div", { clase: "tarjeta" }, [el("div", { clase: "detalle", texto: x[0] }), el("div", { clase: "valor", texto: txt(x[1]) })]); })));
-    c.appendChild(el("h2", { texto: "Quién acierta contra la referencia humana" }));
-    c.appendChild(tabla([["Componente", function (x) { return x.componente + (x.modelo ? " (" + x.modelo + ")" : ""); }], ["Casos con referencia (oferta)", function (x) { return x.n; }],
-      ["Coinciden", function (x) { return x.coinciden; }], ["Proporción", function (x) { return x.n ? pct(x.coinciden / x.n) + (x.n < 30 ? " · muestra insuficiente" : "") : "sin referencia"; }]], d.componentes));
-    c.appendChild(el("h2", { texto: "Clasificación de discrepancias" }));
-    c.appendChild(tabla([["Clase", function (x) { return x[0]; }], ["Casos", function (x) { return x[1]; }]],
-      Object.keys(d.discrepancias).map(function (k) { return [k, d.discrepancias[k]]; })));
-    c.appendChild(el("h2", { texto: "Fallas de la IA" }));
-    c.appendChild(tabla([["Tipo", function (x) { return x[0]; }], ["Veces", function (x) { return x[1]; }]], Object.keys(d.fallas).map(function (k) { return [k, d.fallas[k]]; }), "Sin fallas registradas en el periodo."));
+    // 1 · Quién acierta contra el humano (sin ganador si falta muestra)
+    var comps = d.componentes || [], cortas = comps.filter(function (x) { return x.n < 30; });
+    izq.appendChild(el("h2", { texto: "Quién acierta contra el humano" }));
+    if (!comps.length) izq.appendChild(el("div", { clase: "vacio", texto: "Sin referencia humana todavía." }));
+    else {
+      if (cortas.length) izq.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-muestra", texto: "Con " + Math.min.apply(null, comps.map(function (x) { return x.n; })) + " casos con referencia (menos de 30) todavía no se puede decir quién acierta más." }));
+      izq.appendChild(el("div", { clase: "quien", id: "ia-componentes" }, comps.map(function (x) {
+        var p = x.n ? x.coinciden / x.n : null, b = barraFila(x.componente, p === null ? 0 : p * 100, 100, null, x.n < 30);
+        return el("div", { clase: "fila-quien" }, [el("b", { texto: legible(x.componente) + (x.modelo ? " (" + x.modelo + ")" : "") }), b[0],
+          el("div", { clase: "valor-q" }, [p === null ? "sin referencia" : pct(p), el("small", { texto: x.coinciden + " / " + x.n })])]); })));
+      if (cortas.length) izq.appendChild(el("div", { clase: "detalle", texto: "Gris: muestra insuficiente. Con 30 casos o más las barras pasan a negro." }));
+    }
+    // 2 · Acuerdo IA/lector (no es exactitud)
+    var ac = d.acuerdo_ia_lector || {};
+    izq.appendChild(el("div", { clase: "tarjeta", id: "ia-acuerdo" }, [el("div", { clase: "detalle", texto: "Acuerdo IA con el lector" }),
+      el("div", { clase: "valor", texto: ac.n ? ac.coinciden + " / " + ac.n + " = " + pct(ac.coinciden / ac.n) : "sin datos" }), el("span", { clase: "etiqueta aviso", texto: "no es exactitud" })]));
+    // 3 · Discrepancias y fallas
+    var totD = Object.keys(d.discrepancias || {}).reduce(function (s, k) { return s + d.discrepancias[k]; }, 0);
+    var totF = Object.keys(d.fallas || {}).reduce(function (s, k) { return s + d.fallas[k]; }, 0);
+    der.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Discrepancias" }), el("span", { clase: "detalle", texto: totD + " casos" })]));
+    der.appendChild(listaBarras(d.discrepancias, "Sin discrepancias en el periodo."));
+    der.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Fallas de la IA" }), el("span", { clase: "detalle", texto: totF + (totF === 1 ? " vez" : " veces") })]));
+    var esSaldo = function (k) { return /402|saldo|credit/i.test(k); };
+    der.appendChild(listaBarras(d.fallas, "Sin fallas registradas en el periodo.", function (k) { return esSaldo(k) ? "var(--rojo)" : "var(--amarillo)"; }));
+    var saldo = Object.keys(d.fallas || {}).filter(esSaldo).reduce(function (s, k) { return s + d.fallas[k]; }, 0);
+    if (saldo) der.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-saldo", texto: "La IA dejó de revisar " + saldo + (saldo === 1 ? " vez" : " veces") + " por falta de saldo. Recárgalo para que siga revisando." }));
+    der.appendChild(el("a", { href: "#errores", clase: "boton-enlace", texto: "Revisar los casos en Errores", onclick: function (ev) { ev.preventDefault(); ir("errores"); } }));
+    cols.appendChild(izq); cols.appendChild(der); c.appendChild(cols);
     c.appendChild(el("div", { clase: "detalle", texto: d.nota }));
-    c.appendChild(enlace("Ir a los errores para revisar cada caso", "errores"));
   }
 
   // ---------- 07 Configuración ----------
