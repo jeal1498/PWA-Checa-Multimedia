@@ -287,3 +287,21 @@ details.mas-metricas { margin:10px 0; } details.mas-metricas > summary { display
   .ver-layout { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-items:start; flex-direction:row; }
   .panel-cmp { position:sticky; top:62px; order:2; }
 }
+
+/* ===== Equipos ===== */
+.tabs2 { display:grid; grid-template-columns:1fr 1fr; background:var(--panel); border-radius:12px; padding:3px; gap:3px; margin-bottom:10px; }
+.tabs2 button { border:0; background:transparent; min-height:44px; border-radius:9px; font-weight:700; color:var(--tenue); }
+.tabs2 button[aria-selected="true"] { background:var(--tablero); color:var(--texto); box-shadow:0 1px 3px #0003; }
+.panel-eq { display:none; } .panel-eq.activo { display:block; }
+.equipo-lista { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.equipo-tarjeta { background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; }
+.actividad { margin-left:auto; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.etiquetas { flex-wrap:wrap; gap:4px; }
+.chipv { font:700 12px "JetBrains Mono", ui-monospace, monospace; border:1px solid var(--borde); border-radius:6px; padding:0 6px; color:var(--tenue); }
+@media (min-width:1000px) and (orientation:landscape) {
+  .tabs2 { display:none; }
+  .equipos-cuerpo { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start; }
+  .equipos-cuerpo > .chips { grid-column:1 / -1; margin-bottom:0; }
+  .panel-eq { display:block; }
+}
+.equipo-tarjeta .version-cab b { font:800 15px "DM Sans", system-ui, sans-serif; }

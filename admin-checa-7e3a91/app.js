@@ -577,19 +577,77 @@
   }
 
   // ---------- 05 Conductores y dispositivos ----------
+  var tabEq = "dispositivos", ordenEq = "errores";
+  function haceCuanto(f) {
+    if (!f) return ["sin actividad", "nd"];
+    var d = new Date(f); if (isNaN(d)) return [String(f).slice(0, 16), "nd"];
+    var dias = Math.floor((Date.now() - d.getTime()) / 864e5), hh = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    return [dias < 1 ? "hoy " + hh : dias === 1 ? "ayer " + hh : "hace " + dias + " días", dias >= 3 ? "aviso" : "ok", dias];
+  }
+  function ordenarEq(arr, tasaFn, sufFn) {
+    var c = arr.slice();
+    if (ordenEq === "lecturas") c.sort(function (x, y) { return y.lecturas - x.lecturas; });
+    else if (ordenEq === "inactivos") c.sort(function (x, y) { return String(x.ultima || "").localeCompare(String(y.ultima || "")); });
+    else c.sort(function (x, y) { var sx = sufFn(x) ? 1 : 0, sy = sufFn(y) ? 1 : 0; if (sx !== sy) return sy - sx; return (tasaFn(y) || 0) - (tasaFn(x) || 0); });
+    return c;
+  }
+  function tarjetaEq(titulo, sub, x, casillas, aviso) {
+    var act = haceCuanto(x.ultima);
+    return el("article", { clase: "equipo-tarjeta" }, [
+      el("div", { clase: "version-cab" }, [el("b", { texto: titulo }), sub ? el("span", { clase: "detalle", texto: sub }) : null,
+        el("span", { clase: "actividad detalle" }, [el("span", { clase: "punto " + (act[1] === "aviso" ? "aviso" : act[1] === "nd" ? "nd" : "ok"), "aria-hidden": "true" }), act[0]])]),
+      el("div", { clase: "comp3" }, casillas),
+      aviso ? el("div", { clase: "aviso-cmp", texto: aviso }) : null,
+      el("div", { clase: "fila etiquetas" }, (x.versiones || []).map(function (v) { return el("span", { clase: "chipv", texto: String(v) }); }))]);
+  }
   async function dispositivos(c) {
     c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Conductores y dispositivos" }), selPeriodo(pintar)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_dispositivos", { desde: r.desde, hasta: r.hasta });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    c.appendChild(el("h2", { texto: "Dispositivos" }));
-    c.appendChild(tabla([["Modelo", function (x) { return x.telefono; }], ["Android", function (x) { return x.android; }], ["Versiones de Checa", function (x) { return (x.versiones || []).join(", "); }],
-      ["Lecturas", function (x) { return x.lecturas; }], ["Errores", function (x) { return x.errores; }], ["Abstenciones", function (x) { return x.abstenciones; }],
-      ["Última actividad", function (x) { return (x.ultima || "").slice(0, 16); }], ["Muestra", function (x) { return x.muestra_suficiente ? "suficiente" : "insuficiente (< 30)"; }]], d.dispositivos));
-    c.appendChild(el("h2", { texto: "Conductores (seudónimo)" }));
-    c.appendChild(tabla([["Conductor", function (x) { return x.conductor; }], ["Lecturas", function (x) { return x.lecturas; }], ["Errores de proceso", function (x) { return x.errores; }],
-      ["Errores del lector", function (x) { return x.errores_lector; }], ["Versiones", function (x) { return (x.versiones || []).join(", "); }], ["Última actividad", function (x) { return (x.ultima || "").slice(0, 16); }]], d.conductores));
+    var disp = d.dispositivos || [], cond = d.conductores || [];
+    function suf(x) { return x.muestra_suficiente === undefined ? x.lecturas >= 30 : !!x.muestra_suficiente; }
+    function tD(x) { return x.lecturas ? x.errores / x.lecturas : null; }
+    function tC(x) { return x.lecturas ? x.errores / x.lecturas : null; }
+    function sufC(x) { return x.lecturas >= 30; }
+    var cuerpo = el("div", { clase: "equipos-cuerpo" });
+    function pintarEq() {
+      cuerpo.textContent = "";
+      var tabs = el("div", { clase: "tabs2", role: "tablist", "aria-label": "Equipos" }, [["dispositivos", "Dispositivos " + disp.length], ["conductores", "Conductores " + cond.length]].map(function (t) {
+        return el("button", { type: "button", role: "tab", id: "tab-" + t[0], "aria-selected": String(tabEq === t[0]), texto: t[1], onclick: function () { tabEq = t[0]; pintarEq(); } }); }));
+      cuerpo.appendChild(tabs);
+      cuerpo.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Orden" }, [["errores", "Más errores"], ["lecturas", "Más lecturas"], ["inactivos", "Sin actividad"]].map(function (o) {
+        return el("button", { type: "button", clase: "chip", "aria-pressed": String(ordenEq === o[0]), texto: o[1], onclick: function () { ordenEq = o[0]; pintarEq(); } }); })));
+      // Dispositivos
+      var pd = el("section", { clase: "panel-eq" + (tabEq === "dispositivos" ? " activo" : ""), id: "panel-dispositivos", "aria-label": "Dispositivos" });
+      pd.appendChild(el("h2", { texto: "Dispositivos" }));
+      var ss = disp.filter(suf), maxD = ss.length ? Math.max.apply(null, ss.map(function (x) { return tD(x) || 0; })) : 0;
+      var vig = ss.filter(function (x) { return (tD(x) || 0) === maxD && maxD > 0; })[0];
+      if (vig) {
+        var resto = ss.filter(function (x) { return x !== vig; }), lr = resto.reduce(function (s, x) { return s + x.lecturas; }, 0), er = resto.reduce(function (s, x) { return s + x.errores; }, 0);
+        var base = lr ? er / lr : null, veces = base ? tD(vig) / base : null;
+        if (veces === null || veces >= 1.5) pd.appendChild(el("div", { clase: "aviso-cmp", id: "vigilar", texto: vig.telefono + " (Android " + txt(vig.android) + ") tiene " + pct(tD(vig)) + " de errores con " + vig.lecturas + " lecturas" + (veces ? ", " + veces.toFixed(1).replace(".0", "") + " veces el resto." : ".") }));
+      }
+      pd.appendChild(el("div", { clase: "equipo-lista" }, ordenarEq(disp, tD, suf).map(function (x) {
+        var hot = suf(x) && tD(x) === maxD && maxD > 0;
+        return tarjetaEq(txt(x.telefono), "Android " + txt(x.android), x, [casilla("Lecturas", [String(x.lecturas)], false), casilla("Errores", [x.lecturas ? pct(tD(x)) : "—"], hot),
+          casilla("Abstenciones", [x.lecturas ? pct(x.abstenciones / x.lecturas) : "—"], false)], suf(x) ? null : "Muestra insuficiente (menos de 30 lecturas)."); })));
+      if (!disp.length) pd.appendChild(el("div", { clase: "vacio", texto: "Sin dispositivos en este periodo." }));
+      cuerpo.appendChild(pd);
+      // Conductores
+      var pc = el("section", { clase: "panel-eq" + (tabEq === "conductores" ? " activo" : ""), id: "panel-conductores", "aria-label": "Conductores" });
+      pc.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Conductores" }), el("span", { clase: "detalle", texto: "seudónimos, sin datos personales" })]));
+      var sc = cond.filter(sufC), maxC = sc.length ? Math.max.apply(null, sc.map(function (x) { return tC(x) || 0; })) : 0;
+      pc.appendChild(el("div", { clase: "equipo-lista" }, ordenarEq(cond, tC, sufC).map(function (x) {
+        var hot = sufC(x) && tC(x) === maxC && maxC > 0;
+        return tarjetaEq(txt(x.conductor), null, x, [casilla("Lecturas", [String(x.lecturas)], false), casilla("Error proceso", [x.lecturas ? pct(tC(x)) : "—"], hot),
+          casilla("Error lector", [x.lecturas ? pct(x.errores_lector / x.lecturas) : "—"], false)], sufC(x) ? null : "Muestra insuficiente (menos de 30 lecturas)."); })));
+      if (!cond.length) pc.appendChild(el("div", { clase: "vacio", texto: "Sin conductores en este periodo." }));
+      cuerpo.appendChild(pc);
+    }
+    pintarEq();
+    c.appendChild(cuerpo);
     c.appendChild(el("div", { clase: "detalle", texto: d.nota }));
   }
 
