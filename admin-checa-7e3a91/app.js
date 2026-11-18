@@ -1015,8 +1015,33 @@
     skeleton(c);
     var r = rango(), g = await llamar("admin_config"), k = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta }), b = await llamar("admin_bitacora", { pagina: 1 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
+    var ie = null; try { var rr = await cli.rpc("admin_ia_estado"); ie = rr && rr.data && !rr.data.error ? rr.data : null; } catch (x) { ie = null; }
     var ancho = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
     var cont = el("div", { clase: "config-cols" }), izq = el("div", { clase: "config-col" }), der = el("div", { clase: "config-col" });
+    // 0 · IA con imagen: interruptores remotos y cuánto tarda en contestar
+    if (ie) {
+      var seg = function (ms) { return ms === null || ms === undefined ? "—" : (ms / 1000).toFixed(1) + " s"; };
+      var esRev = !!(yo && yo.rol === "revisor");
+      var interruptor = function (que, titulo, detalle, activo) {
+        var pend = false, btn = el("button", { type: "button", id: "ia-sw-" + que, clase: "ia-sw", "aria-pressed": String(activo), disabled: esRev ? null : "", texto: activo ? "Encendida · Apagar" : "Apagada · Encender", onclick: async function () {
+          if (!pend) { pend = true; btn.textContent = "¿Seguro? Toca otra vez para " + (activo ? "apagarla" : "encenderla"); return; }
+          var r = await llamar("admin_ia_interruptor", { p_que: que, p_activo: !activo }); if (r && r.ok) pintar(); else { pend = false; btn.textContent = activo ? "Encendida · Apagar" : "Apagada · Encender"; } } });
+        return el("div", { clase: "ia-fila" }, [el("div", {}, [el("b", { texto: titulo }), el("div", { clase: "detalle", texto: detalle })]), btn]);
+      };
+      var modo = function (m, nombre) {
+        var d = (ie.modos || {})[m];
+        if (!d) return el("div", { clase: "detalle", texto: nombre + ": sin consultas en los últimos 7 días." });
+        return el("div", { clase: "ia-modo" }, [el("b", { texto: nombre + " · " + d.n + " consultas (7 días)" }),
+          filaKV("Tarda en contestar (mediana · p90)", seg(d.ms_ia_p50) + " · " + seg(d.ms_ia_p90)),
+          filaKV("Ida y vuelta desde el teléfono", seg(d.ms_total_p50) + " · " + seg(d.ms_total_p90)),
+          filaKV("Con error · sin saldo", d.errores + " · " + d.sin_saldo), filaKV("Costo", "$" + Number(d.costo_usd || 0).toFixed(4) + " USD")]);
+      };
+      izq.appendChild(acordeon("cfg-ia", "IA con imagen", "interruptores y tiempos", ie.vision ? "ON" : "OFF", [
+        interruptor("vision", "La IA ve la imagen de la oferta", "Si se apaga, el teléfono sigue solo con su lector.", !!ie.vision),
+        interruptor("texto", "IA de texto (la de antes)", "Se usa en teléfonos sin imagen. Apagada, esos teléfonos usan solo su lector.", !!ie.texto),
+        modo("vision", "Con imagen"), modo("texto", "De texto"),
+        el("div", { clase: "detalle", texto: "Los cambios tardan hasta 30 segundos en llegar a los teléfonos. Último cambio: " + (ie.actualizado ? String(ie.actualizado).slice(0, 16).replace("T", " ") + " UTC" : "—") + (ie.por ? " por " + ie.por : "") + "." })], true));
+    }
     // 1 · Costo de la IA
     if (k) {
       var total = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0), tok = function (n) { return n === null || n === undefined ? "—" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : String(n); };
