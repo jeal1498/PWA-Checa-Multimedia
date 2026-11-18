@@ -468,8 +468,12 @@
       var of = selClase.value === "oferta", t = parseFloat(document.getElementById("v-tarifa").value.replace(",", ".")), k = parseFloat(document.getElementById("v-km").value.replace(",", ".")), m = parseFloat(document.getElementById("v-min").value.replace(",", "."));
       if (of && !(t > 0 && k > 0 && m > 0)) { err.textContent = "Escribe la tarifa, la distancia y el tiempo correctos (mayores que cero)."; err.hidden = false; return; }
       guardar.disabled = true; guardar.textContent = "Guardando…";
-      var r = await llamar("admin_veredicto", { objetivo: "error_lector", objetivo_id: String(e.id), clase: selClase.value, tarifa: of ? t : null, km: of ? k : null, min: of ? m : null,
-        confianza: conf, evidencia_sha256: e.enlace.captura_sha256, nota: nota.value || null, ia_sugerencia: guardarSug || null });
+      var args = { objetivo: "error_lector", objetivo_id: String(e.id), clase: selClase.value, tarifa: of ? t : null, km: of ? k : null, min: of ? m : null,
+        confianza: conf, evidencia_sha256: e.enlace.captura_sha256, nota: nota.value || null };
+      var r = null;
+      // La sugerencia de la IA viaja solo si existe. Si la base aún no la acepta (falta el SQL 010), se guarda el veredicto sin ella.
+      if (guardarSug) { try { var r1 = await cli.rpc("admin_veredicto", Object.assign({ ia_sugerencia: guardarSug }, args)); if (r1 && r1.data && r1.data.id) r = r1.data; } catch (x) { r = null; } }
+      if (!r) r = await llamar("admin_veredicto", args);
       if (r && r.id) { h.remove(); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
     } });
     var h = el("div", { id: "hoja-ver", role: "dialog", "aria-modal": "true", "aria-label": "Dar veredicto", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
@@ -538,7 +542,7 @@
           .concat([sug.nota ? el("div", { clase: "detalle", texto: sug.nota }) : null, el("div", { clase: "detalle", texto: "Es una sugerencia: tú decides." }),
             yo && yo.rol === "revisor" && e.enlace && e.enlace.captura_sha256 ? el("button", { type: "button", id: "ia-usar", texto: vigente ? "Dar veredicto con sus valores" : "Dar veredicto: no es oferta", onclick: function () { hojaVeredicto(e, lec, ia, sug, sug); } }) : null])));
       };
-      var pr = await llamar("admin_ia_precision_errores"); precErr = pr && !pr.error ? pr : null;
+      var pr = null; try { var prr = await cli.rpc("admin_ia_precision_errores"); pr = prr && prr.data; } catch (x) { pr = null; } precErr = pr && !pr.error ? pr : null;
       pintarIA(null, false); c.appendChild(cajaIA);
     }
     if (yo && yo.rol === "revisor") {
