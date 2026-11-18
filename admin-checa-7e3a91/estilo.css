@@ -383,3 +383,23 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 .mt-fila { display:flex; justify-content:space-between; gap:8px; font:700 13px/1.5 "JetBrains Mono", ui-monospace, monospace; }
 .mt-fila span { font:600 12px "DM Sans", system-ui, sans-serif; color:var(--tenue); } .mt-fila b { overflow-wrap:anywhere; text-align:right; }
 .mt-fila.x b { color:var(--rojo); } .mt-fila.nada b { color:var(--tenue); font-weight:600; }
+
+/* ===== Cuadro de captura fijo y mosaicos parejos ===== */
+.duo { align-items:stretch; }
+.marco-captura { aspect-ratio:auto; align-self:stretch; min-height:250px; max-height:none; }
+.metr { height:100%; }
+.mt { flex:1; justify-content:center; }
+.mt-nom { flex-wrap:nowrap; font-size:11px; letter-spacing:.04em; white-space:nowrap; } .mt-nom em { font-size:11px; white-space:nowrap; }
+.mt-fila { line-height:1.35; }
+/* ===== Dar veredicto ===== */
+.dar-veredicto { width:100%; min-height:48px; margin:8px 0; font-weight:800; border-color:var(--texto); }
+.dar-veredicto:disabled { opacity:.5; }
+#hoja-ver { position:fixed; inset:0; z-index:30; }
+#hoja-ver .velo { position:absolute; inset:0; background:rgba(12,12,16,.5); }
+#hoja-ver .panel-hoja { position:absolute; left:0; right:0; bottom:0; max-width:560px; max-height:92vh; overflow:auto; margin:0 auto; background:var(--tablero); border-radius:22px 22px 0 0; padding:10px 16px calc(16px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:8px; box-shadow:0 -8px 30px #0004; }
+#hoja-ver .asa { width:40px; height:4px; border-radius:2px; background:var(--borde); align-self:center; flex:none; } #hoja-ver h2 { margin:0; }
+#hoja-ver .etq { font:700 11px "DM Sans", system-ui, sans-serif; color:var(--tenue); text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
+.atajos-v { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .atajos-v button { min-height:56px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; line-height:1.2; text-align:center; } .atajos-v small { font:600 11px "JetBrains Mono", ui-monospace, monospace; color:var(--tenue); }
+.campos-v { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; } .campo-v { display:flex; flex-direction:column; gap:2px; font-size:12px; color:var(--tenue); min-width:0; } .campo-v input, .campo-v select { width:100%; font-size:16px; }
+.seg3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; } .seg3 button[aria-pressed="true"] { background:var(--texto); color:var(--fondo); border-color:var(--texto); font-weight:800; }
+.campo-v[hidden], #ver-error[hidden], [hidden].aviso-cmp { display:none !important; }

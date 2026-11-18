@@ -75,7 +75,7 @@
     try { r = await cli.rpc(fn, args || {}); } catch (e) { aviso("Sin conexión con el servidor. Intenta de nuevo."); return null; }
     if (r.error) { aviso("Error del servidor: " + (r.error.message || r.error.code || "desconocido")); return null; }
     var d = r.data;
-    if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : "Filtro inválido: " + d.error); return null; }
+    if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : d.error === "veredicto_invalido" ? "El veredicto no es válido: revisa los valores (la oferta necesita tarifa, distancia y tiempo mayores que cero)." : d.error === "objetivo_o_evidencia" ? "Falta la huella de la captura: este caso no admite veredicto." : "Filtro inválido: " + d.error); return null; }
     return d;
   }
   function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } window.scrollTo(0, 0); pintar(); }
@@ -416,7 +416,6 @@
       if (!url) { vacio("No se pudo cargar.", true); return; }
       marco.textContent = ""; marco.classList.remove("vacio");
       var img = el("img", { src: url, alt: "Captura del error " + e.id, clase: "captura-img" });
-      img.addEventListener("load", function () { if (img.naturalWidth && img.naturalHeight) marco.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight; });
       img.addEventListener("click", function () { abrirVisor(url, e.id); });
       marco.appendChild(img);
       marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(url, e.id); } }));
@@ -443,6 +442,47 @@
       nota: document.getElementById("s-nota").value || null });
     var h = document.getElementById("hoja-seg"); if (h) h.remove();
     if (r) pintar();
+  }
+  // ---------- Veredicto humano: la referencia que usan Auditoría IA, Versiones y Ofertas ----------
+  var CLASES_V = [["oferta", "Oferta"], ["no_oferta", "No es oferta"], ["varias", "Varias ofertas"], ["ilegible", "Ilegible"], ["cambio_pantalla", "Cambió la pantalla"]];
+  var CONFIANZAS_V = [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]];
+  function hojaVeredicto(e, lec, ia) {
+    var viejo = document.getElementById("hoja-ver"); if (viejo) viejo.remove();
+    var conf = "alta", err = el("div", { clase: "aviso-cmp", id: "ver-error", hidden: "" });
+    function cerrar() { h.remove(); }
+    function campo(id, etiqueta, unidad, modo) { return el("label", { clase: "campo-v" }, [el("span", { texto: etiqueta + " (" + unidad + ")" }), el("input", { id: id, inputmode: modo || "decimal", autocomplete: "off", enterkeyhint: "next" })]); }
+    var inT = campo("v-tarifa", "Tarifa", "$"), inK = campo("v-km", "Distancia", "km"), inM = campo("v-min", "Tiempo", "min");
+    var selClase = el("select", { id: "v-clase" }, CLASES_V.map(function (c) { return el("option", { value: c[0], texto: c[1] }); }));
+    var nota = el("input", { id: "v-nota", maxlength: "280", autocomplete: "off" });
+    function poner(l) { document.getElementById("v-tarifa").value = l.tarifa === null || l.tarifa === undefined ? "" : l.tarifa; document.getElementById("v-km").value = l.km === null || l.km === undefined ? "" : l.km; document.getElementById("v-min").value = l.min === null || l.min === undefined ? "" : l.min; selClase.value = "oferta"; visibilidad(); }
+    function visibilidad() { var of = selClase.value === "oferta"; ["v-tarifa", "v-km", "v-min"].forEach(function (id) { document.getElementById(id).closest("label").hidden = !of; }); }
+    selClase.addEventListener("change", visibilidad);
+    var iaNo = ia.oferta === false;
+    var atajos = el("div", { clase: "atajos-v" }, [
+      el("button", { type: "button", id: "atajo-ia", onclick: function () { if (iaNo) { selClase.value = "no_oferta"; visibilidad(); } else poner(ia); } }, [el("b", { texto: "La IA acertó" }), el("small", { texto: iaNo ? "no era oferta" : tkm(ia).join(" · ") })]),
+      el("button", { type: "button", id: "atajo-lector", onclick: function () { poner(lec); } }, [el("b", { texto: "El Lector acertó" }), el("small", { texto: tkm(lec).join(" · ") })])]);
+    var segConf = el("div", { clase: "seg3", role: "group", "aria-label": "Qué tan seguro estás" }, CONFIANZAS_V.map(function (c) {
+      return el("button", { type: "button", "data-conf": c[0], "aria-pressed": String(conf === c[0]), texto: c[1], onclick: function (ev) { conf = c[0]; segConf.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-conf") === conf)); }); } }); }));
+    var guardar = el("button", { id: "v-guardar", type: "button", clase: "primario", texto: "Guardar veredicto", onclick: async function () {
+      err.hidden = true;
+      var of = selClase.value === "oferta", t = parseFloat(document.getElementById("v-tarifa").value.replace(",", ".")), k = parseFloat(document.getElementById("v-km").value.replace(",", ".")), m = parseFloat(document.getElementById("v-min").value.replace(",", "."));
+      if (of && !(t > 0 && k > 0 && m > 0)) { err.textContent = "Escribe la tarifa, la distancia y el tiempo correctos (mayores que cero)."; err.hidden = false; return; }
+      guardar.disabled = true; guardar.textContent = "Guardando…";
+      var r = await llamar("admin_veredicto", { objetivo: "error_lector", objetivo_id: String(e.id), clase: selClase.value, tarifa: of ? t : null, km: of ? k : null, min: of ? m : null,
+        confianza: conf, evidencia_sha256: e.enlace.captura_sha256, nota: nota.value || null });
+      if (r && r.id) { h.remove(); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
+    } });
+    var h = el("div", { id: "hoja-ver", role: "dialog", "aria-modal": "true", "aria-label": "Dar veredicto", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Dar veredicto" }),
+        el("div", { clase: "detalle", texto: "Según la captura de las " + (e.creado || "").slice(11, 16) + ". Queda guardada como evidencia de tu veredicto." }),
+        el("div", { clase: "etq", texto: "Atajos" }), atajos,
+        el("div", { clase: "etq", texto: "Qué es" }), el("label", { clase: "campo-v" }, [selClase]),
+        el("div", { clase: "campos-v" }, [inT, inK, inM]),
+        el("div", { clase: "etq", texto: "Qué tan seguro estás" }), segConf,
+        el("label", { clase: "campo-v" }, [el("span", { texto: "Nota (opcional)" }), nota]), err, guardar])]);
+    document.body.appendChild(h); poner(iaNo ? { tarifa: null, km: null, min: null } : ia); if (iaNo) { selClase.value = "no_oferta"; visibilidad(); }
+    selClase.focus();
   }
   async function expediente(c, id) {
     var enLado = c.id === "lado";
@@ -472,6 +512,11 @@
     var iguales = bl.filter(function (x) { return x.estado === "ok"; }).map(function (x) { return x.m.toLowerCase(); }), difieren = bl.filter(function (x) { return x.estado === "dif"; }).map(function (x) { return x.m.toLowerCase(); });
     function lista(xs) { return xs.length > 1 ? xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1] : xs[0]; }
     if (difieren.length) c.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-diferencia", texto: (iguales.length ? legibleCap(lista(iguales)) + (iguales.length > 1 ? " iguales; " : " igual; ") : "") + lista(difieren) + (difieren.length > 1 ? " distintos." : " distinto.") + (refE ? "" : " Falta un veredicto humano para saber cuál acierta.") }));
+    if (yo && yo.rol === "revisor") {
+      var sha = e.enlace && e.enlace.captura_sha256;
+      c.appendChild(el("button", { type: "button", id: "dar-veredicto", clase: "dar-veredicto", texto: "Dar veredicto", disabled: sha ? null : "", onclick: function () { hojaVeredicto(e, lec, ia); } }));
+      if (!sha) c.appendChild(el("div", { clase: "detalle", id: "sin-huella", texto: "No se puede dar veredicto: este caso no tiene la huella de la captura (caso anterior a la 10.82 o sin lectura registrada)." }));
+    }
     c.appendChild(el("div", { clase: "detalle", texto: "Veredicto heredado: " + txt(e.veredicto_heredado) + " (no es verdad humana)" }));
     c.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Seguimiento" }), el("span", { clase: "detalle", texto: String(e.estado_seguimiento).replace(/_/g, " ") })]));
     c.appendChild(pasosSeg(e.estado_seguimiento));
