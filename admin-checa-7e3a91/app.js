@@ -78,7 +78,7 @@
     if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : "Filtro inválido: " + d.error); return null; }
     return d;
   }
-  function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.replaceState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } pintar(); }
+  function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } window.scrollTo(0, 0); pintar(); }
   function enlace(texto, v, p) { return el("a", { href: "#" + v + (p ? "/" + p : ""), clase: "enlace", texto: texto, onclick: function (ev) { ev.preventDefault(); ir(v, p); } }); }
 
   // ---------- componentes visuales ----------
@@ -128,9 +128,17 @@
       svg.appendChild(sv("path", { d: d, fill: "none", "stroke-width": "2", class: "linea " + (s.clase || "a" + si) }));
       s.puntos.forEach(function (p, i) { if (!pts[i]) return;
         var c = sv("circle", { cx: pts[i][0], cy: pts[i][1], r: "3", class: "pt " + (s.clase || "a" + si) });
-        var tt = sv("title"); tt.textContent = s.nombre + " · " + p.x + ": " + p.y + (unidad || ""); c.appendChild(tt); svg.appendChild(c); });
+        var tt = sv("title"); tt.textContent = s.nombre + " · " + p.x + ": " + p.y + (unidad || ""); c.appendChild(tt); svg.appendChild(c);
+        var zona = sv("circle", { cx: pts[i][0], cy: pts[i][1], r: "11", fill: "transparent", class: "toque" });
+        zona.addEventListener("click", function () { lectura.textContent = s.nombre + " · " + p.x + ": " + p.y + (unidad || ""); });
+        svg.appendChild(zona); });
     });
+    var lectura = el("div", { clase: "lectura", "aria-live": "polite", texto: "Toca un punto para ver su valor." });
     caja.appendChild(svg);
+    caja.appendChild(lectura);
+    var filas = base.map(function (b, i) { return el("tr", {}, [el("td", { texto: String(b.x) })].concat(series.map(function (s) { var p = s.puntos[i]; return el("td", { texto: p && p.y !== null && p.y !== undefined ? String(p.y) + (unidad || "") : "—" }); }))); });
+    caja.appendChild(el("details", { clase: "datos" }, [el("summary", { texto: "Ver tabla de datos" }),
+      el("div", { clase: "tabla" }, [el("table", {}, [el("thead", {}, [el("tr", {}, [el("th", { texto: "Día" })].concat(series.map(function (s) { return el("th", { texto: s.nombre }); })))]), el("tbody", {}, filas)])])]));
     caja.appendChild(el("div", { clase: "detalle", texto: series.map(function (s) { return s.nombre; }).join(" · ") + " · " + base[0].x + " → " + base[base.length - 1].x }));
     return caja;
   }
@@ -239,12 +247,16 @@
       el("label", {}, ["Desde", el("input", { id: "f-desde", type: "date", value: r.desde.slice(0, 10) })]),
       el("label", {}, ["Hasta", el("input", { id: "f-hasta", type: "date", value: r.hasta.slice(0, 10) })]),
       el("label", {}, ["App", el("select", { id: "f-app" }, [el("option", { value: "", texto: "Todas" }), el("option", { value: "uber", texto: "Uber" }), el("option", { value: "didi", texto: "DiDi" })])]),
-      el("label", {}, ["Versión", el("input", { id: "f-version", placeholder: "10.81", size: "6" })])].concat(extra || []).concat([
+      el("label", {}, ["Versión", el("input", { id: "f-version", placeholder: "Ej. 10.81", size: "6", inputmode: "decimal", enterkeyhint: "search", autocomplete: "off" })])].concat(extra || []).concat([
       el("button", { id: "f-aplicar", texto: "Aplicar", onclick: function () {
         ["f-desde", "f-hasta", "f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = document.getElementById(id); if (x) F[id] = x.value; });
-        F.desde = F["f-desde"] || null; F.hasta = F["f-hasta"] || null; pag.errores = pag.ofertas = 1; pintar(); } })]));
+        F.desde = F["f-desde"] || null; F.hasta = F["f-hasta"] || null; pag.errores = pag.ofertas = 1; pintar(); } }),
+      el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; dias = 7; pag.errores = pag.ofertas = 1; pintar(); } })]));
     ["f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = nodo.querySelector("#" + id); if (x && F[id] !== undefined) x.value = F[id]; });
-    return nodo;
+    var n = Object.keys(F).filter(function (k) { return F[k] && k.indexOf("f-") === 0 && k !== "f-desde" && k !== "f-hasta"; }).length;
+    var pleg = el("details", { clase: "filtros-hoja" }, [el("summary", { texto: "Filtros" + (n ? " (" + n + ")" : "") }), nodo]);
+    if (!(window.matchMedia && matchMedia("(max-width:760px)").matches)) pleg.open = true;
+    return pleg;
   }
   function opciones(id, etiqueta, vals) {
     return el("label", {}, [etiqueta, el("select", { id: id }, vals.map(function (v) { return el("option", { value: v, texto: v || "Todos" }); }))]);
@@ -260,7 +272,11 @@
       tipo: valor("f-tipo"), estado_veredicto: valor("f-estado"), pagina: pag.errores, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    c.appendChild(tabla([["Error", function (f) { return enlace("#" + f.id, "errores", String(f.id)); }], ["Fecha", function (f) { return (f.creado || "").slice(0, 16); }],
+    var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle del error", hidden: "" });
+    var dividido = el("div", { clase: "dividido" }, [lista, lado]); c.appendChild(dividido); var cpad = c; c = lista;
+    c.appendChild(tabla([["Error", function (f) { return el("a", { href: "#errores/" + f.id, clase: "enlace", texto: "#" + f.id, onclick: function (ev) {
+        if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ev.preventDefault(); ir("errores", String(f.id)); return; }
+        ev.preventDefault(); var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false; expediente(l, f.id); l.scrollTop = 0; } }); }], ["Fecha", function (f) { return (f.creado || "").slice(0, 16); }],
       ["Tipo", function (f) { return f.tipo; }], ["App", function (f) { return f.app; }],
       ["Versión", function (f) { return enlace(txt(f.version), "versiones"); }],
       ["Lector", function (f) { var l = f.lector_lectura || {}; return [l.tarifa, l.km, l.min].map(txt).join(" · "); }],
@@ -269,6 +285,7 @@
       ["Referencia humana", function (f) { var x = f.referencia; return x ? [x.clase, x.tarifa, x.km, x.min].map(txt).join(" · ") : null; }],
       ["Captura", function (f) { return f.tiene_captura ? "sí (acceso restringido)" : "no"; }]], d.filas));
     c.appendChild(paginas("errores", d));
+    c = cpad;
   }
   var ESTADOS_SEG = ["nuevo", "pendiente_de_revision", "en_investigacion", "causa_identificada", "corregido", "verificado", "cerrado"];
   var CAUSAS = ["", "ocr", "interpretacion", "tarjeta_equivocada", "pantalla_cambio", "ia", "dato_ambiguo", "otra"];
@@ -452,15 +469,58 @@
   var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
   var TITULOS = {}; MODULOS.forEach(function (m) { TITULOS[m[0]] = m[1]; });
 
+  // Hoja inferior «Más» (solo teléfono): módulos restantes, tema y salir.
+  function hoja(abrir) {
+    var h = document.getElementById("hoja");
+    if (h) h.remove();
+    var mas = document.getElementById("t-mas");
+    if (mas) mas.setAttribute("aria-expanded", String(!!abrir));
+    if (!abrir) return;
+    function cerrar() { hoja(false); if (mas) mas.focus(); }
+    var items = MODULOS.filter(function (m) { return ["inicio", "errores", "ofertas"].indexOf(m[0]) < 0; }).map(function (m) {
+      return el("button", { type: "button", clase: "item", "aria-current": m[0] === vista ? "page" : null, onclick: function () { hoja(false); ir(m[0]); } }, [icono(m[0]), el("span", { texto: m[1] })]); });
+    items.push(el("button", { type: "button", clase: "item", onclick: function () { document.getElementById("tema").click(); cerrar(); } }, [el("span", { texto: temaActual() === "dark" ? "Modo claro" : "Modo oscuro" })]));
+    items.push(el("button", { type: "button", clase: "item peligro", onclick: function () { document.getElementById("salir").click(); } }, [el("span", { texto: "Salir" })]));
+    var hoja_ = el("div", { id: "hoja", role: "dialog", "aria-modal": "true", "aria-label": "Más opciones", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } },
+      [el("div", { clase: "velo", onclick: cerrar }), el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" })].concat(items))]);
+    document.body.appendChild(hoja_);
+    var p = hoja_.querySelector(".item"); if (p) p.focus();
+  }
+
+  var ultima = Date.now();
+  function barraEstado() {
+    return el("div", { clase: "estado-barra" }, [el("span", { id: "est-punto", clase: "punto ok", "aria-hidden": "true" }), el("span", { id: "est-texto", "aria-live": "polite" }),
+      el("button", { id: "refrescar", type: "button", texto: "Actualizar", onclick: function () { pintar(); } })]);
+  }
+  function textoEstado() {
+    var t = document.getElementById("est-texto"), p = document.getElementById("est-punto"); if (!t) return;
+    var off = navigator.onLine === false, m = Math.floor((Date.now() - ultima) / 60000);
+    t.textContent = off ? "Sin conexión. Se muestran los últimos datos." : "Actualizado " + (m < 1 ? "hace un momento" : "hace " + m + " min");
+    p.className = "punto " + (off ? "mal" : m >= 10 ? "aviso" : "ok");
+  }
+  setInterval(textoEstado, 30000);
+  window.addEventListener("online", function () { textoEstado(); });
+  window.addEventListener("offline", textoEstado);
+
   async function pintar() {
+    hoja(false);
     var raiz = document.getElementById("raiz");
     raiz.textContent = "";
-    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, MODULOS.map(function (m) {
-      return el("button", { id: "t-" + m[0], "aria-selected": String(m[0] === vista), "aria-label": m[1], onclick: function () { ir(m[0]); } },
-        [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); }));
+    var PRINCIPALES = ["inicio", "errores", "ofertas"];
+    var enMas = PRINCIPALES.indexOf(vista) < 0;
+    var botones = MODULOS.map(function (m) {
+      var activo = m[0] === vista;
+      return el("button", { id: "t-" + m[0], type: "button", role: "tab", clase: PRINCIPALES.indexOf(m[0]) < 0 ? "sec" : "", "aria-selected": String(activo), "aria-current": activo ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
+        [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); });
+    var masIco = sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "currentColor" }, [sv("circle", { cx: "5", cy: "12", r: "1.6" }), sv("circle", { cx: "12", cy: "12", r: "1.6" }), sv("circle", { cx: "19", cy: "12", r: "1.6" })]);
+    botones.push(el("button", { id: "t-mas", type: "button", clase: "mas", "aria-haspopup": "dialog", "aria-expanded": "false", "aria-selected": String(enMas), "aria-label": "Más módulos y cuenta", onclick: function () { hoja(true); } },
+      [masIco, el("span", { clase: "corto", texto: "Más" })]));
+    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, [el("div", { role: "tablist", "aria-label": "Módulos", clase: "pestanas" }, botones)]);
     var c = el("section", { id: "vista-" + vista, clase: "contenido" });
     raiz.appendChild(nav); raiz.appendChild(c);
+    c.appendChild(barraEstado());
     await VISTAS[vista](c);
+    ultima = Date.now(); textoEstado();
   }
 
   async function iniciar(cliente) {
@@ -489,6 +549,10 @@
   function aplicarTema(t) { document.documentElement.setAttribute("data-theme", t); var b = document.getElementById("tema"); if (b) b.textContent = t === "dark" ? "Modo claro" : "Modo oscuro"; }
   try { var gt = localStorage.getItem("checa-tema"); if (gt === "dark" || gt === "light") document.documentElement.setAttribute("data-theme", gt); } catch (e) { /* sin almacenamiento */ }
 
+  window.addEventListener("popstate", function () {
+    var h = (location.hash || "").replace(/^#/, "").split("/");
+    if (cli && VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; pintar(); }
+  });
   window.Admin = { iniciar: iniciar, aviso: aviso, pintar: pintar };
 
   document.addEventListener("DOMContentLoaded", function () {
