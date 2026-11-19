@@ -3,11 +3,25 @@
 // (nada de innerHTML con datos). Solo recuerda, mientras la pestaña esté abierta, filtros y página (sessionStorage), y el tema. Ningún dato inventado: sin datos → gris «sin datos».
 (function () {
   "use strict";
-  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, colaErrores = [], scrollErrores = 0, restaurarScroll = null, ultimaClave = "", vista = "inicio", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
+  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, colaErrores = [], scrollErrores = 0, restaurarScroll = null, ultimaClave = "", vista = "hoy", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
+  var urgentes = null, buscarEq = "";
   var SVG = "http://www.w3.org/2000/svg";
-  // [id, nombre completo, nombre corto para la barra inferior del teléfono]
-  var MODULOS = [["inicio", "Inicio · Salud", "Salud"], ["errores", "Errores", "Errores"], ["ofertas", "Ofertas", "Ofertas"], ["versiones", "Versiones", "Versiones"],
-                 ["dispositivos", "Conductores y dispositivos", "Equipos"], ["ia", "Auditoría IA", "IA"], ["config", "Configuración", "Ajustes"]];
+  // Cuatro pestañas, una pregunta cada una: ¿qué pasa? ¿qué decido? ¿qué tan bien va? ¿cómo está configurado?
+  var MODULOS = [["hoy", "Hoy", "Hoy"], ["revisar", "Revisar", "Revisar"], ["calidad", "Calidad", "Calidad"], ["ajustes", "Ajustes", "Ajustes"]];
+  // Subpestañas: [id, nombre]. La primera es la que se abre por omisión.
+  var SUBS = { revisar: [["errores", "Errores"], ["capturas", "Capturas"], ["historial", "Historial"]],
+               calidad: [["resumen", "Resumen"], ["versiones", "Versiones"], ["ia", "IA"], ["conductores", "Conductores"]] };
+  // Rutas de antes (#errores, #ofertas…) → [pestaña, subpestaña]. Mantienen vivos los enlaces guardados.
+  var ANTIGUAS = { inicio: ["hoy", null], errores: ["revisar", null], ofertas: ["revisar", "historial"], versiones: ["calidad", "versiones"],
+                   dispositivos: ["calidad", "conductores"], ia: ["calidad", "ia"], config: ["ajustes", null] };
+  function traducir(v, p) {
+    if (v === "errores" && p) return ["revisar", String(p)];
+    if (ANTIGUAS[v]) return ANTIGUAS[v];
+    return [v, p || null];
+  }
+  function esId(p) { return p !== null && p !== undefined && /^\d+$/.test(String(p)); }
+  function enDetalle() { return vista === "revisar" && esId(param); }
+  function enListaErrores() { return vista === "revisar" && (!param || param === "errores"); }
   var ESTADO = { operativo: "ok", degradado: "aviso", fuera_de_servicio: "mal", sin_comprobar: "nd", sin_datos: "nd", no_aplicable: "nd",
                  verde: "ok", amarillo: "aviso", amarillo_parcial: "aviso", rojo: "mal", gris: "nd" };
   // Palabras de todos los días: quien lo lee no tiene que ser técnico.
@@ -52,9 +66,15 @@
     return e;
   }
   // Íconos de línea para la barra (solo formas; sin texto del servidor).
-  var ICONOS = { inicio: "M3 12h4l3-7 4 14 3-7h4", errores: "M12 3 2 21h20L12 3zM12 10v5M12 18v.01", ofertas: "M4 6h16M4 12h16M4 18h10",
-                 versiones: "M7 4v16M17 4v16M3 8l4-4 4 4M13 16l4 4 4-4", dispositivos: "M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 18h2",
-                 ia: "M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z", config: "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6" };
+  var ICONOS = { hoy: "M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5", revisar: "M7 3.5h10a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3zM8.5 12l2.5 2.5 4.5-5",
+                 calidad: "M4 20v-7M10 20V6M16 20v-9M21 20H3", ajustes: "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6",
+                 buscar: "M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM16 16l4.5 4.5",
+                 ia: "M7 6h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3zM12 6V3M9 12h.01M15 12h.01M9.5 15.5h5",
+                 dinero: "M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.3 4.5 3-2 3-4.5 3-4.5-1.3-4.5-3",
+                 personas: "M9 4.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4zM3 20c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5M16 5a3 3 0 0 1 0 6M18 14.8c1.7.7 2.7 2.6 3 5.2",
+                 disco: "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
+                 campana: "M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4", lista: "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
+                 luna: "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" };
   function icono(id) {
     return sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }, [sv("path", { d: ICONOS[id] })]);
   }
@@ -105,7 +125,13 @@
     if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : d.error === "veredicto_invalido" ? "El veredicto no es válido: revisa los valores (la oferta necesita tarifa, distancia y tiempo mayores que cero)." : d.error === "revision_invalida" ? "La revisión no es válida: revisa los valores o el motivo." : d.error === "objetivo_o_evidencia" ? "No se puede comprobar la captura de este caso: no admite veredicto." : "Filtro inválido: " + d.error); return null; }
     return d;
   }
-  function ir(v, p) { if (vista === "errores" && !param) scrollErrores = window.scrollY; vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } restaurarScroll = v === "errores" && !p ? scrollErrores : null; if (restaurarScroll === null) window.scrollTo(0, 0); pintar(); }
+  function ir(v, p) {
+    var t = traducir(v, p); v = t[0]; p = t[1];
+    if (enListaErrores()) scrollErrores = window.scrollY;
+    vista = v; param = p || null;
+    if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } }
+    restaurarScroll = enListaErrores() ? scrollErrores : null; if (restaurarScroll === null) window.scrollTo(0, 0); pintar();
+  }
   function enlace(texto, v, p) { return el("a", { href: "#" + v + (p ? "/" + p : ""), clase: "enlace", texto: texto, onclick: function (ev) { ev.preventDefault(); ir(v, p); } }); }
 
   // ---------- componentes visuales ----------
@@ -118,7 +144,7 @@
       el("div", { clase: "valor", texto: texto }),
       el("div", { clase: "detalle", texto: casos(t.k, t.n) + (t.unidad && t.unidad.indexOf("proporci") !== 0 ? " · " + t.unidad : "") }),
       est ? el("span", { clase: "etiqueta " + (est === "suficiente" ? "ok" : "aviso"), texto: est === "suficiente" ? "casos suficientes" : "pocos casos para opinar" }) : null,
-      t.definicion ? el("div", { clase: "def", texto: t.definicion }) : null].concat(extra || []));
+      t.definicion ? el("details", { clase: "def-ayuda" }, [el("summary", { texto: "¿Qué significa?" }), el("div", { clase: "detalle", texto: t.definicion })]) : null].concat(extra || []));
   }
   function tabla(cols, filas, vacio) {
     if (!filas.length) return el("div", { clase: "vacio", texto: vacio || "Sin datos en este periodo (no es lo mismo que cero errores)." });
@@ -174,6 +200,50 @@
       return el("button", { "data-dias": n, "aria-pressed": String(dias === n && !F.desde), texto: n + " días", onclick: function () { dias = n; F.desde = F.hasta = null; onCambio(); } });
     }));
   }
+  // Mini gráfica de tendencia (sin ejes): solo la forma y el último punto.
+  function spark(vals) {
+    var v = vals.filter(function (x) { return x !== null && x !== undefined && !isNaN(x); });
+    if (v.length < 2) return null;
+    var W = 120, H = 28, mx = Math.max.apply(null, v), mn = Math.min.apply(null, v), rg = mx - mn || 1;
+    var pts = v.map(function (x, i) { return [(i * W / (v.length - 1)).toFixed(1), (H - 3 - (x - mn) / rg * (H - 6)).toFixed(1)]; });
+    var u = pts[pts.length - 1];
+    return sv("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none", class: "spark", "aria-hidden": "true" }, [
+      sv("polyline", { points: pts.map(function (p) { return p.join(","); }).join(" "), fill: "none", stroke: "currentColor", "stroke-width": "1.8", "vector-effect": "non-scaling-stroke" }),
+      sv("circle", { cx: u[0], cy: u[1], r: "2.5", fill: "currentColor" })]);
+  }
+  // Anillo de acierto (0–100 %).
+  function aro(p) {
+    var r = 44, cir = 2 * Math.PI * r, g = [sv("circle", { cx: 56, cy: 56, r: r, fill: "none", class: "aro-f", "stroke-width": "12" })];
+    if (p !== null) g.push(sv("circle", { cx: 56, cy: 56, r: r, fill: "none", class: "aro-v", "stroke-width": "12", "stroke-linecap": "round", "stroke-dasharray": (cir * p).toFixed(1) + " " + cir.toFixed(1), transform: "rotate(-90 56 56)" }));
+    var t = sv("text", { x: 56, y: 62, "text-anchor": "middle", class: "aro-t" }); t.textContent = p === null ? "—" : (p * 100).toFixed(1).replace(".0", "") + "%"; g.push(t);
+    return sv("svg", { width: 112, height: 112, viewBox: "0 0 112 112", class: "aro", role: "img", "aria-label": p === null ? "Sin datos de acierto" : "Acierto " + (p * 100).toFixed(1) + " por ciento" }, g);
+  }
+  // Barras de lecturas por día con una escala redonda; el último día resaltado.
+  function barrasDia(h) {
+    var vals = h.map(function (x) { return Number(x.lecturas) || 0; });
+    if (!vals.length) return el("div", { clase: "vacio", texto: "Sin datos en este periodo." });
+    var W = 340, H = 150, L = 34, B = 22, T = 8, max = Math.max.apply(null, vals) || 1;
+    var paso = Math.pow(10, Math.floor(Math.log10(max))), tope = Math.ceil(max / paso) * paso, pw = (W - L) / vals.length;
+    var g = [];
+    [0, tope / 2, tope].forEach(function (y) { var py = T + (H - T - B) * (1 - y / tope); g.push(sv("line", { x1: L, x2: W, y1: py, y2: py, stroke: "currentColor", "stroke-opacity": ".15" }));
+      var t = sv("text", { x: L - 6, y: py + 4, "text-anchor": "end", class: "eje" }); t.textContent = y >= 1000 ? (y / 1000).toLocaleString("es-MX") + "k" : String(Math.round(y)); g.push(t); });
+    vals.forEach(function (v, i) { var bh = (H - T - B) * v / tope, x = L + i * pw + pw * .2;
+      var r = sv("rect", { x: x.toFixed(1), y: (H - B - bh).toFixed(1), width: Math.max(1, pw * .6).toFixed(1), height: bh.toFixed(1), rx: "3", class: i === vals.length - 1 ? "bar ult" : "bar" });
+      var tt = sv("title"); tt.textContent = h[i].dia + ": " + v + " lecturas"; r.appendChild(tt); g.push(r); });
+    var a = sv("text", { x: L, y: H - 5, class: "eje" }); a.textContent = corto(h[0].dia);
+    var z = sv("text", { x: W, y: H - 5, "text-anchor": "end", class: "eje" }); z.textContent = corto(h[h.length - 1].dia) + " · " + vals[vals.length - 1].toLocaleString("en-US");
+    g.push(a, z);
+    return sv("svg", { viewBox: "0 0 " + W + " " + H, class: "barras-dia", role: "img", "aria-label": "Lecturas por día del " + h[0].dia + " al " + h[h.length - 1].dia + "; último día " + vals[vals.length - 1] }, g);
+  }
+  // Toda la tarjeta lleva a su detalle (los «¿Qué significa?» de dentro siguen funcionando).
+  function envolver(t, v, p) {
+    t.classList.add("tocable"); t.setAttribute("role", "link"); t.tabIndex = 0;
+    var ir_ = function (ev) { if (ev.target.closest("summary, details")) return; ev.preventDefault(); ir(v, p); };
+    t.addEventListener("click", ir_); t.addEventListener("keydown", function (ev) { if (ev.key === "Enter") ir_(ev); });
+    var tit = t.querySelector(".detalle"); if (tit) tit.appendChild(el("span", { clase: "chev", "aria-hidden": "true", texto: " ›" }));
+    return t;
+  }
+  function fechaLarga() { var x = new Intl.DateTimeFormat("es-MX", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(new Date()).replace(",", ""); return x.charAt(0).toUpperCase() + x.slice(1); }
   function skeleton(c) { c.appendChild(el("div", { clase: "skeleton", "aria-busy": "true" })); }
 
   // ---------- 01 Inicio (Salud) ----------
@@ -188,10 +258,25 @@
   // A dónde lleva cada alerta: al lugar donde se puede hacer algo.
   function destinoAlerta(a) {
     var comp = a.componente, t = (a.titulo || "") + " " + (a.descripcion || "");
-    if (comp === "revision_ia") return /402/.test(t) ? ["config", "Ver saldo o apagar la IA"] : ["ia", "Abrir Auditoría IA"];
-    if (comp === "revision_humana") return ["errores", "Abrir errores"];
-    if (comp === "ingesta" || comp === "aplicacion_android") return ["dispositivos", "Ver equipos"];
-    return ["ofertas", "Abrir ofertas"];
+    if (comp === "revision_ia") return /402/.test(t) ? ["ajustes", "Ver el saldo en Ajustes"] : ["ia", "Ver la IA en Calidad"];
+    if (comp === "revision_humana") return ["errores", "Revisar errores"];
+    if (comp === "ingesta" || comp === "aplicacion_android") return ["dispositivos", "Ver conductores y dispositivos"];
+    return ["ofertas", "Ver el historial de lecturas"];
+  }
+  // Errores sin veredicto del periodo: el único número que pinta la insignia de Revisar.
+  // Solo cuenta errores de la 10.82 en adelante: los anteriores no admiten veredicto (no se puede comprobar su captura).
+  var urgPorVersion = {};
+  async function contarUrgentes() {
+    var r = rango(); await asegurarVersiones();
+    var vs = VERSIONES.filter(function (x) { return versionNum(x) >= 10082; });
+    var res = await Promise.all(vs.map(function (ver) {
+      return cli.rpc("admin_errores", { desde: r.desde, hasta: r.hasta, version: ver, estado_veredicto: "sin_veredicto", pagina: 1, por_pagina: 1 })
+        .then(function (x) { return x && x.data && !x.data.error ? Number(x.data.total) : null; }, function () { return null; }); }));
+    urgPorVersion = {}; vs.forEach(function (ver, i) { urgPorVersion[ver] = res[i]; });
+    var ok = res.filter(function (x) { return x !== null; });
+    urgentes = ok.length ? ok.reduce(function (a, b) { return a + b; }, 0) : null;
+    var b = document.getElementById("insignia-revisar"); if (b) { b.textContent = urgentes ? String(urgentes) : ""; b.hidden = !urgentes; }
+    return urgentes;
   }
   function aclaracion(a) {
     if (a.componente === "revision_ia") return /402/.test(a.titulo + " " + a.descripcion) ? "Se acabó el saldo del revisor automático. Recárgalo." : "El revisor automático está fallando. Mira el detalle.";
@@ -219,32 +304,24 @@
     var comprobados = d.componentes.filter(function (x) { return ["operativo", "degradado", "fuera_de_servicio"].indexOf(x.estado) >= 0; }).length;
     var fallas = d.componentes.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
     var v = VEREDICTO[d.estado_general] || VEREDICTO.gris;
-    var luces = ["luz-r", "luz-a", "luz-v"].map(function (l) { return el("i", { clase: v[2] === l ? "on " + l : "" }); });
-    c.appendChild(barraEstado());
-    c.appendChild(el("div", { clase: "encabezado" }, [el("div", { clase: "detalle", texto: "Periodo: " + r.desde.slice(0, 10) + " → " + r.hasta.slice(0, 10) }), selPeriodo(pintar)]));
 
     // 1 · Veredicto y frase de acción
     var pasos = PASOS.map(function (p) { return pasoEstado(p, d.componentes); });
     var rotos = pasos.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
     var fraseCadena = rotos ? "Falla " + rotos + (rotos === 1 ? " paso" : " pasos") + " de " + PASOS.length + "." : "Ningún paso de la cadena falla.";
     var heroEl;
-    c.appendChild(heroEl = el("section", { clase: "hero", id: "estado-general" }, [
-      el("div", { clase: "semaforo", "aria-hidden": "true" }, luces),
-      el("div", { clase: "hero-texto" }, [el("h1", { texto: v[0] }), el("p", { texto: v[1] }), el("p", { texto: fraseCadena }),
-        el("div", { clase: "fila" }, [insignia(d.estado_general), el("span", { clase: "detalle", texto: comprobados + " de " + n + " cosas medidas" })])])]));
+    c.appendChild(heroEl = el("section", { clase: "hero estado-v3", id: "estado-general" }, [
+      el("div", { clase: "estado-cab" }, [el("span", { clase: "latido " + (ESTADO[d.estado_general] || "nd"), "aria-hidden": "true" }), el("h2", { clase: "estado-t", texto: v[0] })]),
+      el("p", { clase: "estado-p", texto: rotos ? (rotos === 1 ? "Un paso tiene problemas." : rotos + " pasos tienen problemas.") + " Tócalo para ver el detalle." : v[1] })]));
 
-    if (yo && yo.rol === "revisor") pendientesRev().then(function (n) {
-      if (n > 0 && heroEl.isConnected) heroEl.after(el("a", { href: "#revisar", id: "pend-revisar", clase: "boton-enlace revisar-entrada", texto: textoRevisar(n), onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
-    });
     // 2 · Pasos de la lectura: un punto por paso; el que falla se abre solo.
     var peor = -1;
     pasos.forEach(function (x, k) { if (GRAVE[x.estado] <= 1 && (peor < 0 || GRAVE[x.estado] < GRAVE[pasos[peor].estado])) peor = k; });
-    var sel = peor;
+    var sel = -1;   // el detalle se abre al tocar un paso
     var cadena = el("section", { clase: "cadena", id: "cadena", "aria-label": "Pasos de la lectura" });
     var detalleCadena = el("div", { clase: "paso-detalle", "aria-live": "polite" });
     function pintarCadena() {
       cadena.textContent = "";
-      cadena.appendChild(el("div", { clase: "cadena-cab" }, [el("h2", { texto: "Pasos de la lectura" }), el("span", { clase: "detalle", texto: rotos ? rotos + (rotos === 1 ? " paso falla" : " pasos fallan") : "sin fallas" })]));
       cadena.appendChild(el("div", { clase: "pasos" }, pasos.map(function (p, k) {
         return el("button", { type: "button", clase: "paso " + (ESTADO[p.estado] || "nd") + (k === sel ? " sel" : ""), "aria-pressed": String(k === sel), "aria-label": p.paso.nombre + ": " + (TEXTO[p.estado] || p.estado),
           onclick: function () { sel = sel === k ? -1 : k; pintarCadena(); } }, [punto(p.estado), el("span", { texto: p.paso.nombre })]); })));
@@ -257,44 +334,93 @@
         detalleCadena.appendChild(el("div", { clase: "aclara", texto: aclara || RESPUESTA[p.estado] || TEXTO[p.estado] }));
         if (x.ultima_comprobacion) detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + fechaHora(x.ultima_comprobacion) }));
         if (al) detalleCadena.appendChild(enlace(destinoAlerta(al)[1], destinoAlerta(al)[0]));
-      } else detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Toca un paso para ver qué significa." }));
+      }
       cadena.appendChild(detalleCadena);
     }
     pintarCadena();
-    c.appendChild(cadena);
+    heroEl.appendChild(cadena);
 
     // 3 · Por revisar (máximo 3 a la vista, urgente primero)
     var GR = { alta: 0, media: 1, baja: 2 };
     var atn = d.atencion.slice().sort(function (x, y) { return (GR[x.gravedad] === undefined ? 3 : GR[x.gravedad]) - (GR[y.gravedad] === undefined ? 3 : GR[y.gravedad]); });
-    function tarjetaAlerta(a) {
-      var aclara = aclaracion(a);
-      return el("div", { clase: "alerta " + a.gravedad }, [
-        el("div", { clase: "fila" }, [el("span", { clase: "tag " + a.gravedad, texto: GRAVEDAD[a.gravedad] || a.gravedad.toUpperCase() }), el("strong", { texto: a.titulo })]),
-        aclara ? el("div", { clase: "aclara", texto: aclara }) : null,
-        el("details", {}, [el("summary", { texto: "Más detalle" }),
-          el("div", { clase: "detalle", texto: a.descripcion }),
-          el("div", { clase: "detalle", texto: "Dato técnico: " + a.evidencia })]),
-        enlace(destinoAlerta(a)[1], destinoAlerta(a)[0])]);
+    // La alerta de la IA trae su acción a la mano: apagarla sin ir a Ajustes (solo un revisor puede).
+    var iaEst = null;
+    if (yo && yo.rol === "revisor" && atn.some(function (a) { return a.componente === "revision_ia"; })) {
+      try { var rie = await cli.rpc("admin_ia_estado"); iaEst = rie && rie.data && !rie.data.error ? rie.data : null; } catch (x) { iaEst = null; }
     }
-    c.appendChild(el("h2", { texto: "Por revisar" + (atn.length ? " (" + atn.length + ")" : "") }));
-    c.appendChild(el("div", { id: "alertas", clase: "atencion" }, atn.length ? atn.slice(0, 3).map(tarjetaAlerta).concat(atn.length > 3 ?
-      [el("details", { clase: "mas-alertas" }, [el("summary", { texto: "Ver las " + (atn.length - 3) + " restantes" }), el("div", { clase: "atencion" }, atn.slice(3).map(tarjetaAlerta))])] : [])
-      : [el("div", { clase: "vacio", texto: "Nada por revisar con los datos de este periodo." })]));
-
-    // 4 · Tres cifras
+    function accionIA() {
+      if (!iaEst || !iaEst.vision) return null;
+      return el("button", { type: "button", clase: "si", id: "apagar-ia", texto: "Apagar IA", onclick: function () {
+        hojaConfirmar("¿Apagar la IA con imagen?", "Los teléfonos dejarán de pedirle a la IA que mire la imagen de la oferta y seguirán solo con su lector. Tarda unos 30 segundos en llegar a todos. Puedes volver a encenderla en Ajustes.", "Sí, apagar",
+          async function () { var r = await llamar("admin_ia_interruptor", { p_que: "vision", p_activo: false }); if (r && r.ok) { toast("IA con imagen apagada"); pintar(); return true; } return false; }); } });
+    }
+    function tarjetaAlerta(a) {
+      var aclara = aclaracion(a) || a.descripcion, dest = destinoAlerta(a), acc = a.componente === "revision_ia" ? accionIA() : null;
+      return el("div", { clase: "alerta " + a.gravedad }, [
+        el("div", { clase: "alerta-l" }, [el("span", { clase: "alerta-ic", "aria-hidden": "true", texto: a.gravedad === "baja" ? "i" : "!" }),
+          el("div", { clase: "alerta-tx" }, [el("b", { texto: a.titulo }), el("small", { texto: aclara }),
+            el("details", { clase: "alerta-mas" }, [el("summary", { texto: "Dato técnico" }), el("div", { clase: "detalle", texto: a.evidencia })])])]),
+        el("div", { clase: "alerta-acc" }, [el("button", { type: "button", clase: acc ? "" : "si", texto: acc ? "Ver detalle" : dest[1], onclick: function () { ir(dest[0]); } }), acc])]);
+    }
+    // 3 · Atención: lo urgente primero (errores sin veredicto), luego las alertas y la meta de etiquetado.
+    c.appendChild(el("h2", { texto: "Atención" }));
+    var at = el("div", { id: "alertas", clase: "atencion" });
+    var nUrg = await contarUrgentes();
+    var desde = VERSIONES.filter(function (x) { return versionNum(x) >= 10082; }).sort(function (a, b) { return versionNum(a) - versionNum(b); })[0] || "10.82";
+    at.appendChild(el("a", { href: "#revisar", id: "urgentes", clase: "urgente" + (nUrg ? "" : " al-dia"), onclick: function (ev) {
+        ev.preventDefault(); F["f-estado"] = "sin_veredicto"; pag.errores = 1;
+        var con = Object.keys(urgPorVersion).filter(function (k) { return urgPorVersion[k] > 0; }); if (con.length === 1) F["f-version"] = con[0];
+        ir("revisar"); } }, [
+      el("b", { clase: "urgente-n", texto: nUrg === null ? "—" : String(nUrg) }),
+      el("span", { clase: "urgente-t" }, [el("strong", { texto: nUrg === 1 ? "Error sin veredicto" : "Errores sin veredicto" }), el("small", { texto: nUrg ? "De la " + desde + " en adelante" : nUrg === 0 ? "Todo al día" : "No se pudo contar" })]),
+      el("span", { clase: "urgente-ir", texto: "Revisar" })]));
+    // «Errores sin referencia humana» ya lo dice la tarjeta de arriba.
+    atn = atn.filter(function (a) { return a.componente !== "revision_humana"; });
+    atn.slice(0, 3).forEach(function (a) { at.appendChild(tarjetaAlerta(a)); });
+    if (atn.length > 3) at.appendChild(el("details", { clase: "mas-alertas" }, [el("summary", { texto: "Ver las " + (atn.length - 3) + " alertas restantes" }), el("div", { clase: "atencion" }, atn.slice(3).map(tarjetaAlerta))]));
+    c.appendChild(at);
+    // 4 · Cuatro cifras: cada una lleva a su detalle.
     var porClave = {}; d.indicadores.forEach(function (i) { porClave[i.clave] = i; });
-    var tres = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean);
-    if (tres.length) { c.appendChild(el("h2", { texto: "Lo esencial" })); c.appendChild(el("div", { clase: "tarjetas tres", id: "esencial" }, tres.map(function (i) { return tarjeta(i, []); }))); }
+    var DEST = { lecturas: ["calidad", "resumen"], tasa_errores: ["calidad", "versiones"], calidad_interpretacion: ["calidad", "ia"] };
+    var hs = d.historia || [];
+    var SPARK = { lecturas: hs.map(function (x) { return x.lecturas; }), tasa_errores: hs.map(function (x) { return x.lecturas ? x.errores / x.lecturas : null; }) };
+    var CORTO = { lecturas: "Lecturas", tasa_errores: "Errores", calidad_interpretacion: "Acierto" };
+    function valorInd(i) { var v = i.valor === undefined || i.valor === null ? (i.k !== undefined && i.n ? i.k / i.n : null) : i.valor; return v === null ? "—" : (i.unidad && i.unidad.indexOf("proporci") === 0 ? pct(v) : Number(v).toLocaleString("en-US")); }
+    function kpi(titulo, valor, sub, extra, v, p) {
+      return el("a", { href: "#" + v + (p ? "/" + p : ""), clase: "kpi", onclick: function (ev) { ev.preventDefault(); ir(v, p); } }, [
+        el("span", { clase: "kpi-t" }, [titulo, el("span", { "aria-hidden": "true", texto: "›" })]), el("span", { clase: "kpi-v", texto: valor }), el("span", { clase: "kpi-d", texto: sub }), extra]);
+    }
+    var cuatro = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean).map(function (i) {
+      var sub = i.n ? (i.clave === "lecturas" ? "en el periodo" : i.k + " de " + i.n) : i.clave === "lecturas" ? "en el periodo" : "aún sin casos";
+      var extra = SPARK[i.clave] ? spark(SPARK[i.clave]) : i.clave === "calidad_interpretacion" && i.n ? el("span", { clase: "medidor" }, [(function () { var b = el("i"); b.style.width = Math.round(i.k / i.n * 100) + "%"; b.style.background = "var(--verde)"; return b; })()]) : null;
+      return kpi(CORTO[i.clave], valorInd(i), sub, extra, DEST[i.clave][0], DEST[i.clave][1]); });
+    var kc = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta });
+    if (kc) {
+      var gasto = (kc.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0);
+      cuatro.push(kpi("Gasto en IA", (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—", "USD en el periodo", null, "ajustes"));
+    }
+    if (cuatro.length) { c.appendChild(el("h2", { texto: dias === 7 ? "Últimos 7 días" : "Últimos " + dias + " días" })); c.appendChild(el("div", { clase: "kpis", id: "esencial" }, cuatro)); }
+    // Meta de etiquetado: capturas confirmadas por una persona.
+    var metaN = el("b", { clase: "mono", texto: "—" }), metaS = el("small", { texto: "Capturas de ofertas confirmadas por una persona" }), metaB = el("i");
+    c.appendChild(el("h2", { texto: "Meta de etiquetado" }));
+    c.appendChild(el("a", { href: "#revisar/capturas", id: "pend-revisar", clase: "meta-et", onclick: function (ev) { ev.preventDefault(); ir("revisar", "capturas"); } }, [
+      el("span", { clase: "meta-tx" }, [metaN, metaS, el("span", { clase: "medidor" }, [metaB])]), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]));
+    pendientesRev().then(function (x) {
+      if (!x || !metaN.isConnected) return;
+      metaN.textContent = x.rev + " de " + (x.rev + x.pend);
+      metaS.textContent = x.pend ? x.pend + " esperando revisión" : "Todo al día";
+      metaB.style.width = (x.rev + x.pend ? Math.round(x.rev / (x.rev + x.pend) * 100) : 0) + "%";
+    });
+
 
     // 5 · Tendencia
     var h0 = d.historia || [];
-    c.appendChild(el("div", { clase: "graficas una", id: "tendencia" }, [grafica("Lecturas y errores por día", [{ nombre: "Lecturas", clase: "a0", puntos: h0.map(function (x) { return { x: x.dia, y: x.lecturas }; }) },
-      { nombre: "Errores", clase: "a1", puntos: h0.map(function (x) { return { x: x.dia, y: x.errores }; }) }])]));
+    c.appendChild(el("h2", { texto: "Lecturas por día" }));
+    c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [barrasDia(h0)]));
 
-    // Todo lo demás, a un toque
-    var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todo el detalle: partes del sistema, números, tiempos y gráficas" })]);
+    // Cada parte del sistema, a un toque (los números y gráficas de calidad viven en Calidad › Resumen).
+    var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todas las partes del sistema" })]);
     var cuerpo = el("div", { clase: "completo-cuerpo" }); completo.appendChild(cuerpo); c.appendChild(completo); c = cuerpo;
-    c.appendChild(el("h2", { texto: "Cada parte, en una pregunta" }));
     var ordenados = d.componentes.slice().sort(function (a, b) { return (ORDEN[a.estado] === undefined ? 9 : ORDEN[a.estado]) - (ORDEN[b.estado] === undefined ? 9 : ORDEN[b.estado]); });
     c.appendChild(el("div", { clase: "carriles", id: "componentes" }, ordenados.map(function (x) {
       var pq = PREGUNTA[x.clave] || [x.nombre, x.nombre];
@@ -303,19 +429,61 @@
         el("div", { clase: "carril-texto" }, [
           el("strong", { texto: pq[0] }),
           el("div", { clase: "respuesta", texto: RESPUESTA[x.estado] || TEXTO[x.estado] }),
-          el("details", {}, [el("summary", { texto: "¿Qué significa?" }), el("p", { texto: pq[1] }),
+          el("details", {}, [el("summary", { texto: "Detalle" }), el("p", { texto: pq[1] }),
             el("div", { clase: "detalle", texto: x.nombre + " · cómo se comprueba: " + txt(x.comprobacion) }),
             el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + (x.ultima_comprobacion ? String(x.ultima_comprobacion).slice(0, 19).replace("T", " ") : "—") }),
             x.k !== undefined ? el("div", { clase: "detalle", texto: casos(x.k, x.n) }) : null,
             x.ms ? el("div", { clase: "detalle", texto: "Tiempo típico: " + x.ms + " ms" }) : null,
-            el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])]),
-        insignia(x.estado)]);
+            el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])])]);
     })));
+  }
 
+  // ---------- Calidad › Resumen: qué tan bien lee la app, con todos sus números ----------
+  async function resumen(c) {
+    skeleton(c);
+    var r = rango();
+    var res = await Promise.all([llamar("admin_metricas", { desde: r.desde, hasta: r.hasta, app: null, version: null }), llamar("admin_salud", { desde: r.desde, hasta: r.hasta }),
+      llamar("admin_versiones", { desde: r.desde, hasta: r.hasta }), llamar("admin_ia", { desde: r.desde, hasta: r.hasta })]);
+    var m = res[0], d = res[1], dv = res[2], di = res[3];
+    var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
+    // 1 · Acierto contra una persona, en grande
+    var ms = m ? (m.metricas || []) : [], ph = ms.filter(function (x) { return x.clave === "precision_humana"; })[0];
+    var pv = ph ? (ph.valor !== null && ph.valor !== undefined ? Number(ph.valor) : ph.n ? ph.k / ph.n : null) : null;
+    var ind = {}; (d ? d.indicadores : []).forEach(function (i) { ind[i.clave] = i; });
+    var te = ind.tasa_errores, lecI = ind.lecturas, p50 = d && d.procesamiento ? d.procesamiento.ms_lectura_p50 : null;
+    var teV = te ? (te.valor !== null && te.valor !== undefined ? Number(te.valor) : te.n ? te.k / te.n : null) : null;
+    c.appendChild(el("div", { clase: "caja-v3", id: "calidad" }, [
+      el("div", { clase: "aro-caja" }, [aro(pv), el("div", { clase: "aro-tx" }, [
+        el("b", { texto: pv === null ? "Aún no se puede medir" : "La app acierta " + Math.round(pv * 100) + " de cada 100" }),
+        el("small", { texto: ph && ph.n ? "Comparado con " + ph.n + " capturas revisadas por una persona" + (ph.n < 30 ? ". Son pocos casos para opinar." : ".") : "Falta que una persona revise capturas." })])]),
+      el("div", { clase: "trio" }, [["Errores", teV === null ? "—" : pct(teV)], ["Tiempo", p50 ? (p50 / 1000).toFixed(1) + " s" : "—"], ["Lecturas", lecI && lecI.valor !== undefined && lecI.valor !== null ? Number(lecI.valor).toLocaleString("en-US") : "—"]].map(function (x) {
+        return el("div", {}, [el("small", { texto: x[0] }), el("b", { texto: x[1] })]); }))]));
+    // 2 · Por versión
+    var vs = dv ? (dv.versiones || []).slice().sort(function (x, y) { return String(y.primera || "").localeCompare(String(x.primera || "")); }).slice(0, 4) : [];
+    if (vs.length) {
+      c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Por versión" }), enlace("Comparar ›", "calidad", "versiones")]));
+      c.appendChild(el("div", { clase: "caja-v3" }, vs.map(function (v) {
+        var q = v.con_referencia ? v.coinciden / v.con_referencia : null, i = el("i"); i.style.width = (q === null ? 0 : q * 100) + "%";
+        return el("div", { clase: "vbar" + (v.con_referencia < 30 ? " poca" : q !== null && q >= 0.9 ? " ok" : " aviso") }, [el("span", { texto: v.version }), el("div", { clase: "p" }, [i]),
+          el("b", { texto: q === null ? "—" : pct(q) })]); }).concat([el("div", { clase: "detalle nota-v", texto: "Acierto contra una persona. En gris, versiones con menos de 30 casos revisados." })])));
+    }
+    // 3 · La IA contra una persona
+    var comps = di ? (di.componentes || []) : [];
+    if (comps.length) {
+      c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Quién acierta contra una persona" }), enlace("Detalle ›", "calidad", "ia")]));
+      c.appendChild(el("div", { clase: "caja-v3" }, comps.map(function (x) {
+        var q = x.n ? x.coinciden / x.n : null, i = el("i"); i.style.width = (q === null ? 0 : q * 100) + "%";
+        return el("div", { clase: "vbar ancha" + (x.n < 30 ? " poca" : " ok") }, [el("span", { texto: ({ lector: "Lector", revision_ia: "IA de revisión", vision: "IA con imagen", texto: "IA de texto" })[x.componente] || legible(x.componente) }), el("div", { clase: "p" }, [i]), el("b", { texto: q === null ? "—" : pct(q) })]); })));
+    }
+    if (d) { c.appendChild(el("h2", { texto: "Lecturas por día" })); c.appendChild(el("div", { clase: "caja-v3" }, [barrasDia(d.historia || [])])); }
+    if (!d) return;
+    // Todo lo demás, plegado
+    var masN = el("details", { clase: "completo", id: "mas-numeros" }, [el("summary", { texto: "Más números y gráficas" })]);
+    var cuerpoN = el("div", { clase: "completo-cuerpo" }); masN.appendChild(cuerpoN); c.appendChild(masN); c = cuerpoN;
     c.appendChild(el("h2", { texto: "Los números" }));
     c.appendChild(el("div", { clase: "tarjetas", id: "inicio" }, d.indicadores.map(function (i) {
       return tarjeta(i, [i.clave === "calidad_interpretacion" ? enlace("Ver detalle", "ia") : i.clave === "veredictos_pendientes" ? enlace("Ver errores", "errores") :
-        i.clave === "lecturas" || i.clave === "tasa_errores" ? enlace("Ver ofertas", "ofertas") : null]);
+        i.clave === "lecturas" || i.clave === "tasa_errores" ? enlace("Ver historial", "ofertas") : null]);
     })));
     var p = d.procesamiento;
     c.appendChild(el("h2", { texto: "Qué tan rápido y completo se revisa" }));
@@ -335,6 +503,17 @@
                                             { nombre: "Errores", clase: "a1", puntos: h.map(function (x) { return { x: x.dia, y: x.errores }; }) }]),
       grafica("Tiempo típico de lectura", [{ nombre: "ms", clase: "a2", puntos: h.map(function (x) { return { x: x.dia, y: x.ms_p50 }; }) }], " ms"),
       grafica("Costo de la revisión con IA", [{ nombre: "USD", clase: "a3", puntos: (d.costos_historia || []).map(function (x) { return { x: x.dia, y: Number(x.usd) }; }) }], " USD")]));
+    if (m) {
+      var grupos = { operacion: "Cómo está funcionando", calidad_humana: "Qué tanto acierta contra una persona", acuerdo_ia: "Cuántas veces la IA y el lector coinciden (no significa que acierten)", banco_historico: "Casos viejos (revisados antes)" };
+      var mas = el("details", { clase: "mas-metricas", id: "mas-metricas" }, [el("summary", { texto: "Todas las métricas" })]);
+      Object.keys(grupos).forEach(function (g) {
+        var gs = (m.metricas || []).filter(function (x) { return x.grupo === g; });
+        if (!gs.length) return;
+        mas.appendChild(el("h2", { texto: grupos[g] }));
+        mas.appendChild(el("div", { clase: "tarjetas" }, gs.map(metricaTarjeta)));
+      });
+      c.appendChild(mas);
+    }
   }
 
   // ---------- 02 Errores ----------
@@ -344,12 +523,22 @@
   function versionesOpc() {
     return [el("option", { value: "", texto: "Todas" })].concat(VERSIONES.map(function (v) { return el("option", { value: v, texto: v }); }));
   }
+  var cargandoVersiones = null;
+  function asegurarVersiones() {
+    if (versionesCargadas) return Promise.resolve();
+    if (cargandoVersiones) return cargandoVersiones;
+    cargandoVersiones = (async function () {
+      var d = null;
+      try { var x = await cli.rpc("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T06:00:00Z" }); d = x && x.data && !x.data.error ? x.data : null; } catch (e) { d = null; }
+      versionesCargadas = true;
+      if (!d || !d.versiones) return;
+      d.versiones.forEach(function (x) { var v = String(x.version || ""); if (/^\d+\.\d+$/.test(v) && versionNum(v) >= 10082 && VERSIONES.indexOf(v) < 0) VERSIONES.push(v); });
+      VERSIONES.sort(function (a, b) { return versionNum(b) - versionNum(a); });
+    })();
+    return cargandoVersiones;
+  }
   async function cargarVersiones(sel) {
-    if (versionesCargadas) return; versionesCargadas = true;
-    var d = await llamar("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T06:00:00Z" });
-    if (!d || !d.versiones) return;
-    d.versiones.forEach(function (x) { var v = String(x.version || ""); if (/^\d+\.\d+$/.test(v) && versionNum(v) >= 10082 && VERSIONES.indexOf(v) < 0) VERSIONES.push(v); });
-    VERSIONES.sort(function (a, b) { return versionNum(b) - versionNum(a); });
+    await asegurarVersiones();
     var actual = sel.value; sel.textContent = ""; versionesOpc().forEach(function (o) { sel.appendChild(o); }); sel.value = actual;
   }
   function filtrosBase(extra) {
@@ -359,7 +548,7 @@
       el("label", {}, ["Hasta", el("input", { id: "f-hasta", type: "date", value: r.hasta.slice(0, 10) })]),
       el("label", {}, ["App", el("select", { id: "f-app" }, [el("option", { value: "", texto: "Todas" }), el("option", { value: "uber", texto: "Uber" }), el("option", { value: "didi", texto: "DiDi" })])]),
       el("label", {}, ["Versión", el("select", { id: "f-version" }, versionesOpc())])].concat(extra || []).concat([
-      el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; dias = 7; pag.errores = pag.ofertas = 1; scrollErrores = 0; pintar(); } })]));
+      el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; pag.errores = pag.ofertas = 1; scrollErrores = 0; pintar(); } })]));
     ["f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = nodo.querySelector("#" + id); if (x && F[id] !== undefined) x.value = F[id]; });
     // 10.84 (propuesta B): los filtros se aplican solos al cambiar y el activo se resalta.
     function aplicar() {
@@ -391,7 +580,7 @@
   // ---------- Errores: tarjetas con la comparación a la vista ----------
   var VER_ET = { solo_ia: ["SOLO IA", "aviso"], conflicto_humano: ["EN DESACUERDO", "mal"], referencia_doble: ["REVISADO", "ok"], referencia_adjudicada: ["REVISADO", "ok"],
                  referencia_humana: ["REVISADO", "ok"], heredado_no_revisado: ["CASO VIEJO", "nd"], sin_veredicto: ["SIN REVISAR", "nd"] };
-  var CHIPS = [["", "Todos"], ["solo_ia", "Solo IA"], ["conflicto_humano", "En desacuerdo"], ["referencia_humana", "Revisados"]];
+  var CHIPS = [["sin_veredicto", "Sin revisar"], ["solo_ia", "Solo IA"], ["conflicto_humano", "En desacuerdo"], ["referencia_humana", "Revisados"], ["", "Todos"]];
   function etiquetaVeredicto(v) { var x = VER_ET[v] || [v ? String(v).toUpperCase() : "SIN DATO", "nd"]; return el("span", { clase: "vb " + x[1], texto: x[0] }); }
   function tkm(l) { return [l.tarifa === null || l.tarifa === undefined ? "—" : "$" + l.tarifa, l.km === null || l.km === undefined ? "—" : l.km + " km", l.min === null || l.min === undefined ? "—" : l.min + "'"]; }
   function clave3(l) { return [l.tarifa, l.km, l.min].map(txt).join("|"); }
@@ -411,17 +600,31 @@
   }
   function tarjetaError(f) {
     var lec = f.lector_lectura || {}, ia = f.ia_lectura || {}, hu = f.referencia || null;
-    var m = marcas(lec, ia, hu);
-    function una(t, l) { return l; }
-    return el("article", { clase: "error-tarjeta", "data-id": String(f.id) }, [
-      el("div", { clase: "error-cab" }, [el("a", { href: "#errores/" + f.id, clase: "enlace", texto: "#" + f.id, onclick: function (ev) {
-          if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ev.preventDefault(); ir("errores", String(f.id)); return; }
-          ev.preventDefault(); var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
-          document.querySelectorAll(".error-tarjeta.sel").forEach(function (x) { x.classList.remove("sel"); }); ev.target.closest(".error-tarjeta").classList.add("sel");
-          expediente(l, f.id); l.scrollTop = 0; } }),
-        el("span", { clase: "detalle", texto: (TIPO_TXT[f.tipo] || txt(f.tipo)) + " · " + txt(f.app) + " " + txt(f.version) }), el("span", { clase: "detalle fecha", texto: fechaHora(f.creado) })]),
-      comparar3(lec, ia, hu),
-      el("div", { clase: "error-pie" }, [etiquetaVeredicto(f.estado_veredicto), el("span", { clase: "detalle", texto: f.tiene_captura ? "con captura" : "sin captura" })])]);
+    var CAMPOS = [["Tarifa", "tarifa", function (v) { return "$" + v; }], ["Km", "km", function (v) { return String(v); }], ["Min", "min", function (v) { return String(v); }]];
+    var nulo = function (v) { return v === null || v === undefined; };
+    var dif = el("div", { clase: "caso-dif" });
+    if (ia.oferta === false) dif.append("Lector ", el("b", { texto: tkm(lec).join(" · ") }), " · IA ", el("em", { texto: "no era oferta" }));
+    else {
+      var c = CAMPOS.filter(function (k) { var ref = hu && !nulo(hu[k[1]]) ? hu[k[1]] : ia[k[1]]; return !nulo(lec[k[1]]) && !nulo(ref) && String(lec[k[1]]) !== String(ref) || (hu && !nulo(hu[k[1]]) && !nulo(ia[k[1]]) && String(ia[k[1]]) !== String(hu[k[1]])); })[0];
+      if (c) dif.append(c[0] + ": Lector ", el("b", { texto: nulo(lec[c[1]]) ? "—" : c[2](lec[c[1]]) }), " · IA ", el("em", { texto: nulo(ia[c[1]]) ? "—" : c[2](ia[c[1]]) }), hu && !nulo(hu[c[1]]) ? " · Humano " + c[2](hu[c[1]]) : "");
+      else dif.append(el("b", { texto: tkm(lec).join(" · ") }));
+    }
+    var app = String(f.app || "").toLowerCase(), ve = VER_ET[f.estado_veredicto] || ["SIN DATO", "nd"];
+    function abrir(ev) {
+      ev.preventDefault();
+      if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ir("errores", String(f.id)); return; }
+      var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
+      document.querySelectorAll(".error-tarjeta.sel").forEach(function (x) { x.classList.remove("sel"); }); fila.classList.add("sel");
+      expediente(l, f.id); l.scrollTop = 0;
+    }
+    var fila = el("a", { href: "#revisar/" + f.id, clase: "error-tarjeta caso-fila", "data-id": String(f.id), onclick: abrir }, [
+      el("span", { clase: "plat " + (app === "didi" ? "d" : app === "uber" ? "u" : "x"), "aria-hidden": "true", texto: app === "didi" ? "D" : app === "uber" ? "U" : "?" }),
+      el("span", { clase: "caso-tx" }, [
+        el("span", { clase: "caso-l1" }, [el("b", { texto: "#" + f.id }), el("span", { texto: fechaHora(f.creado) })]),
+        dif,
+        el("span", { clase: "caso-meta" }, [el("span", { clase: "punto " + ve[1], "aria-hidden": "true" }), (TIPO_TXT[f.tipo] || txt(f.tipo)) + " · " + ve[0].charAt(0) + ve[0].slice(1).toLowerCase() + " · " + txt(f.app) + " " + txt(f.version) + (f.tiene_captura ? " · con captura" : "")])]),
+      el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]);
+    return fila;
   }
   function pasosSeg(estado) {
     var k = ESTADOS_SEG.indexOf(estado);
@@ -429,7 +632,9 @@
       ESTADOS_SEG.map(function (s, i) { return el("i", { clase: i <= k ? "hecho" : "" }); }));
   }
   async function errores(c) {
-    if (param) return expediente(c, Number(param));
+    if (esId(param)) return expediente(c, Number(param));
+    // La cola abre en «Sin revisar»: primero lo que espera una decisión.
+    if (F["f-estado"] === undefined) F["f-estado"] = "sin_veredicto";
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Veredicto" }, CHIPS.map(function (ch) {
       return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-estado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-estado"] = ch[0]; pag.errores = 1; scrollErrores = 0; pintar(); } }); })));
     c.appendChild(filtrosBase([opciones("f-tipo", "Tipo", ["", "diferencia", "rescate", "desacuerdo", "reporte"], TIPO_TXT), opciones("f-estado", "Estado de revisión", VEREDICTOS, VER_TXT)]));
@@ -525,7 +730,8 @@
     var ok = await p.enviar();
     if (!ok) { aviso("No se pudo guardar el veredicto del error #" + p.id + ". Ábrelo y vuelve a intentarlo.", false); return; }
     toast("Veredicto guardado");
-    if (vista === "errores" && String(param) === String(p.id)) pintar();
+    contarUrgentes();
+    if (enDetalle() && String(param) === String(p.id)) pintar();
   }
   function programarVeredicto(id, enviar) { pendienteV = { id: id, enviar: enviar, timer: setTimeout(commitirPendiente, 7000) }; }
   function deshacerVeredicto() {
@@ -538,7 +744,7 @@
     toast(sig ? "Veredicto listo. Aquí va el siguiente." : "Veredicto listo. Era el último de la lista.", { texto: "Deshacer", onclick: deshacerVeredicto }, 7000);
     if (sig) ir("errores", String(sig)); else pintar();
   }
-  function hojaVeredicto(e, lec, ia, sug, guardarSug) {
+  function hojaVeredicto(e, lec, ia, sug, guardarSug, preset) {
     var viejo = document.getElementById("hoja-ver"); if (viejo) viejo.remove();
     var conf = "", err = el("div", { clase: "aviso-cmp", id: "ver-error", hidden: "" });
     function cerrar() { h.remove(); }
@@ -572,7 +778,7 @@
       var lado = document.getElementById("lado");
       if (lado && !lado.hidden) {   // panel de escritorio: se guarda al momento
         guardar.disabled = true; guardar.textContent = "Guardando…";
-        if (await enviar()) { h.remove(); toast("Veredicto guardado"); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
+        if (await enviar()) { h.remove(); toast("Veredicto guardado"); contarUrgentes(); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
         return;
       }
       await commitirPendiente(); h.remove(); programarVeredicto(e.id, enviar); avanzarError(e.id);
@@ -589,17 +795,25 @@
     document.body.appendChild(h);
     if (sug) { if (sug.estado === "vigente") poner({ tarifa: sug.tarifa, km: sug.km, min: sug.min }); else { poner({ tarifa: null, km: null, min: null }); selClase.value = "no_oferta"; visibilidad(); } }
     else { poner(iaNo ? { tarifa: null, km: null, min: null } : ia); if (iaNo) { selClase.value = "no_oferta"; visibilidad(); } }
+    if (preset === "lector") poner(lec);
+    else if (preset === "no") { poner({ tarifa: null, km: null, min: null }); selClase.value = "no_oferta"; visibilidad(); }
     selClase.focus();
   }
   async function expediente(c, id) {
     var enLado = c.id === "lado";
-    c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Errores", texto: "‹ Errores", onclick: function () { ir("errores"); } }));
+    c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a la cola", texto: "‹ Revisar", onclick: function () { ir("revisar"); } }));
     var e = await llamar("admin_error", { id: id });
     if (!e) return;
     var iCola = colaErrores.indexOf(Number(e.id));
-    if (!enLado && iCola >= 0) c.appendChild(el("div", { clase: "detalle", id: "exp-pos", texto: "Error " + (iCola + 1) + " de " + colaErrores.length + " en la lista" }));
-    c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { id: "exp-titulo", texto: "Error #" + e.id }), (e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : null]));
-    c.appendChild(el("div", { clase: "detalle", texto: txt(e.app) + " " + txt(e.version) + " · " + txt(e.tipo) + " · conductor " + txt(e.conductor) + " · " + fechaHora(e.creado) }));
+    var antE = vecinoError(e.id, -1), sigE = vecinoError(e.id, 1);
+    c.appendChild(el("div", { clase: "exp-top" }, [
+      el("div", { clase: "exp-tx" }, [el("div", { clase: "fecha-hoy", texto: (TIPO_TXT[e.tipo] || txt(e.tipo)) + " · " + txt(e.app) + " · versión " + txt(e.version) + " · " + fechaHora(e.creado) }),
+        el("h1", { id: "exp-titulo", clase: "exp-id", texto: "#" + e.id })]),
+      !enLado && iCola >= 0 ? el("div", { clase: "exp-nav", id: "exp-pos" }, [
+        el("button", { type: "button", id: "err-anterior", "aria-label": "Error anterior", texto: "‹", disabled: antE ? null : "", onclick: function () { ir("errores", String(antE)); } }),
+        el("span", { texto: (iCola + 1) + " de " + colaErrores.length }),
+        el("button", { type: "button", id: "err-siguiente", "aria-label": "Error siguiente", texto: "›", disabled: sigE ? null : "", onclick: function () { ir("errores", String(sigE)); } })]) : null]));
+    c.appendChild(el("div", { clase: "exp-meta" }, [(e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : etiquetaVeredicto("sin_veredicto"), el("span", { clase: "detalle", texto: "Conductor " + txt(e.conductor) })]));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
     var refE = hu && hu.clase ? hu : null, mE = marcas(lec, ia, refE);
     var iaNo = ia.oferta === false;
@@ -612,18 +826,23 @@
       else if (!iaNo && !nulo(L) && !nulo(I)) { difL = difI = String(L) !== String(I); estado = difL ? "dif" : "ok"; }
       else if (iaNo) { difL = false; difI = true; estado = "dif"; }
       var fila = function (nom, v, dif, texto) { return el("div", { clase: "mt-fila" + (dif ? " x" : "") }, [el("span", { texto: nom }), el("b", { texto: texto !== undefined ? texto : nulo(v) ? "—" : f(v) })]); };
-      return { m: m[0], estado: estado, nodo: el("div", { clase: "mt" + (estado === "dif" ? " dif" : ""), "data-metrica": k }, [
+      var celda = function (v, dif, texto) { var t = texto !== undefined ? texto : nulo(v) ? "—" : f(v); return el("td", { clase: dif ? "x" : "" }, [dif ? el("span", { texto: t }) : t]); };
+      var tr = el("tr", { "data-metrica": k }, [el("td", { texto: m[0] }), celda(L, difL), celda(I, difI, iaNo ? "no oferta" : undefined), el("td", { texto: refE ? (nulo(H) ? (refE.clase || "—") : f(H)) : "—" })]);
+      return { m: m[0], estado: estado, tr: tr, nodo: el("div", { clase: "mt" + (estado === "dif" ? " dif" : ""), "data-metrica": k }, [
         el("div", { clase: "mt-nom" }, [el("span", { texto: m[0] }), estado ? el("em", { clase: estado === "ok" ? "ok" : "no", texto: estado === "ok" ? "✓ iguales" : "✕ difieren" }) : null]),
         fila("Lector", L, difL), fila("IA", I, difI, iaNo ? "no era oferta" : undefined), el("div", { clase: "mt-fila nada" }, [el("span", { texto: "Humano" }), el("b", { texto: refE ? (nulo(H) ? (refE.clase || "—") : f(H)) : "—" })])]) };
     }
     var bl = METR.map(bloque);
-    c.appendChild(el("div", { clase: "duo", id: "comparar" }, [marcoCaptura(e), el("div", { clase: "metr" }, bl.map(function (x) { return x.nodo; }))]));
+    c.appendChild(el("div", { clase: "exp-captura" }, [marcoCaptura(e)]));
+    c.appendChild(el("h2", { texto: "¿Quién leyó qué?" }));
+    c.appendChild(el("div", { clase: "caja-v3", id: "comparar" }, [el("table", { clase: "comp-v3" }, [el("thead", {}, [el("tr", {}, ["", "Lector", "IA", "Humano"].map(function (t) { return el("th", { texto: t }); }))]), el("tbody", {}, bl.map(function (x) { return x.tr; }))])]));
     var iguales = bl.filter(function (x) { return x.estado === "ok"; }).map(function (x) { return x.m.toLowerCase(); }), difieren = bl.filter(function (x) { return x.estado === "dif"; }).map(function (x) { return x.m.toLowerCase(); });
     function lista(xs) { return xs.length > 1 ? xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1] : xs[0]; }
     if (difieren.length) c.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-diferencia", texto: (iguales.length ? legibleCap(lista(iguales)) + (iguales.length > 1 ? " iguales; " : " igual; ") : "") + lista(difieren) + (difieren.length > 1 ? " distintos." : " distinto.") + (refE ? "" : " Falta un veredicto humano para saber cuál acierta.") }));
     // Sugerencia de la IA que lee la imagen (DeepSeek): una captura a la vez, solo si la captura existe. La decisión es de la persona.
+    var sugErr = null;
     if (e.evidencia && e.evidencia.captura) {
-      var cajaIA = el("div", { id: "ia-vision" }), sugErr = null, precErr = null;
+      var cajaIA = el("div", { id: "ia-vision" }), precErr = null;
       var pintarIA = function (sug, pidiendo) {
         sugErr = sug; cajaIA.textContent = "";
         if (precErr && precErr.n > 0) cajaIA.appendChild(el("div", { clase: "rev-ia-prec", id: "ia-precision-errores", texto: "Errores revisados con la IA de imagen: " + precErr.n + " (de ellos " + precErr.ofertas + " eran ofertas). La IA de imagen acertó " + precErr.vision + " de " + precErr.n + "; en las ofertas: IA de imagen " + precErr.vision_ofertas + ", Lector " + precErr.lector_ofertas + ", IA de texto " + precErr.texto_ofertas + " de " + precErr.ofertas + (precErr.n < (precErr.minimo || 30) ? " · pocos casos para opinar (menos de " + (precErr.minimo || 30) + ")" : "") }));
@@ -680,13 +899,13 @@
           el("button", { type: "button", id: "abrir-registro", clase: "primario", texto: "Registrar", onclick: function () { hojaSeguimiento(id, e.estado_seguimiento); } })]));
       }
     } else { c.appendChild(el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })); }
-    if (!enLado && (btnVer || iCola >= 0)) {
-      var ant = vecinoError(e.id, -1), sig = vecinoError(e.id, 1);
-      c.appendChild(el("div", { clase: "barra-acc", id: "barra-acc" }, [
-        el("button", { type: "button", id: "err-anterior", texto: "‹ Anterior", disabled: ant ? null : "", onclick: function () { ir("errores", String(ant)); } }),
-        btnVer,
-        el("button", { type: "button", id: "err-siguiente", texto: sig ? "Siguiente ›" : "Fin de la lista", disabled: sig ? null : "", onclick: function () { ir("errores", String(sig)); } })]));
-    }
+    if (!enLado && btnVer) {
+      var shaE = e.enlace && e.enlace.captura_sha256, off = shaE ? null : "";
+      c.appendChild(el("div", { clase: "barra-acc v3", id: "barra-acc" }, [
+        el("button", { type: "button", id: "ver-no", disabled: off, texto: "✕ No es oferta", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr, "no"); } }),
+        el("button", { type: "button", id: "ver-corregir", disabled: off, texto: "✎ Corregir", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } }),
+        el("button", { type: "button", id: "dar-veredicto", clase: "si", disabled: off, texto: "✓ El lector acertó", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr, "lector"); } })]));
+    } else if (!enLado && !btnVer) c.appendChild(el("div", { clase: "solo-lectura" , texto: "Tu rol es de solo lectura: puedes ver el caso, pero no decidir." }));
   }
 
   // ---------- 03 Ofertas ----------
@@ -736,10 +955,11 @@
       }
       if (cuerpo) { cuerpo.remove(); cuerpo = null; cab.setAttribute("aria-expanded", "false"); art.classList.remove("abierto"); }
       else { cuerpo = detalleEvento(f); art.appendChild(cuerpo); cab.setAttribute("aria-expanded", "true"); art.classList.add("abierto"); } } }, [
-      el("div", { clase: "evento-fila" }, [el("b", { texto: hora(f.ts_evento) }), etiquetaResultado(f.resultado), el("span", { clase: "detalle der", texto: txt(f.app) + " " + txt(f.version_app) })]),
-      el("div", { clase: "evento-valor" }, [punto(f.nivel), el("span", { texto: [f.tarifa, f.km, f.min].every(function (x) { return x === null || x === undefined; }) ? "—" : tkm({ tarifa: f.tarifa, km: f.km, min: f.min }).join(" · ") })]),
-      f.motivo ? el("div", { clase: "detalle", texto: f.motivo }) : null,
-      el("div", { clase: "mini", "aria-hidden": "true" }, (f.etapas || []).map(function (e) { return el("i", { clase: claseEtapa(e.estado) }); }))]);
+      el("span", { clase: "plat " + (String(f.app || "").toLowerCase() === "didi" ? "d" : String(f.app || "").toLowerCase() === "uber" ? "u" : "x"), "aria-hidden": "true", texto: String(f.app || "").toLowerCase() === "didi" ? "D" : String(f.app || "").toLowerCase() === "uber" ? "U" : "?" }),
+      el("span", { clase: "caso-tx" }, [
+        el("span", { clase: "caso-l1" }, [el("b", { clase: "ev-val", texto: [f.tarifa, f.km, f.min].every(function (x) { return x === null || x === undefined; }) ? "—" : tkm({ tarifa: f.tarifa, km: f.km, min: f.min }).join(" · ") }), el("span", { texto: hora(f.ts_evento) })]),
+        el("span", { clase: "caso-meta" }, [el("span", { clase: "punto " + ((RES[f.resultado] || [0, "nd"])[1]), "aria-hidden": "true" }), legibleCap(((RES[f.resultado] || [f.resultado || "—"])[0]).toLowerCase()) + " · " + txt(f.app) + " " + txt(f.version_app) + (f.motivo ? " · " + f.motivo : "")])]),
+      el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]);
     art.appendChild(cab); return art;
   }
   // ---------- Revisar ofertas: capturas de ofertas aceptar / considerar / rechazar (desde la 10.82) ----------
@@ -752,9 +972,8 @@
   function popDeNombre(n) { var m = /^ok-[a-z]+-([\d.]+)-([\d.]+)-([\d.]+)-/.exec(n || ""); return m ? { tarifa: Number(m[1]), km: Number(m[2]), min: Number(m[3]) } : { tarifa: null, km: null, min: null }; }
   async function huella(blob) { try { var b = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()); return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); } catch (e) { return null; } }
 
-  async function revisar(c) {
-    c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Ofertas", texto: "‹ Ofertas", onclick: function () { ir("ofertas"); } }));
-    c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { texto: "Revisar ofertas" }), el("span", { clase: "vb ok", texto: "10.82" })]));
+  async function capturas(c) {
+    c.appendChild(el("p", { clase: "detalle", texto: "Capturas de ofertas de la 10.82 en adelante: confirma una a la vez si la app leyó bien." }));
     var esRevisor = !!(yo && yo.rol === "revisor");
     var cuerpo = el("div", { id: "rev-cuerpo" }); c.appendChild(cuerpo);
     var estado = { items: [], pend: {}, rev: {}, actual: null, url: null, blob: null, ultima: null, ocupado: false, sug: null, pidiendo: false, prec: null };
@@ -837,15 +1056,16 @@
         return el("button", { type: "button", clase: "rev-color", "aria-pressed": String(revNivel === k[0]), onclick: async function () { revNivel = k[0]; soltar(); estado.items = []; estado.ultima = null; await cargarCola(); await siguiente(); } },
           [(function () { var p = el("i", { "aria-hidden": "true" }); p.style.background = k[2]; return p; })(), el("span", { texto: k[1] }), el("b", { texto: String(estado.pend[k[0]] || 0) })]); })));
       var tot = REV_COLORES.reduce(function (s, k) { return s + (estado.pend[k[0]] || 0) + (estado.rev[k[0]] || 0); }, 0), hechas = REV_COLORES.reduce(function (s, k) { return s + (estado.rev[k[0]] || 0); }, 0);
-      var barra = el("i"); barra.style.width = Math.min(100, (estado.rev[revNivel] || 0) / REV_META * 100) + "%";
-      cuerpo.appendChild(el("div", { clase: "rev-prog" }, [el("div", { clase: "rev-prog-t" }, [el("span", { texto: "Revisadas de la 10.82" }), el("b", { texto: hechas + " de " + tot })]), el("div", { clase: "pbar" }, [barra]),
-        el("div", { clase: "rev-prog-t" }, [el("span", { texto: "Meta: " + REV_META + " por color" }), el("span", { texto: REV_COLORES.filter(function (k) { return k[0] === revNivel; })[0][1] + " " + (estado.rev[revNivel] || 0) + "/" + REV_META })])]));
+      var barra = el("i"); barra.style.width = (tot ? Math.round(hechas / tot * 100) : 0) + "%";
+      cuerpo.appendChild(el("div", { clase: "progreso-v3" }, [el("span", { clase: "medidor" }, [barra]), el("span", { texto: hechas + " de " + tot + " · 10.82" })]));
+      cuerpo.appendChild(el("div", { clase: "detalle meta-color" }, [REV_COLORES.filter(function (k) { return k[0] === revNivel; })[0][1] + ": " + (estado.rev[revNivel] || 0) + " de " + REV_META + " para la meta de este color"]));
       var P = estado.prec;
       if (P && P.n > 0) cuerpo.appendChild(el("div", { clase: "rev-ia-prec", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · pocos casos para opinar (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }));
       var it = estado.actual;
       if (!it) { cuerpo.appendChild(el("div", { clase: "vacio", id: "rev-vacio", texto: tot - hechas === 0 ? (hechas ? "Todo al día: revisaste " + hechas + " capturas. Vuelve cuando la app suba más." : "No hay capturas por revisar. Cuando la app suba más, aparecerán aquí.") : "Terminaste las de este color. Quedan " + (tot - hechas) + " en los otros colores: elige otro arriba." })); return; }
       var rotulo = REV_COLORES.filter(function (k) { return k[0] === it.nivel; })[0], pop = popDeNombre(it.nombre);
       var marco = el("div", { clase: "marco-captura" + (estado.url ? "" : " vacio"), id: "marco-captura" });
+      cuerpo.appendChild(el("h1", { clase: "exp-id rev-id", texto: "Captura #" + it.id }));
       if (estado.url) { var img = el("img", { src: estado.url, alt: "Captura de la oferta " + it.id, clase: "captura-img" }); img.addEventListener("click", function () { abrirVisor(estado.url, it.id); }); marco.appendChild(img);
         marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(estado.url, it.id); } })); }
       else marco.appendChild(el("div", { clase: "marco-centro" }, [el("span", { texto: "La captura ya no está disponible." })]));
@@ -853,13 +1073,23 @@
       function tile(nom, val, extra) { return el("div", { clase: "pop-tile " + it.nivel }, [el("div", { clase: "pop-nom", texto: nom }), el("div", { clase: "pop-val", texto: val }), extra ? el("div", { clase: "pop-extra", texto: extra }) : null]); }
       var L = it.local || {}, I = it.ia || {};
       function rec(k, u) { var a1 = L[k], b1 = I[k]; if (a1 === undefined && b1 === undefined) return null; return "recogida · Lector " + (a1 === undefined ? "—" : a1) + " " + u + (b1 === undefined ? "" : " · IA " + b1 + " " + u); }
-      cuerpo.appendChild(el("div", { clase: "duo", id: "rev-actual" }, [marco, el("div", { clase: "metr" }, [tile("Pop-up en la oferta", rotulo[1].toUpperCase()), tile("Tarifa leída", pop.tarifa === null ? "—" : "$" + pop.tarifa), tile("Distancia leída", pop.km === null ? "—" : pop.km + " km", rec("recKm", "km")), tile("Tiempo leído", pop.min === null ? "—" : pop.min + " min", rec("recMin", "min"))])]));
-      cuerpo.appendChild(el("div", { clase: "detalle rev-nota", id: "rev-nota-ayuda", texto: "Los valores salen de lo que leyó la app, no del recuadro de la captura. Si la captura dice otra cosa (por ejemplo los minutos), la captura manda: usa «Valores mal»." }));
+      cuerpo.appendChild(el("div", { clase: "exp-captura", id: "rev-actual" }, [marco]));
+      var Sx = estado.sug, vig = Sx && Sx.estado === "vigente";
+      function filaLeido(nom, val, f, iaV, tol, extra) {
+        var ok = vig && iaV !== null && iaV !== undefined && val !== null && Math.abs(iaV - val) <= tol;
+        return el("tr", {}, [el("td", { texto: nom }), el("td", {}, [val === null ? "—" : f(val), extra ? el("small", { clase: "rec", texto: extra }) : null]),
+          Sx ? el("td", { clase: vig && !ok ? "x" : "" }, [vig ? (iaV === null || iaV === undefined ? "—" : f(iaV)) : "—"]) : null]);
+      }
+      cuerpo.appendChild(el("h2", { texto: "¿Qué leyó la app?" }));
+      cuerpo.appendChild(el("div", { clase: "caja-v3" }, [el("table", { clase: "comp-v3" }, [
+        el("thead", {}, [el("tr", {}, [el("th", { texto: "" }), el("th", { texto: "App" }), Sx ? el("th", { texto: "IA" }) : null])]),
+        el("tbody", {}, [
+          el("tr", {}, [el("td", { texto: "Pop-up" }), el("td", {}, [el("span", { clase: "pt-color " + it.nivel }), rotulo[1]]), Sx ? el("td", { texto: vig ? "vigente" : "no oferta" }) : null]),
+          filaLeido("Tarifa", pop.tarifa, function (v) { return "$" + v; }, Sx && Sx.tarifa, 0.01),
+          filaLeido("Km", pop.km, function (v) { return String(v); }, Sx && Sx.km, 0.15, rec("recKm", "km")),
+          filaLeido("Min", pop.min, function (v) { return String(v); }, Sx && Sx.min, 1, rec("recMin", "min"))])]),
+        el("div", { clase: "nota-ia", id: "rev-nota-ayuda" }, [el("span", { "aria-hidden": "true", texto: "●" }), el("span", { texto: "Si la captura dice otra cosa, la captura manda: usa «Corregir»." })])]));
       var off = !esRevisor || estado.ocupado;
-      cuerpo.appendChild(el("div", { clase: "rev-botones" }, [
-        el("button", { type: "button", id: "rev-correcta", clase: "rb ok", disabled: off ? "" : null, onclick: function () { guardar({ resultado: "correcta" }); } }, [el("big", { texto: "✓" }), "Correcta"]),
-        el("button", { type: "button", id: "rev-valores", clase: "rb vm", disabled: off ? "" : null, onclick: function () { hojaValores(it); } }, [el("big", { texto: "✎" }), "Valores mal"]),
-        el("button", { type: "button", id: "rev-falso", clase: "rb fp", disabled: off ? "" : null, onclick: function () { hojaFalso(); } }, [el("big", { texto: "✕" }), "No era oferta"])]));
       var S = estado.sug;
       if (!S) cuerpo.appendChild(el("button", { type: "button", id: "rev-ia", clase: "rev-ia-pedir", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo con la IA…" : "Pedir sugerencia a la IA", onclick: pedirIA }));
       else {
@@ -868,15 +1098,19 @@
         cuerpo.appendChild(el("div", { clase: "rev-ia-caja", id: "rev-ia-caja" }, [
           el("div", { clase: "pop-nom", texto: "Sugerencia de la IA (" + txt(S.modelo) + ") · confianza " + txt(S.confianza) + (S.ms ? " · tardó " + (S.ms / 1000).toFixed(1) + " s" : "") }),
           el("div", { clase: "rotulo", texto: vigente ? "Oferta vigente" : S.estado === "vencida" ? "Oferta vencida" : S.estado === "aceptada" ? "Ya aceptada o tomada" : "No es una oferta" }),
-          vigente ? el("div", {}, [cmp("Tarifa", S.tarifa, pop.tarifa, 0.01), cmp("Distancia", S.km, pop.km, 0.15), cmp("Tiempo", S.min, pop.min, 1)]) : null,
+          null,
           S.nota ? el("div", { clase: "detalle", texto: S.nota }) : null,
           el("div", { clase: "detalle", texto: vigente ? "✓ coincide con el pop-up; ✕ difiere. Tú decides." : "Si coincide con lo que ves, márcalo como «no era oferta». Tú decides." }),
           el("div", { clase: "rev-ia-acciones" }, [
             vigente && S.tarifa !== null && S.km !== null && S.min !== null ? el("button", { type: "button", id: "rev-ia-usar", texto: "Usar sus valores", disabled: off ? "" : null, onclick: function () { hojaValores(it, { tarifa: S.tarifa, km: S.km, min: S.min }); } }) : null,
             !vigente ? el("button", { type: "button", id: "rev-ia-falso", texto: "Marcar «no era oferta»", disabled: off ? "" : null, onclick: function () { hojaFalso(motivoSug); } }) : null])]));
       }
-      cuerpo.appendChild(el("div", { clase: "rev-pie" }, [el("span", { clase: "detalle", texto: esRevisor ? "Un toque en «Correcta» pasa a la siguiente." : "Tu rol es de solo lectura: no puedes revisar." }),
+      cuerpo.appendChild(el("div", { clase: "rev-pie" }, [el("span", { clase: "detalle", texto: esRevisor ? "«Está bien» guarda y pasa a la siguiente." : "Tu rol es de solo lectura: no puedes revisar." }),
         el("button", { type: "button", id: "rev-deshacer", texto: "↶ Deshacer", disabled: estado.ultima && !estado.ocupado ? null : "", onclick: deshacer })]));
+      if (esRevisor) cuerpo.appendChild(el("div", { clase: "barra-acc v3 rev-botones", id: "rev-botones" }, [
+        el("button", { type: "button", id: "rev-falso", disabled: off ? "" : null, texto: "✕ No es oferta", onclick: function () { hojaFalso(Sx && !vig ? (Sx.estado === "sin_oferta" ? "no_oferta" : "vencida") : undefined); } }),
+        el("button", { type: "button", id: "rev-valores", disabled: off ? "" : null, texto: "✎ Corregir", onclick: function () { hojaValores(it, vig && Sx.tarifa !== null && Sx.km !== null && Sx.min !== null ? { tarifa: Sx.tarifa, km: Sx.km, min: Sx.min } : undefined); } }),
+        el("button", { type: "button", id: "rev-correcta", clase: "si", disabled: off ? "" : null, texto: "✓ Está bien", onclick: function () { guardar({ resultado: "correcta" }); } })]));
     }
     await cargarPrecision();
     if (await cargarCola()) await siguiente();
@@ -885,47 +1119,25 @@
   // Cuántas capturas esperan revisión (solo lectura; si falla, simplemente no se muestra).
   async function pendientesRev() {
     try { var r = await cli.rpc("admin_capturas_pendientes", { p_nivel: "rojo", p_limite: 1 }), d = r && r.data; if (!d || d.error) return null;
-      var p = d.pendientes || {}; return Object.keys(p).reduce(function (t, k) { return t + (Number(p[k]) || 0); }, 0); } catch (x) { return null; }
+      var suma = function (o) { return Object.keys(o || {}).reduce(function (t, k) { return t + (Number(o[k]) || 0); }, 0); };
+      return { pend: suma(d.pendientes), rev: suma(d.revisadas) }; } catch (x) { return null; }
   }
-  function textoRevisar(n) { return n === null ? "Revisar capturas de ofertas" : n > 0 ? "Revisar capturas · " + n + " esperando" : "Revisar capturas · todo al día"; }
-  async function ofertas(c) {
-    c.appendChild(el("h1", { texto: "Ofertas" }));
-    c.appendChild(el("p", { clase: "detalle", texto: "Lo que leyó la app y cuántas capturas faltan por revisar." }));
-    c.appendChild(el("a", { href: "#revisar", id: "ir-revisar", clase: "boton-enlace revisar-entrada", texto: textoRevisar(null), onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
-    pendientesRev().then(function (n) { var a = document.getElementById("ir-revisar"); if (a && n !== null) a.textContent = textoRevisar(n); });
+  // ---------- Revisar › Historial: todas las lecturas del periodo (antes «Ofertas») ----------
+  async function historial(c) {
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
       return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-resultado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-resultado"] = ch[0]; pag.ofertas = 1; pintar(); } }); })));
-    c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"], RES_TXT), opciones("f-estado", "Estado de revisión", VEREDICTOS, VER_TXT)]));
+    c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"], RES_TXT)]));
     skeleton(c);
-    var r = rango(), m = await llamar("admin_metricas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version") });
-    var d = await llamar("admin_ofertas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
-      resultado: valor("f-resultado"), estado_veredicto: valor("f-estado"), pagina: pag.ofertas, por_pagina: 50 });
+    var r = rango(), d = await llamar("admin_ofertas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
+      resultado: valor("f-resultado"), estado_veredicto: null, pagina: pag.ofertas, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
-    var b = d ? barraResultados(d.filas || [], d.total) : null; if (b) c.appendChild(b);
-    var masNodo = null;
-    if (m) {
-      var ms = m.metricas || [];
-      var clave = ["precision_humana", "captura_exacta"], destac = clave.map(function (k) { return ms.filter(function (x) { return x.clave === k; })[0]; }).filter(Boolean);
-      var calNodos = destac.length ? [el("h2", { texto: "Qué tanto acierta contra una persona" }), el("div", { clase: "tarjetas dos", id: "calidad" }, destac.map(metricaTarjeta))] : [];
-      var grupos = { operacion: "Cómo está funcionando", calidad_humana: "Qué tanto acierta contra una persona", acuerdo_ia: "Cuántas veces la IA y el lector coinciden (no significa que acierten)", banco_historico: "Casos viejos (revisados antes)" };
-      var mas = el("details", { clase: "mas-metricas", id: "mas-metricas" }, [el("summary", { texto: "Calidad y métricas" })]);
-      mas.open = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
-      calNodos.forEach(function (n) { mas.appendChild(n); });
-      Object.keys(grupos).forEach(function (g) {
-        var gs = ms.filter(function (x) { return x.grupo === g; });
-        if (!gs.length) return;
-        mas.appendChild(el("h2", { texto: grupos[g] }));
-        mas.appendChild(el("div", { clase: "tarjetas" }, gs.map(metricaTarjeta)));
-      });
-      masNodo = mas;
-    }
-    if (!d) { if (masNodo) c.appendChild(masNodo); return; }
+    if (!d) return;
+    var b = barraResultados(d.filas || [], d.total); if (b) c.appendChild(b);
     c.appendChild(el("h2", { texto: "Lecturas" }));
     var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle de la lectura", hidden: "" });
     c.appendChild(el("div", { clase: "dividido" }, [lista, lado]));
     lista.appendChild(el("div", { clase: "error-lista", id: "eventos" }, (d.filas || []).length ? d.filas.map(tarjetaEvento) : [el("div", { clase: "vacio", texto: "Sin lecturas con estos filtros." })]));
     lista.appendChild(paginas("ofertas", d));
-    if (masNodo) c.appendChild(masNodo);
   }
 
   // ---------- 04 Versiones ----------
@@ -959,18 +1171,15 @@
     return g;
   }
   function tarjetaVersion(v, onCambio) {
-    var cal = v.con_referencia ? pct(calidadV(v)) : "—", on = !!elegidas[v.version];
-    var boton = el("button", { type: "button", clase: "comparar-btn", "aria-pressed": String(on), "aria-label": "Comparar versión " + v.version, "data-version": v.version,
-      onclick: function () { elegidas[v.version] = !elegidas[v.version]; onCambio(); } }, [el("span", { texto: "Comparar" }), el("span", { clase: "cb", "aria-hidden": "true", texto: on ? "✓" : "" })]);
-    return el("article", { clase: "version-tarjeta" + (on ? " sel" : ""), "data-version": v.version }, [
-      el("div", { clase: "version-cab" }, [el("b", { texto: v.version }), el("span", { clase: "detalle", texto: "desde " + corto(v.primera) }), boton]),
-      el("div", { clase: "comp3" }, [casilla("Calidad", [cal], false), casilla("Error", [pct(tasa(v.errores_proceso, v.lecturas))], false), casilla("ms", [txt(v.ms_popup_p50)], false)]),
-      el("div", { clase: v.con_referencia < 30 ? "aviso-cmp" : "detalle", texto: v.con_referencia < 30 ? "Solo " + v.con_referencia + " casos revisados por una persona: aún sin conclusión." : v.con_referencia + " casos revisados por una persona" }),
-      el("div", { clase: "detalle", texto: v.lecturas + " lecturas · " + v.conductores + " conductores · " + v.errores_lector + " errores del lector" })]);
+    var q = v.con_referencia ? calidadV(v) : null, on = !!elegidas[v.version];
+    return el("button", { type: "button", clase: "version-fila" + (on ? " sel" : ""), "data-version": v.version, "aria-pressed": String(on), "aria-label": "Comparar versión " + v.version,
+      onclick: function () { elegidas[v.version] = !elegidas[v.version]; onCambio(); } }, [
+      el("span", { clase: "cb", "aria-hidden": "true", texto: on ? "✓" : "" }),
+      el("span", { clase: "caso-tx" }, [el("b", { clase: "mono", texto: v.version }),
+        el("small", { texto: Number(v.lecturas || 0).toLocaleString("en-US") + " lecturas · desde " + corto(v.primera) + (v.con_referencia < 30 ? " · pocos casos revisados (" + v.con_referencia + ")" : "") })]),
+      el("span", { clase: "der mono" + (q === null || v.con_referencia < 30 ? " gris" : ""), texto: q === null ? "—" : pct(q) })]);
   }
   async function versiones(c) {
-    function cabecera() { return el("div", { clase: "encabezado" }, [el("h1", { texto: "Versiones" }), selPeriodo(pintar)]); }
-    c.appendChild(cabecera());
     skeleton(c);
     var r = rango(), d = await llamar("admin_versiones", { desde: r.desde, hasta: r.hasta });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
@@ -998,12 +1207,12 @@
       vs.forEach(function (v) { lista.appendChild(tarjetaVersion(v, pintarTodo)); });
     }
     pintarTodo();
-    c.appendChild(el("div", { clase: "ver-layout" }, [el("div", {}, [el("div", { clase: "h-fila" }, [el("h2", { texto: "Todas las versiones" }), el("span", { clase: "detalle", texto: String(vs.length) })]), lista]), panel]));
+    c.appendChild(el("div", { clase: "ver-layout" }, [el("div", {}, [el("div", { clase: "h-fila" }, [el("h2", { texto: "Marca hasta 3 para comparar" }), el("span", { clase: "detalle", texto: vs.length + " versiones" })]), lista]), panel]));
     if (d.nota_comparacion) c.appendChild(el("div", { clase: "detalle", texto: d.nota_comparacion }));
   }
 
   // ---------- 05 Conductores y dispositivos ----------
-  var tabEq = "dispositivos", ordenEq = "errores";
+  var tabEq = "conductores", ordenEq = "errores";
   function haceCuanto(f) {
     if (!f) return ["sin actividad", "nd"];
     var d = new Date(f); if (isNaN(d)) return [String(f).slice(0, 16), "nd"];
@@ -1017,22 +1226,28 @@
     else c.sort(function (x, y) { var sx = sufFn(x) ? 1 : 0, sy = sufFn(y) ? 1 : 0; if (sx !== sy) return sy - sx; return (tasaFn(y) || 0) - (tasaFn(x) || 0); });
     return c;
   }
-  function tarjetaEq(titulo, sub, x, casillas, aviso) {
-    var act = haceCuanto(x.ultima);
-    return el("article", { clase: "equipo-tarjeta" }, [
-      el("div", { clase: "version-cab" }, [el("b", { texto: titulo }), sub ? el("span", { clase: "detalle", texto: sub }) : null,
-        el("span", { clase: "actividad detalle" }, [el("span", { clase: "punto " + (act[1] === "aviso" ? "aviso" : act[1] === "nd" ? "nd" : "ok"), "aria-hidden": "true" }), act[0]])]),
-      el("div", { clase: "comp3" }, casillas),
-      aviso ? el("div", { clase: "aviso-cmp", texto: aviso }) : null,
-      el("div", { clase: "fila etiquetas" }, (x.versiones || []).map(function (v) { return el("span", { clase: "chipv", texto: String(v) }); }))]);
+  function tarjetaEq(titulo, sub, x, t, hot, suficiente) {
+    var act = haceCuanto(x.ultima), tono = !suficiente ? "nd" : t > 0.05 ? "mal" : t > 0.025 ? "aviso" : "ok";
+    var barra = el("i"); barra.style.width = Math.min(100, (t || 0) / 0.12 * 100) + "%";
+    return el("div", { clase: "eq-fila " + tono + (suficiente ? "" : " chica") + (hot ? " hot" : "") }, [
+      el("span", { clase: "caso-tx" }, [el("b", { clase: "mono", texto: titulo }),
+        el("small", { texto: (sub ? sub + " · " : "") + act[0] + " · " + Number(x.lecturas || 0).toLocaleString("en-US") + " lecturas" }),
+        suficiente ? el("span", { clase: "mini-b" }, [barra]) : el("small", { texto: "Muy pocas lecturas para comparar" })]),
+      el("span", { clase: "eq-tasa" }, [suficiente && t !== null ? pct(t) : "—", el("small", { texto: "errores" })])]);
   }
   async function dispositivos(c) {
-    c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Conductores y dispositivos" }), selPeriodo(pintar)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_dispositivos", { desde: r.desde, hasta: r.hasta });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    var disp = d.dispositivos || [], cond = d.conductores || [];
+    var q = buscarEq.trim().toLowerCase();
+    function coincide(x) { return !q || [x.conductor, x.telefono, x.android].some(function (v) { return v !== null && v !== undefined && String(v).toLowerCase().indexOf(q) >= 0; }); }
+    var disp = (d.dispositivos || []).filter(coincide), cond = (d.conductores || []).filter(coincide);
+    if (q) {
+      c.appendChild(el("div", { clase: "fila filtro-busqueda", id: "filtro-busqueda" }, [el("span", { texto: "Buscando «" + buscarEq.trim() + "»: " + cond.length + " conductores y " + disp.length + " dispositivos" }),
+        el("button", { type: "button", texto: "Quitar", onclick: function () { buscarEq = ""; pintar(); } })]));
+      if (!cond.length && disp.length) tabEq = "dispositivos"; else if (cond.length) tabEq = "conductores";
+    }
     function suf(x) { return x.muestra_suficiente === undefined ? x.lecturas >= 30 : !!x.muestra_suficiente; }
     function tD(x) { return x.lecturas ? x.errores / x.lecturas : null; }
     function tC(x) { return x.lecturas ? x.errores / x.lecturas : null; }
@@ -1040,7 +1255,7 @@
     var cuerpo = el("div", { clase: "equipos-cuerpo" });
     function pintarEq() {
       cuerpo.textContent = "";
-      var tabs = el("div", { clase: "tabs2", role: "group", "aria-label": "Equipos" }, [["dispositivos", "Dispositivos " + disp.length], ["conductores", "Conductores " + cond.length]].map(function (t) {
+      var tabs = el("div", { clase: "tabs2", role: "group", "aria-label": "Equipos" }, [["conductores", "Conductores " + cond.length], ["dispositivos", "Dispositivos " + disp.length]].map(function (t) {
         return el("button", { type: "button", id: "tab-" + t[0], "aria-pressed": String(tabEq === t[0]), texto: t[1], onclick: function () { tabEq = t[0]; pintarEq(); } }); }));
       cuerpo.appendChild(tabs);
       cuerpo.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Orden" }, [["errores", "Más errores"], ["lecturas", "Más lecturas"], ["inactivos", "Sin actividad"]].map(function (o) {
@@ -1057,8 +1272,7 @@
       }
       pd.appendChild(el("div", { clase: "equipo-lista" }, ordenarEq(disp, tD, suf).map(function (x) {
         var hot = suf(x) && tD(x) === maxD && maxD > 0;
-        return tarjetaEq(txt(x.telefono), "Android " + txt(x.android), x, [casilla("Lecturas", [String(x.lecturas)], false), casilla("Errores", [x.lecturas ? pct(tD(x)) : "—"], hot),
-          casilla("Abstenciones", [x.lecturas ? pct(x.abstenciones / x.lecturas) : "—"], false)], suf(x) ? null : "Pocos casos para opinar (menos de 30 lecturas)."); })));
+        return tarjetaEq(txt(x.telefono), "Android " + txt(x.android), x, tD(x), hot, suf(x)); })));
       if (!disp.length) pd.appendChild(el("div", { clase: "vacio", texto: "Sin dispositivos en este periodo." }));
       cuerpo.appendChild(pd);
       // Conductores
@@ -1067,8 +1281,7 @@
       var sc = cond.filter(sufC), maxC = sc.length ? Math.max.apply(null, sc.map(function (x) { return tC(x) || 0; })) : 0;
       pc.appendChild(el("div", { clase: "equipo-lista" }, ordenarEq(cond, tC, sufC).map(function (x) {
         var hot = sufC(x) && tC(x) === maxC && maxC > 0;
-        return tarjetaEq(txt(x.conductor), null, x, [casilla("Lecturas", [String(x.lecturas)], false), casilla("Error proceso", [x.lecturas ? pct(tC(x)) : "—"], hot),
-          casilla("Error lector", [x.lecturas ? pct(x.errores_lector / x.lecturas) : "—"], false)], sufC(x) ? null : "Pocos casos para opinar (menos de 30 lecturas)."); })));
+        return tarjetaEq(txt(x.conductor), null, x, tC(x), hot, sufC(x)); })));
       if (!cond.length) pc.appendChild(el("div", { clase: "vacio", texto: "Sin conductores en este periodo." }));
       cuerpo.appendChild(pc);
     }
@@ -1093,50 +1306,61 @@
       return el("div", { clase: "fila-barra" }, [el("span", { texto: legible(k) }), b[0], el("b", { clase: "n", texto: String(obj[k]) })]); }));
   }
   async function ia(c) {
-    c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Auditoría IA" }), selPeriodo(pintar)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_ia", { desde: r.desde, hasta: r.hasta });
+    var ie = null; try { var rr = await cli.rpc("admin_ia_estado"); ie = rr && rr.data && !rr.data.error ? rr.data : null; } catch (x) { ie = null; }
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    var cols = el("div", { clase: "ia-cols" });
-    var izq = el("div", { clase: "ia-col" }), der = el("div", { clase: "ia-col" });
-    izq.appendChild(el("div", { clase: "tarjetas dos", id: "ia-casos" }, [["Casos revisados", d.casos], ["Revisadas por una persona", d.con_referencia_humana]].map(function (x) {
-      return el("div", { clase: "tarjeta" }, [el("div", { clase: "detalle", texto: x[0] }), el("div", { clase: "valor", texto: txt(x[1]) })]); })));
-    // 1 · Quién acierta contra el humano (sin ganador si falta muestra)
+    var NOM = { lector: "Lector", revision_ia: "IA de revisión", vision: "IA con imagen", texto: "IA de texto" };
+    // 1 · Quién acierta contra una persona
     var comps = d.componentes || [], cortas = comps.filter(function (x) { return x.n < 30; });
-    izq.appendChild(el("h2", { texto: "Quién acierta contra el humano" }));
-    if (!comps.length) izq.appendChild(el("div", { clase: "vacio", texto: "Sin referencia humana todavía." }));
-    else {
-      if (cortas.length) izq.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-muestra", texto: "Con " + Math.min.apply(null, comps.map(function (x) { return x.n; })) + " casos revisados por una persona (menos de 30) todavía no se puede decir quién acierta más." }));
-      izq.appendChild(el("div", { clase: "quien", id: "ia-componentes" }, comps.map(function (x) {
-        var p = x.n ? x.coinciden / x.n : null, b = barraFila(x.componente, p === null ? 0 : p * 100, 100, null, x.n < 30);
-        return el("div", { clase: "fila-quien" }, [el("b", { texto: legible(x.componente) + (x.modelo ? " (" + x.modelo + ")" : "") }), b[0],
-          el("div", { clase: "valor-q" }, [p === null ? "sin referencia" : pct(p), el("small", { texto: x.coinciden + " / " + x.n })])]); })));
-      if (cortas.length) izq.appendChild(el("div", { clase: "detalle", texto: "Gris: aún son pocos casos para opinar. Con 30 casos o más las barras pasan a negro." }));
-    }
-    // 2 · Acuerdo IA/lector (no es exactitud)
+    c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Quién acierta contra una persona" }), el("span", { clase: "detalle", texto: txt(d.con_referencia_humana) + " revisadas" })]));
+    c.appendChild(el("div", { clase: "caja-v3", id: "ia-componentes" }, comps.length ? comps.map(function (x) {
+      var q = x.n ? x.coinciden / x.n : null, b = el("i"); b.style.width = (q === null ? 0 : q * 100) + "%";
+      return el("div", { clase: "vbar ancha" + (x.n < 30 ? " poca" : " ok") }, [el("span", { texto: (NOM[x.componente] || legible(x.componente)) + (x.modelo ? " · " + x.modelo : "") }), el("div", { clase: "p" }, [b]), el("b", { texto: q === null ? "—" : pct(q) })]);
+    }).concat(cortas.length ? [el("div", { clase: "detalle nota-v", id: "aviso-muestra", texto: "En gris: menos de 30 casos revisados por una persona; todavía no se puede decir quién acierta más." })] : [])
+      : [el("div", { clase: "detalle", texto: "Sin referencia humana todavía." })]));
+    // 2 · Acuerdo IA con el lector (barra apilada)
     var ac = d.acuerdo_ia_lector || {};
-    izq.appendChild(el("div", { clase: "tarjeta", id: "ia-acuerdo" }, [el("div", { clase: "detalle", texto: "Acuerdo IA con el lector" }),
-      el("div", { clase: "valor", texto: ac.n ? ac.coinciden + " / " + ac.n + " = " + pct(ac.coinciden / ac.n) : "sin datos" }), el("span", { clase: "etiqueta aviso", texto: "no es exactitud" })]));
-    // 3 · Discrepancias y fallas
-    var totD = Object.keys(d.discrepancias || {}).reduce(function (s, k) { return s + d.discrepancias[k]; }, 0);
-    var totF = Object.keys(d.fallas || {}).reduce(function (s, k) { return s + d.fallas[k]; }, 0);
-    der.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Discrepancias" }), el("span", { clase: "detalle", texto: totD + " casos" })]));
-    der.appendChild(listaBarras(d.discrepancias, "Sin discrepancias en el periodo."));
-    der.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Fallas de la IA" }), el("span", { clase: "detalle", texto: totF + (totF === 1 ? " vez" : " veces") })]));
+    if (ac.n) {
+      var si = ac.coinciden / ac.n, a1 = el("i"), a2 = el("i"); a1.style.width = si * 100 + "%"; a1.style.background = "var(--verde)"; a2.style.width = (1 - si) * 100 + "%"; a2.style.background = "var(--amarillo)";
+      c.appendChild(el("h2", { texto: "La IA y el lector" }));
+      c.appendChild(el("div", { clase: "caja-v3", id: "ia-acuerdo" }, [el("div", { clase: "apilada", role: "img", "aria-label": "Coinciden " + pct(si) + ", no coinciden " + pct(1 - si) }, [a1, a2]),
+        el("div", { clase: "ley" }, [el("div", {}, [el("span", { clase: "cuad v" }), "Coinciden", el("b", { texto: pct(si) })]), el("div", {}, [el("span", { clase: "cuad a" }), "No coinciden", el("b", { texto: pct(1 - si) })])]),
+        el("div", { clase: "detalle nota-v", texto: ac.coinciden + " de " + ac.n + " casos. Que coincidan no quiere decir que acierten." })]));
+    }
+    // 3 · Dónde no coinciden y fallas, como listas
+    function listaV3(obj, vacio, tono) {
+      var ks = Object.keys(obj || {}).sort(function (x, y) { return obj[y] - obj[x]; });
+      if (!ks.length) return el("div", { clase: "caja-v3 detalle", texto: vacio });
+      return el("div", { clase: "lista-acc" }, ks.map(function (k) { return el("div", { clase: "fila-cfg" }, [el("span", { clase: "acc-t" }, [el("b", { texto: legible(k) })]), el("span", { clase: "der mono" + (tono ? " " + tono(k) : ""), texto: String(obj[k]) })]); }));
+    }
+    var totD = Object.keys(d.discrepancias || {}).reduce(function (s2, k) { return s2 + d.discrepancias[k]; }, 0);
+    c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Dónde no coinciden" }), el("span", { clase: "detalle", texto: totD + " casos" })]));
+    c.appendChild(listaV3(d.discrepancias, "Sin diferencias en el periodo."));
     var esSaldo = function (k) { return /402|saldo|credit/i.test(k); };
-    der.appendChild(listaBarras(d.fallas, "Sin fallas registradas en el periodo.", function (k) { return esSaldo(k) ? "var(--rojo)" : "var(--amarillo)"; }));
-    var saldo = Object.keys(d.fallas || {}).filter(esSaldo).reduce(function (s, k) { return s + d.fallas[k]; }, 0);
-    if (saldo) der.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-saldo", texto: "La IA dejó de revisar " + saldo + (saldo === 1 ? " vez" : " veces") + " por falta de saldo. Recárgalo para que siga revisando." }));
-    der.appendChild(el("a", { href: "#errores", clase: "boton-enlace", texto: "Revisar los casos en Errores", onclick: function (ev) { ev.preventDefault(); ir("errores"); } }));
-    cols.appendChild(izq); cols.appendChild(der); c.appendChild(cols);
-    c.appendChild(el("div", { clase: "detalle", texto: d.nota }));
+    var totF = Object.keys(d.fallas || {}).reduce(function (s2, k) { return s2 + d.fallas[k]; }, 0);
+    c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Fallas de la IA" }), el("span", { clase: "detalle", texto: totF + (totF === 1 ? " vez" : " veces") })]));
+    c.appendChild(listaV3(d.fallas, "Sin fallas en el periodo.", function (k) { return esSaldo(k) ? "rojo-t" : "amarillo-t"; }));
+    var saldo = Object.keys(d.fallas || {}).filter(esSaldo).reduce(function (s2, k) { return s2 + d.fallas[k]; }, 0);
+    if (saldo) c.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-saldo", texto: "La IA dejó de revisar " + saldo + (saldo === 1 ? " vez" : " veces") + " por falta de saldo. Recárgalo para que siga revisando." }));
+    // 4 · Velocidad y estado
+    var mv = ie && ie.modos ? ie.modos.vision : null, seg = function (ms) { return ms === null || ms === undefined ? "—" : (ms / 1000).toFixed(1) + " s"; };
+    c.appendChild(el("h2", { texto: "Velocidad" }));
+    c.appendChild(el("div", { clase: "lista-acc" }, [
+      el("div", { clase: "fila-cfg" }, [el("span", { clase: "acc-t" }, [el("b", { texto: "Tiempo por captura" }), el("small", { texto: mv ? "Típico · los más lentos " + seg(mv.ms_ia_p90) + " (7 días)" : "Sin consultas en los últimos 7 días" })]), el("span", { clase: "der mono", texto: mv ? seg(mv.ms_ia_p50) : "—" })]),
+      el("a", { href: "#ajustes", clase: "fila-cfg", onclick: function (ev) { ev.preventDefault(); ir("ajustes"); } }, [el("span", { clase: "acc-t" }, [el("b", { texto: "IA con imagen" }), el("small", { texto: "Encender o apagar en Ajustes" })]),
+        el("span", { clase: "der", texto: ie ? (ie.vision ? "Encendida" : "Apagada") : "—" }), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })])]));
+    c.appendChild(el("a", { href: "#errores", clase: "boton-enlace", id: "ia-revisar", texto: "Revisar los casos", onclick: function (ev) { ev.preventDefault(); ir("errores"); } }));
+    if (d.nota) c.appendChild(el("div", { clase: "detalle nota-v", texto: d.nota }));
   }
 
   // ---------- 07 Configuración ----------
   function bytesLeg(n) { if (n === null || n === undefined) return "—"; n = Number(n); return n >= 1073741824 ? (n / 1073741824).toFixed(1) + " GB" : n >= 1048576 ? Math.round(n / 1048576) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B"; }
+  var ICO_CFG = { "cfg-ia": "ia", "cfg-costos": "dinero", "cfg-costo-usuario": "personas", "cfg-almacenamiento": "disco", "cfg-alertas": "campana", "cfg-usuarios": "personas", "cfg-historial": "lista" };
+  function grupoCfg(nombre) { var l = el("div", { clase: "lista-acc" }); return { nodo: el("section", { clase: "grupo-cfg" }, [el("div", { clase: "grupo-t", texto: nombre }), l]), l: l }; }
   function acordeon(id, titulo, sub, cifra, hijos, abierto) {
-    var d = el("details", { clase: "acc", id: id }, [el("summary", {}, [el("span", { clase: "acc-t" }, [el("b", { texto: titulo }), el("small", { texto: sub })]), el("span", { clase: "acc-cifra", texto: cifra })])].concat([el("div", { clase: "acc-cuerpo" }, hijos)]));
+    var d = el("details", { clase: "acc", id: id }, [el("summary", {}, [ICO_CFG[id] ? el("span", { clase: "ic-aj" }, [icono(ICO_CFG[id])]) : null, el("span", { clase: "acc-t" }, [el("b", { texto: titulo }), el("small", { texto: sub })]), el("span", { clase: "acc-cifra", texto: cifra })])].concat([el("div", { clase: "acc-cuerpo" }, hijos)]));
     if (abierto) d.open = true; return d;
   }
   function filaKV(t, v, tono) { return el("div", { clase: "kv-fila" }, [el("span", { texto: t }), el("b", { clase: tono || "", texto: txt(v) })]); }
@@ -1170,14 +1394,14 @@
       el("div", { clase: "detalle", texto: "Se guarda solo en este navegador." })]);
   }
   async function config(c) {
-    c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Configuración" }), selPeriodo(pintar)]));
     skeleton(c);
     var r = rango(), g = await llamar("admin_config"), k = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta }), cu = await llamar("admin_costo_usuarios", { desde: r.desde, hasta: r.hasta }), b = await llamar("admin_bitacora", { pagina: 1 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     var ie = null; try { var rr = await cli.rpc("admin_ia_estado"); ie = rr && rr.data && !rr.data.error ? rr.data : null; } catch (x) { ie = null; }
     var ancho = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
     var cont = el("div", { clase: "config-cols" }), izq = el("div", { clase: "config-col" }), der = el("div", { clase: "config-col" });
-    izq.appendChild(el("h2", { texto: "IA y dinero" })); der.appendChild(el("h2", { texto: "Avisos y accesos" }));
+    var gGasto = grupoCfg("Gasto"), gIA = grupoCfg("IA y alertas"), gDatos = grupoCfg("Personas y datos"), gCuenta = grupoCfg("Cuenta");
+    izq.appendChild(gGasto.nodo); izq.appendChild(gIA.nodo); der.appendChild(gDatos.nodo); der.appendChild(gCuenta.nodo);
     // 0 · IA con imagen: interruptores remotos y cuánto tarda en contestar
     if (ie) {
       var seg = function (ms) { return ms === null || ms === undefined ? "—" : (ms / 1000).toFixed(1) + " s"; };
@@ -1199,7 +1423,7 @@
           filaKV("Tiempo total vista desde el teléfono (típico · los más lentos)", seg(d.ms_total_p50) + " · " + seg(d.ms_total_p90)),
           filaKV("Con error · sin saldo", d.errores + " · " + d.sin_saldo), filaKV("Costo", "$" + Number(d.costo_usd || 0).toFixed(4) + " USD")]);
       };
-      izq.appendChild(acordeon("cfg-ia", "IA con imagen", "encender, apagar y tiempos", ie.vision ? "ON" : "OFF", [
+      gIA.l.appendChild(acordeon("cfg-ia", "IA con imagen", "encender, apagar y tiempos", ie.vision ? "ON" : "OFF", [
         interruptor("vision", "La IA ve la imagen de la oferta", "Si se apaga, el teléfono sigue solo con su lector.", !!ie.vision),
         interruptor("texto", "IA de texto (la de antes)", "Se usa en teléfonos sin imagen. Apagada, esos teléfonos usan solo su lector.", !!ie.texto),
         modo("vision", "Con imagen"), modo("texto", "De texto"),
@@ -1209,7 +1433,9 @@
     if (k) {
       var total = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0), tok = function (n) { return n === null || n === undefined ? "—" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : String(n); };
       var ti = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.tokens_entrada || 0); }, 0), ts = (k.por_modelo || []).reduce(function (s, x) { return s + Number(x.tokens_salida || 0); }, 0);
-      izq.appendChild(acordeon("cfg-costos", "Costo de la IA", "periodo elegido", (k.por_modelo || []).length ? "$" + total.toFixed(2) : "—", [
+      gGasto.l.appendChild(el("div", { clase: "gasto-v3" }, [el("small", { texto: "Gasto en IA del periodo" }), el("b", { clase: "mono", texto: (k.por_modelo || []).length ? "$" + total.toFixed(2) : "—" }),
+        el("small", { texto: (k.por_modelo || []).map(function (x) { return x.modelo + " $" + Number(x.usd || 0).toFixed(2); }).join(" · ") || "Sin consumo en el periodo." })]));
+      gGasto.l.appendChild(acordeon("cfg-costos", "Costo de la IA", "periodo elegido", (k.por_modelo || []).length ? "$" + total.toFixed(2) : "—", [
         (k.por_modelo || []).length ? el("div", {}, (k.por_modelo || []).map(function (x) { return filaKV(x.modelo + " · " + x.consultas + " consultas", "$" + Number(x.usd || 0).toFixed(2)); })) : el("div", { clase: "vacio", texto: "Sin consumo en el periodo." }),
         (k.por_modelo || []).length ? el("div", { clase: "detalle", texto: "Tokens: " + tok(ti) + " entrada · " + tok(ts) + " salida." }) : null,
         el("details", { clase: "sub" }, [el("summary", { texto: "Precio de cada IA" }), el("div", {}, (k.tarifas || []).map(function (x) { return filaKV(x.modelo, "$" + x.usd_mtok_entrada + " entrada · $" + x.usd_mtok_salida + " salida (por M tokens)"); }))]),
@@ -1221,7 +1447,7 @@
       var gastoMes = function (x) { return Number(x.usd_mes || 0) * CAMBIO; };
       var prom = us.length ? us.reduce(function (t, x) { return t + gastoMes(x); }, 0) / us.length : 0;
       var peor = us.length ? gastoMes(us[0]) : 0;
-      izq.appendChild(acordeon("cfg-costo-usuario", "Costo por usuario", "al mes, de cada $" + INGRESO + " que te quedan", us.length ? "Te quedan " + mxn(INGRESO - prom) : "—", [
+      gGasto.l.appendChild(acordeon("cfg-costo-usuario", "Costo por usuario", "al mes, de cada $" + INGRESO + " que te quedan", us.length ? "Te quedan " + mxn(INGRESO - prom) : "—", [
         us.length ? el("div", {}, [
           filaKV("Gasto de IA de un usuario típico al mes", mxn(prom)),
           filaKV("Te queda de su pago (típico)", mxn(INGRESO - prom), INGRESO - prom < 30 ? "aviso-t" : ""),
@@ -1235,34 +1461,38 @@
     if (g) {
       var al = g.almacenamiento || {}, rt = g.retencion || {};
       // 2 · Almacenamiento y retención
-      izq.appendChild(el("h2", { texto: "Datos guardados" }));
-      izq.appendChild(acordeon("cfg-almacenamiento", "Almacenamiento", "capturas y lecturas", bytesLeg(al.capturas_bytes), [
+      gDatos.l.appendChild(acordeon("cfg-almacenamiento", "Almacenamiento", "capturas y lecturas", bytesLeg(al.capturas_bytes), [
         filaKV("Capturas guardadas", txt(al.capturas_objetos) + " · " + bytesLeg(al.capturas_bytes)), filaKV("Lecturas guardadas", al.lecturas_filas),
         filaKV("Lecturas vencidas", rt.lecturas_vencidas, rt.lecturas_vencidas > 0 ? "aviso-t" : ""),
         el("div", { clase: "detalle", texto: "Se conservan " + txt(rt.lecturas_dias) + " días las lecturas y " + txt(rt.capturas_dias) + " días las capturas." }), rt.nota ? el("div", { clase: "detalle", texto: rt.nota }) : null], ancho));
       // 3 · Alertas
       var um = g.umbrales_alertas || [];
-      der.appendChild(acordeon("cfg-alertas", "Alertas", "avisos y sus límites", String(um.length), [
+      gIA.l.appendChild(acordeon("cfg-alertas", "Alertas", "avisos y sus límites", String(um.length), [
         um.length ? el("div", {}, um.map(function (x) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: x.regla }), el("small", { texto: txt(x.umbral) })]), el("span", { clase: "sev " + x.gravedad, texto: GRAVEDAD[x.gravedad] || String(x.gravedad).toUpperCase() })]); })) : el("div", { clase: "vacio", texto: "Sin reglas." }),
         el("div", { clase: "detalle", texto: "Límites que se pueden cambiar: " + (g.umbrales_editables ? "sí" : "no (son fijos; cambiarlos requiere ayuda técnica)") + " · esquema " + g.esquema })], ancho));
       // 4 · Usuarios y permisos
       var ad = g.administradores || [], pm = g.permisos || {};
-      der.appendChild(acordeon("cfg-usuarios", "Usuarios y permisos", "tú eres " + txt((g.yo || {}).rol), String(ad.length), [
+      gDatos.l.insertBefore(acordeon("cfg-usuarios", "Usuarios y permisos", "tú eres " + txt((g.yo || {}).rol), String(ad.length), [
         el("div", { clase: "fila" }, [el("b", { texto: "Tú: " + txt((g.yo || {}).admin) }), el("span", { clase: "rol", texto: String((g.yo || {}).rol || "").toUpperCase() })]),
         el("div", {}, ad.map(function (x) { return filaKV(x.admin + " · " + x.rol, "desde " + (x.alta || "").slice(0, 10)); })),
         el("div", { clase: "etiquetas fila" }, ["lector", "revisor"].map(function (rl) { return el("span", { clase: "chipv", texto: rl + ": " + (pm[rl] || []).join(", ") }); })),
-        el("div", { clase: "detalle", texto: "Para agregar a alguien nuevo se necesita ayuda técnica." })], ancho));
+        el("div", { clase: "detalle", texto: "Para agregar a alguien nuevo se necesita ayuda técnica." })], false), gDatos.l.firstChild);
     }
     // 5 · Historial
     if (b) {
       var fs = b.filas || [];
       var fila = function (f) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: fechaHora(f.creado) + " · " + txt(f.admin) }), el("small", { texto: txt(f.accion) })]), el("span", { clase: "sev nd", texto: txt(f.resultado) + (f.filas !== null && f.filas !== undefined ? " · " + f.filas : "") })]); };
       var resto = fs.slice(10);
-      der.appendChild(el("h2", { texto: "Registro" }));
-      der.appendChild(acordeon("cfg-historial", "Qué se ha hecho en el Admin", "acciones registradas", String(fs.length), [
+      gDatos.l.appendChild(acordeon("cfg-historial", "Qué se ha hecho en el Admin", "acciones registradas", String(fs.length), [
         fs.length ? el("div", {}, fs.slice(0, 10).map(fila)) : el("div", { clase: "vacio", texto: "Sin acciones registradas." }),
         resto.length ? el("details", { clase: "sub" }, [el("summary", { texto: "Ver " + resto.length + " más" }), el("div", {}, resto.map(fila))]) : null], false));
     }
+    gCuenta.l.id = "cfg-cuenta";
+    gCuenta.l.appendChild(el("div", { clase: "fila-cfg" }, [el("span", { clase: "avatar", "aria-hidden": "true", texto: (correo || "?").charAt(0).toUpperCase() }),
+      el("span", { clase: "acc-t" }, [el("b", { texto: correo || "Sesión iniciada" }), el("small", { texto: yo && yo.rol ? (yo.rol === "revisor" ? "Revisor" : "Solo lectura") : "—" })])]));
+    gCuenta.l.appendChild(el("button", { type: "button", id: "cfg-tema", clase: "fila-cfg", onclick: function () { document.getElementById("tema").click(); this.querySelector(".der").textContent = temaActual() === "dark" ? "Oscuro" : "Claro"; } }, [
+      el("span", { clase: "ic-aj" }, [icono("luna")]), el("span", { clase: "acc-t" }, [el("b", { texto: "Apariencia" })]), el("span", { clase: "der", texto: temaActual() === "dark" ? "Oscuro" : "Claro" }), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]));
+    gCuenta.l.appendChild(el("button", { type: "button", id: "cfg-salir", clase: "fila-cfg salir", texto: "Salir", onclick: function () { document.getElementById("salir").click(); } }));
     cont.appendChild(izq); cont.appendChild(der); c.appendChild(cont);
   }
 
@@ -1287,26 +1517,53 @@
     else if (!ev.shiftKey && act === z) { ev.preventDefault(); a.focus(); }
   });
 
-  var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, revisar: revisar, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
-  var TITULOS = {}; MODULOS.forEach(function (m) { TITULOS[m[0]] = m[1]; });
+  // Cada pestaña es una vista, o un grupo de subvistas.
+  var VISTAS = { hoy: inicio, revisar: { errores: errores, capturas: capturas, historial: historial },
+                 calidad: { resumen: resumen, versiones: versiones, ia: ia, conductores: dispositivos }, ajustes: config };
+  function subActual() {
+    if (!SUBS[vista]) return null;
+    if (vista === "revisar" && esId(param)) return "errores";
+    var ids = SUBS[vista].map(function (x) { return x[0]; });
+    return ids.indexOf(param) >= 0 ? param : ids[0];
+  }
+  function vistaFn() { var v = VISTAS[vista]; return typeof v === "function" ? v : v[subActual()]; }
 
-  // Hoja inferior «Más» (solo teléfono): módulos restantes, tema y salir.
-  function hoja(abrir) {
-    var h = document.getElementById("hoja");
-    if (h) h.remove();
-    var mas = document.getElementById("t-mas");
-    if (mas) mas.setAttribute("aria-expanded", String(!!abrir));
-    if (!abrir) return;
-    function cerrar() { hoja(false); if (mas) mas.focus(); }
-    var items = MODULOS.filter(function (m) { return ["inicio", "errores", "ofertas"].indexOf(m[0]) < 0; }).map(function (m) {
-      return el("button", { type: "button", clase: "item", "aria-current": m[0] === vista ? "page" : null, onclick: function () { hoja(false); ir(m[0]); } }, [icono(m[0]), el("span", { texto: m[1] })]); });
-    if (correo) items.unshift(el("div", { clase: "cuenta-hoja", texto: correo }));
-    items.push(el("button", { type: "button", clase: "item", onclick: function () { document.getElementById("tema").click(); cerrar(); } }, [el("span", { texto: temaActual() === "dark" ? "Modo claro" : "Modo oscuro" })]));
-    items.push(el("button", { type: "button", clase: "item peligro", onclick: function () { document.getElementById("salir").click(); } }, [el("span", { texto: "Salir" })]));
-    var hoja_ = el("div", { id: "hoja", role: "dialog", "aria-modal": "true", "aria-label": "Más opciones", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } },
-      [el("div", { clase: "velo", onclick: cerrar }), el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" })].concat(items))]);
-    document.body.appendChild(hoja_);
-    var p = hoja_.querySelector(".item"); if (p) p.focus();
+  // Arriba, para toda la app: el periodo (uno solo) y la búsqueda.
+  function herramientas() {
+    var h = document.getElementById("herr"); if (!h) return;
+    h.textContent = "";
+    h.appendChild(el("button", { type: "button", id: "btn-periodo", clase: "pildora", "aria-haspopup": "dialog", "aria-label": "Periodo: " + dias + " días", onclick: abrirPeriodo }, [dias + " días", sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico-p" }, [sv("path", { d: "m7 10 5 5 5-5" })])]));
+    h.appendChild(el("button", { type: "button", id: "btn-buscar", clase: "btn-buscar", "aria-label": "Buscar un caso o un conductor", onclick: abrirBusqueda }, [icono("buscar"), el("span", { clase: "largo", texto: "Buscar" })]));
+  }
+  function abrirPeriodo() {
+    var viejo = document.getElementById("hoja-buscar"); if (viejo) viejo.remove();
+    function cerrar() { h.remove(); }
+    var h = el("div", { id: "hoja-buscar", role: "dialog", "aria-modal": "true", "aria-label": "Periodo", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Periodo" }), el("p", { clase: "detalle", texto: "Aplica a toda la app: Hoy, Revisar y Calidad." }),
+        el("div", { clase: "lista-op" }, [7, 30, 90].map(function (n) {
+          return el("button", { type: "button", clase: "op", "aria-pressed": String(dias === n && !F.desde), onclick: function () { cerrar(); dias = n; F.desde = F.hasta = null; contarUrgentes(); pintar(); } }, [el("b", { texto: "Últimos " + n + " días" }), dias === n && !F.desde ? el("span", { texto: "✓" }) : null]); }))])]);
+    document.body.appendChild(h); var f = h.querySelector(".op"); if (f) f.focus();
+  }
+  function abrirBusqueda() {
+    var viejo = document.getElementById("hoja-buscar"); if (viejo) viejo.remove();
+    function cerrar() { h.remove(); }
+    var entrada = el("input", { id: "q", type: "search", autocomplete: "off", enterkeyhint: "search", placeholder: "Ej. 1432 o C-7F2A", "aria-describedby": "q-ayuda" });
+    var err = el("div", { clase: "aviso-cmp", hidden: "" });
+    var form = el("form", { clase: "buscar-form" }, [el("label", { clase: "campo-v" }, [el("span", { texto: "Número de caso, código de conductor o teléfono" }), entrada]),
+      el("div", { clase: "detalle", id: "q-ayuda", texto: "Un número abre ese error. Un código busca entre conductores y dispositivos del periodo." }), err,
+      el("button", { type: "submit", clase: "primario", texto: "Buscar" })]);
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var v = entrada.value.trim().replace(/^#/, "");
+      if (!v) { err.textContent = "Escribe un número de caso o un código."; err.hidden = false; return; }
+      cerrar();
+      if (/^\d+$/.test(v)) ir("revisar", v); else { buscarEq = v; ir("calidad", "conductores"); }
+    });
+    var h = el("div", { id: "hoja-buscar", role: "dialog", "aria-modal": "true", "aria-label": "Buscar", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Buscar" }), form])]);
+    document.body.appendChild(h); entrada.focus();
   }
 
   var ultima = Date.now();
@@ -1319,37 +1576,45 @@
     var off = navigator.onLine === false, m = Math.floor((Date.now() - ultima) / 60000);
     t.textContent = off ? "Sin conexión. Lo que ves puede no estar al día." : "Actualizado " + (m < 1 ? "hace un momento" : "hace " + m + " min");
     p.className = "punto " + (off ? "mal" : m >= 10 ? "aviso" : "ok");
+    var bar = t.closest(".estado-barra"); if (bar) bar.setAttribute("data-alerta", String(off || m >= 10));
   }
   setInterval(textoEstado, 30000);
   window.addEventListener("online", function () { textoEstado(); });
   window.addEventListener("offline", textoEstado);
 
   async function pintar() {
-    hoja(false);
-    if (pendienteV && !(vista === "errores" && param)) await commitirPendiente();
+    if (pendienteV && !enDetalle()) await commitirPendiente();
     var claveVista = vista + "/" + (param || ""), yAntes = claveVista === ultimaClave ? window.scrollY : null; ultimaClave = claveVista;
     try { sessionStorage.setItem("checa-vista", JSON.stringify({ F: F, dias: dias, pag: pag })); } catch (x) { /* sin almacenamiento */ }
     var raiz = document.getElementById("raiz");
     raiz.textContent = "";
-    var PRINCIPALES = ["inicio", "errores", "ofertas"], vSel = vista === "revisar" ? "ofertas" : vista;
-    var enMas = PRINCIPALES.indexOf(vSel) < 0;
+    herramientas();
     var botones = MODULOS.map(function (m) {
-      var activo = m[0] === vSel;
-      return el("button", { id: "t-" + m[0], type: "button", clase: PRINCIPALES.indexOf(m[0]) < 0 ? "sec" : "", "aria-current": activo ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
-        [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); });
-    var masIco = sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "currentColor" }, [sv("circle", { cx: "5", cy: "12", r: "1.6" }), sv("circle", { cx: "12", cy: "12", r: "1.6" }), sv("circle", { cx: "19", cy: "12", r: "1.6" })]);
-    botones.push(el("button", { id: "t-mas", type: "button", clase: "mas", "aria-haspopup": "dialog", "aria-expanded": "false", "data-activo": String(enMas), "aria-label": "Más secciones y cuenta", onclick: function () { hoja(true); } },
-      [masIco, el("span", { clase: "corto", texto: "Más" })]));
-    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, [el("div", { clase: "pestanas" }, botones)]);
-    var c = el("section", { id: "vista-" + vista, clase: "contenido" });
-    raiz.appendChild(nav); raiz.appendChild(c);
-    c.appendChild(barraEstado());
+      return el("button", { id: "t-" + m[0], type: "button", "aria-current": m[0] === vista ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
+        [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] }),
+         m[0] === "revisar" ? el("span", { id: "insignia-revisar", clase: "insignia-nav", "aria-label": "errores sin veredicto", hidden: urgentes ? null : "", texto: urgentes ? String(urgentes) : "" }) : null]); });
+    var nav = el("nav", { id: "menu", "aria-label": "Secciones" }, [el("div", { clase: "pestanas" }, botones)]);
+    var marco = el("section", { id: "vista-" + vista, clase: "contenido" });
+    raiz.appendChild(nav); raiz.appendChild(marco);
+    marco.appendChild(barraEstado());
+    // Título de la pestaña y sus subpestañas (no en Hoy ni dentro del detalle de un error).
+    if (!enDetalle()) {
+      marco.appendChild(el("div", { clase: "titulo-wrap" }, [el("div", { clase: "fecha-hoy", texto: fechaLarga() }), el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] })]));
+      if (vista === "revisar") marco.appendChild(el("button", { type: "button", clase: "buscador", id: "buscador", onclick: abrirBusqueda }, [icono("buscar"), "Buscar # de caso o conductor"]));
+      if (SUBS[vista]) {
+        var sa = subActual();
+        marco.appendChild(el("div", { clase: "subtabs", role: "group", "aria-label": "Secciones de " + vista }, SUBS[vista].map(function (x) {
+          return el("button", { type: "button", id: "sub-" + x[0], "aria-pressed": String(x[0] === sa), texto: x[1], onclick: function () { ir(vista, x[0] === SUBS[vista][0][0] ? null : x[0]); } }); })));
+      }
+    }
+    var c = el("div", { clase: "vista-cuerpo", id: "vista-" + vista + "-" + (subActual() || "x") });
+    marco.appendChild(c);
     falloCarga = false;
     function fallo(msg) { return el("div", { clase: "vacio fallo", role: "status" }, [el("p", { texto: msg }), el("button", { type: "button", texto: "Reintentar", onclick: function () { pintar(); } })]); }
-    try { await VISTAS[vista](c); } catch (e) { if (window.console) console.error(e); c.textContent = ""; c.appendChild(fallo("Algo salió mal al mostrar esta pantalla.")); falloCarga = false; }
+    try { await vistaFn()(c); } catch (e) { if (window.console) console.error(e); c.textContent = ""; c.appendChild(fallo("Algo salió mal al mostrar esta pantalla.")); falloCarga = false; }
     if (falloCarga && c.isConnected) c.appendChild(fallo("Algunos datos no se pudieron cargar."));
     if (restaurarScroll !== null) { window.scrollTo(0, restaurarScroll); restaurarScroll = null; } else if (yAntes !== null) window.scrollTo(0, yAntes);
-    if (!document.querySelector(".estado-barra") && c.isConnected) c.insertBefore(barraEstado(), c.firstChild);
+    if (!document.querySelector(".estado-barra") && marco.isConnected) marco.insertBefore(barraEstado(), marco.firstChild);
     ultima = Date.now(); textoEstado();
   }
 
@@ -1364,14 +1629,16 @@
       return;
     }
     try { var gv = JSON.parse(sessionStorage.getItem("checa-vista") || "null"); if (gv && gv.F && typeof gv.F === "object") { F = gv.F; if ([7, 30, 90].indexOf(gv.dias) >= 0) dias = gv.dias; if (gv.pag && gv.pag.errores > 0 && gv.pag.ofertas > 0) pag = gv.pag; } } catch (x) { /* sin almacenamiento */ }
-    var h = (location.hash || "").replace(/^#/, "").split("/");
-    if (VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; }
+    var h = (location.hash || "").replace(/^#/, "").split("/"), t = traducir(h[0], h[1]);
+    if (VISTAS[t[0]]) { vista = t[0]; param = t[1] || null; if (t[0] !== h[0]) { try { history.replaceState(null, "", "#" + vista + (param ? "/" + param : "")); } catch (e) { /* sin historial */ } } }
     correo = (s.user && s.user.email) || ""; document.getElementById("quien").textContent = correo || "Sesión iniciada";
     var salir = document.getElementById("salir");
     salir.hidden = false;
     salir.onclick = async function () { await cli.auth.signOut(); location.reload(); };
     var g = await llamar("admin_config");
     if (g) yo = g.yo;
+    var herr = el("div", { id: "herr", clase: "herr" }); document.getElementById("quien").after(herr);
+    if (vista !== "hoy") contarUrgentes();   // en Hoy ya se cuenta al pintar
     await pintar();
   }
 
@@ -1381,8 +1648,8 @@
   try { var gt = localStorage.getItem("checa-tema"); if (gt === "dark" || gt === "light") document.documentElement.setAttribute("data-theme", gt); } catch (e) { /* sin almacenamiento */ }
 
   window.addEventListener("popstate", function () {
-    var h = (location.hash || "").replace(/^#/, "").split("/");
-    if (cli && VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; restaurarScroll = vista === "errores" && !param ? scrollErrores : null; pintar(); }
+    var h = (location.hash || "").replace(/^#/, "").split("/"), t = traducir(h[0], h[1]);
+    if (cli && VISTAS[t[0]]) { vista = t[0]; param = t[1] || null; restaurarScroll = enListaErrores() ? scrollErrores : null; pintar(); }
   });
   window.Admin = { iniciar: iniciar, aviso: aviso, pintar: pintar };
 
