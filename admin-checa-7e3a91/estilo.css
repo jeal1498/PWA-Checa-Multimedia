@@ -1160,3 +1160,21 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 .ci-ic { grid-row:1 / 3; align-self:center; }
 .ci > span:not(.ci-ic) { grid-column:2; align-self:end; }
 .ci b { grid-column:2; margin-left:0; text-align:left; align-self:start; }
+
+/* ===== Tarjeta de valores del bosquejo: Lector | IA, un bloque por campo, Check IA y "Sugerido" ===== */
+.ficha-fila { grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr); }
+.vtc2 { background:var(--tablero); border:1px solid var(--hb); border-radius:18px; padding:12px; font-family:"JetBrains Mono", ui-monospace, monospace; }
+.vtc2.dif { background:color-mix(in srgb, var(--luz-r) 11%, var(--tablero)); }
+.vq-cab { padding:0 8px 6px; } .vq-fila { margin-top:0; }
+.qg1 { display:grid; grid-template-columns:1fr; } .qg2 { display:grid; grid-template-columns:1fr 1fr; column-gap:4px; } .qg3 { display:grid; grid-template-columns:repeat(3, 1fr); column-gap:4px; }
+.vq-h { font:600 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.04em; text-transform:uppercase; color:var(--tenue); } .vq-h.r, .vq-v.r { text-align:right; } .vq-h.m, .vq-v.m { text-align:center; }
+.vbox { border:1.5px solid color-mix(in srgb, var(--luz-r) 30%, var(--hb)); border-radius:10px; background:color-mix(in srgb, var(--luz-r) 5%, var(--tablero)); overflow:hidden; }
+.vtc2:not(.dif) .vbox { border-color:var(--hb); background:var(--tablero); }
+.vq-b { padding:8px; text-align:center; } .vq-b + .vq-b { border-top:1.5px solid color-mix(in srgb, var(--luz-r) 30%, var(--hb)); } .vtc2:not(.dif) .vq-b + .vq-b { border-top-color:var(--hb); }
+.vq-b > .vq-h { display:block; margin-bottom:4px; }
+.vq-v { font:600 14px "JetBrains Mono", ui-monospace, monospace; letter-spacing:-.03em; white-space:nowrap; color:var(--texto); } .vq-v.red { color:var(--rojo); }
+.vq-b .chk { margin-top:6px; padding:3px 6px; border-radius:6px; font:600 12px "JetBrains Mono", ui-monospace, monospace; letter-spacing:-.02em; color:var(--verde); background:color-mix(in srgb, var(--luz-v) 15%, var(--tablero)); }
+.ficha-col .ia-btn { min-height:44px; margin-top:0; }
+.ficha-bar button.p { min-height:54px; } .ficha-bar button:not(.p) { min-height:46px; }
+.ficha-bar button.rec { box-shadow:0 0 0 3px color-mix(in srgb, var(--luz-v) 75%, transparent); }
+.ficha-bar button small { display:block; margin-top:1px; font:500 11px "DM Sans", system-ui, sans-serif; opacity:.8; }
