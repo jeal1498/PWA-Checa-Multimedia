@@ -138,7 +138,7 @@
       el("div", { clase: "valor", texto: texto }),
       el("div", { clase: "detalle", texto: casos(t.k, t.n) + (t.unidad && t.unidad.indexOf("proporci") !== 0 ? " · " + t.unidad : "") }),
       est ? el("span", { clase: "etiqueta " + (est === "suficiente" ? "ok" : "aviso"), texto: est === "suficiente" ? "casos suficientes" : "pocos casos para opinar" }) : null,
-      t.definicion ? el("div", { clase: "def", texto: t.definicion }) : null].concat(extra || []));
+      t.definicion ? el("details", { clase: "def-ayuda" }, [el("summary", { texto: "¿Qué significa?" }), el("div", { clase: "detalle", texto: t.definicion })]) : null].concat(extra || []));
   }
   function tabla(cols, filas, vacio) {
     if (!filas.length) return el("div", { clase: "vacio", texto: vacio || "Sin datos en este periodo (no es lo mismo que cero errores)." });
@@ -194,6 +194,26 @@
       return el("button", { "data-dias": n, "aria-pressed": String(dias === n && !F.desde), texto: n + " días", onclick: function () { dias = n; F.desde = F.hasta = null; onCambio(); } });
     }));
   }
+  // Mini gráfica de tendencia (sin ejes): solo la forma y el último punto.
+  function spark(vals) {
+    var v = vals.filter(function (x) { return x !== null && x !== undefined && !isNaN(x); });
+    if (v.length < 2) return null;
+    var W = 120, H = 28, mx = Math.max.apply(null, v), mn = Math.min.apply(null, v), rg = mx - mn || 1;
+    var pts = v.map(function (x, i) { return [(i * W / (v.length - 1)).toFixed(1), (H - 3 - (x - mn) / rg * (H - 6)).toFixed(1)]; });
+    var u = pts[pts.length - 1];
+    return sv("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none", class: "spark", "aria-hidden": "true" }, [
+      sv("polyline", { points: pts.map(function (p) { return p.join(","); }).join(" "), fill: "none", stroke: "currentColor", "stroke-width": "1.8", "vector-effect": "non-scaling-stroke" }),
+      sv("circle", { cx: u[0], cy: u[1], r: "2.5", fill: "currentColor" })]);
+  }
+  // Toda la tarjeta lleva a su detalle (los «¿Qué significa?» de dentro siguen funcionando).
+  function envolver(t, v, p) {
+    t.classList.add("tocable"); t.setAttribute("role", "link"); t.tabIndex = 0;
+    var ir_ = function (ev) { if (ev.target.closest("summary, details")) return; ev.preventDefault(); ir(v, p); };
+    t.addEventListener("click", ir_); t.addEventListener("keydown", function (ev) { if (ev.key === "Enter") ir_(ev); });
+    var tit = t.querySelector(".detalle"); if (tit) tit.appendChild(el("span", { clase: "chev", "aria-hidden": "true", texto: " ›" }));
+    return t;
+  }
+  function fechaLarga() { var x = new Intl.DateTimeFormat("es-MX", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(new Date()).replace(",", ""); return x.charAt(0).toUpperCase() + x.slice(1); }
   function skeleton(c) { c.appendChild(el("div", { clase: "skeleton", "aria-busy": "true" })); }
 
   // ---------- 01 Inicio (Salud) ----------
@@ -214,10 +234,17 @@
     return ["ofertas", "Ver el historial de lecturas"];
   }
   // Errores sin veredicto del periodo: el único número que pinta la insignia de Revisar.
+  // Solo cuenta errores de la 10.82 en adelante: los anteriores no admiten veredicto (no se puede comprobar su captura).
+  var urgPorVersion = {};
   async function contarUrgentes() {
-    var r = rango();
-    try { var x = await cli.rpc("admin_errores", { desde: r.desde, hasta: r.hasta, estado_veredicto: "sin_veredicto", pagina: 1, por_pagina: 1 }); urgentes = x && x.data && !x.data.error ? Number(x.data.total) : null; }
-    catch (e) { urgentes = null; }
+    var r = rango(); await asegurarVersiones();
+    var vs = VERSIONES.filter(function (x) { return versionNum(x) >= 10082; });
+    var res = await Promise.all(vs.map(function (ver) {
+      return cli.rpc("admin_errores", { desde: r.desde, hasta: r.hasta, version: ver, estado_veredicto: "sin_veredicto", pagina: 1, por_pagina: 1 })
+        .then(function (x) { return x && x.data && !x.data.error ? Number(x.data.total) : null; }, function () { return null; }); }));
+    urgPorVersion = {}; vs.forEach(function (ver, i) { urgPorVersion[ver] = res[i]; });
+    var ok = res.filter(function (x) { return x !== null; });
+    urgentes = ok.length ? ok.reduce(function (a, b) { return a + b; }, 0) : null;
     var b = document.getElementById("insignia-revisar"); if (b) { b.textContent = urgentes ? String(urgentes) : ""; b.hidden = !urgentes; }
     return urgentes;
   }
@@ -247,17 +274,15 @@
     var comprobados = d.componentes.filter(function (x) { return ["operativo", "degradado", "fuera_de_servicio"].indexOf(x.estado) >= 0; }).length;
     var fallas = d.componentes.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
     var v = VEREDICTO[d.estado_general] || VEREDICTO.gris;
-    var luces = ["luz-r", "luz-a", "luz-v"].map(function (l) { return el("i", { clase: v[2] === l ? "on " + l : "" }); });
 
     // 1 · Veredicto y frase de acción
     var pasos = PASOS.map(function (p) { return pasoEstado(p, d.componentes); });
     var rotos = pasos.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
     var fraseCadena = rotos ? "Falla " + rotos + (rotos === 1 ? " paso" : " pasos") + " de " + PASOS.length + "." : "Ningún paso de la cadena falla.";
     var heroEl;
-    c.appendChild(heroEl = el("section", { clase: "hero", id: "estado-general" }, [
-      el("div", { clase: "semaforo", "aria-hidden": "true" }, luces),
-      el("div", { clase: "hero-texto" }, [el("h1", { texto: v[0] }), el("p", { texto: v[1] }), el("p", { texto: fraseCadena }),
-        el("div", { clase: "fila" }, [insignia(d.estado_general), el("span", { clase: "detalle", texto: comprobados + " de " + n + " cosas medidas" })])])]));
+    c.appendChild(heroEl = el("section", { clase: "hero estado-v3", id: "estado-general" }, [
+      el("div", { clase: "estado-cab" }, [el("span", { clase: "latido " + (ESTADO[d.estado_general] || "nd"), "aria-hidden": "true" }), el("h2", { clase: "estado-t", texto: v[0] })]),
+      el("p", { clase: "estado-p", texto: v[1] + " " + fraseCadena + " " + comprobados + " de " + n + " cosas medidas." })]));
 
     // 2 · Pasos de la lectura: un punto por paso; el que falla se abre solo.
     var peor = -1;
@@ -267,7 +292,6 @@
     var detalleCadena = el("div", { clase: "paso-detalle", "aria-live": "polite" });
     function pintarCadena() {
       cadena.textContent = "";
-      cadena.appendChild(el("div", { clase: "cadena-cab" }, [el("h2", { texto: "Pasos de la lectura" }), el("span", { clase: "detalle", texto: rotos ? rotos + (rotos === 1 ? " paso falla" : " pasos fallan") : "sin fallas" })]));
       cadena.appendChild(el("div", { clase: "pasos" }, pasos.map(function (p, k) {
         return el("button", { type: "button", clase: "paso " + (ESTADO[p.estado] || "nd") + (k === sel ? " sel" : ""), "aria-pressed": String(k === sel), "aria-label": p.paso.nombre + ": " + (TEXTO[p.estado] || p.estado),
           onclick: function () { sel = sel === k ? -1 : k; pintarCadena(); } }, [punto(p.estado), el("span", { texto: p.paso.nombre })]); })));
@@ -284,7 +308,7 @@
       cadena.appendChild(detalleCadena);
     }
     pintarCadena();
-    c.appendChild(cadena);
+    heroEl.appendChild(cadena);
 
     // 3 · Por revisar (máximo 3 a la vista, urgente primero)
     var GR = { alta: 0, media: 1, baja: 2 };
@@ -314,28 +338,44 @@
     c.appendChild(el("h2", { texto: "Atención" }));
     var at = el("div", { id: "alertas", clase: "atencion" });
     var nUrg = await contarUrgentes();
-    at.appendChild(el("a", { href: "#revisar", id: "urgentes", clase: "urgente" + (nUrg ? "" : " al-dia"), onclick: function (ev) { ev.preventDefault(); F["f-estado"] = "sin_veredicto"; pag.errores = 1; ir("revisar"); } }, [
+    var desde = VERSIONES.filter(function (x) { return versionNum(x) >= 10082; }).sort(function (a, b) { return versionNum(a) - versionNum(b); })[0] || "10.82";
+    at.appendChild(el("a", { href: "#revisar", id: "urgentes", clase: "urgente" + (nUrg ? "" : " al-dia"), onclick: function (ev) {
+        ev.preventDefault(); F["f-estado"] = "sin_veredicto"; pag.errores = 1;
+        var con = Object.keys(urgPorVersion).filter(function (k) { return urgPorVersion[k] > 0; }); if (con.length === 1) F["f-version"] = con[0];
+        ir("revisar"); } }, [
       el("b", { clase: "urgente-n", texto: nUrg === null ? "—" : String(nUrg) }),
-      el("span", { clase: "urgente-t" }, [el("strong", { texto: nUrg === 1 ? "Error sin veredicto" : "Errores sin veredicto" }), el("small", { texto: nUrg ? "Nadie ha dicho si la app leyó bien o mal." : nUrg === 0 ? "Todo al día en este periodo." : "No se pudo contar." })]),
-      el("span", { clase: "urgente-ir", texto: "Revisar ›" })]));
+      el("span", { clase: "urgente-t" }, [el("strong", { texto: nUrg === 1 ? "Error sin veredicto" : "Errores sin veredicto" }), el("small", { texto: nUrg ? "De la " + desde + " en adelante" : nUrg === 0 ? "Todo al día" : "No se pudo contar" })]),
+      el("span", { clase: "urgente-ir", texto: "Revisar" })]));
+    // «Errores sin referencia humana» ya lo dice la tarjeta de arriba.
+    atn = atn.filter(function (a) { return a.componente !== "revision_humana"; });
     atn.slice(0, 3).forEach(function (a) { at.appendChild(tarjetaAlerta(a)); });
     if (atn.length > 3) at.appendChild(el("details", { clase: "mas-alertas" }, [el("summary", { texto: "Ver las " + (atn.length - 3) + " alertas restantes" }), el("div", { clase: "atencion" }, atn.slice(3).map(tarjetaAlerta))]));
-    if (!atn.length) at.appendChild(el("div", { clase: "detalle", texto: "Sin alertas con los datos de este periodo." }));
-    var meta = el("a", { href: "#revisar/capturas", id: "pend-revisar", clase: "boton-enlace revisar-entrada", texto: textoRevisar(null), onclick: function (ev) { ev.preventDefault(); ir("revisar", "capturas"); } });
-    at.appendChild(meta);
-    pendientesRev().then(function (n) { if (meta.isConnected && n !== null) meta.textContent = textoRevisar(n); });
     c.appendChild(at);
+    // Meta de etiquetado: capturas confirmadas por una persona.
+    var metaN = el("b", { clase: "mono", texto: "—" }), metaS = el("small", { texto: "Capturas de ofertas confirmadas por una persona" }), metaB = el("i");
+    c.appendChild(el("h2", { texto: "Meta de etiquetado" }));
+    c.appendChild(el("a", { href: "#revisar/capturas", id: "pend-revisar", clase: "meta-et", onclick: function (ev) { ev.preventDefault(); ir("revisar", "capturas"); } }, [
+      el("span", { clase: "meta-tx" }, [metaN, metaS, el("span", { clase: "medidor" }, [metaB])]), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]));
+    pendientesRev().then(function (x) {
+      if (!x || !metaN.isConnected) return;
+      metaN.textContent = x.rev + " de " + (x.rev + x.pend);
+      metaS.textContent = x.pend ? x.pend + " esperando revisión" : "Todo al día";
+      metaB.style.width = (x.rev + x.pend ? Math.round(x.rev / (x.rev + x.pend) * 100) : 0) + "%";
+    });
 
     // 4 · Cuatro cifras: cada una lleva a su detalle.
     var porClave = {}; d.indicadores.forEach(function (i) { porClave[i.clave] = i; });
     var DEST = { lecturas: ["calidad", "resumen"], tasa_errores: ["calidad", "versiones"], calidad_interpretacion: ["calidad", "ia"] };
+    var hs = d.historia || [];
+    var SPARK = { lecturas: hs.map(function (x) { return x.lecturas; }), tasa_errores: hs.map(function (x) { return x.lecturas ? x.errores / x.lecturas : null; }) };
     var cuatro = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean).map(function (i) {
-      return tarjeta(i, [enlace("Ver detalle ›", DEST[i.clave][0], DEST[i.clave][1])]); });
+      var t = tarjeta(i, [SPARK[i.clave] ? spark(SPARK[i.clave]) : null]);
+      return envolver(t, DEST[i.clave][0], DEST[i.clave][1]); });
     var kc = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta });
     if (kc) {
       var gasto = (kc.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0);
-      cuatro.push(el("div", { clase: "tarjeta", "data-clave": "gasto_ia" }, [el("div", { clase: "detalle", texto: "Gasto en IA" }), el("div", { clase: "valor", texto: (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—" }),
-        el("div", { clase: "detalle", texto: "USD en el periodo" }), enlace("Ver en Ajustes ›", "ajustes")]));
+      cuatro.push(envolver(el("div", { clase: "tarjeta", "data-clave": "gasto_ia" }, [el("div", { clase: "detalle", texto: "Gasto en IA" }), el("div", { clase: "valor", texto: (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—" }),
+        el("div", { clase: "detalle", texto: "USD en el periodo" })]), "ajustes"));
     }
     if (cuatro.length) { c.appendChild(el("h2", { texto: "Lo esencial" })); c.appendChild(el("div", { clase: "tarjetas cuatro", id: "esencial" }, cuatro)); }
 
@@ -420,12 +460,22 @@
   function versionesOpc() {
     return [el("option", { value: "", texto: "Todas" })].concat(VERSIONES.map(function (v) { return el("option", { value: v, texto: v }); }));
   }
+  var cargandoVersiones = null;
+  function asegurarVersiones() {
+    if (versionesCargadas) return Promise.resolve();
+    if (cargandoVersiones) return cargandoVersiones;
+    cargandoVersiones = (async function () {
+      var d = null;
+      try { var x = await cli.rpc("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T06:00:00Z" }); d = x && x.data && !x.data.error ? x.data : null; } catch (e) { d = null; }
+      versionesCargadas = true;
+      if (!d || !d.versiones) return;
+      d.versiones.forEach(function (x) { var v = String(x.version || ""); if (/^\d+\.\d+$/.test(v) && versionNum(v) >= 10082 && VERSIONES.indexOf(v) < 0) VERSIONES.push(v); });
+      VERSIONES.sort(function (a, b) { return versionNum(b) - versionNum(a); });
+    })();
+    return cargandoVersiones;
+  }
   async function cargarVersiones(sel) {
-    if (versionesCargadas) return; versionesCargadas = true;
-    var d = await llamar("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T06:00:00Z" });
-    if (!d || !d.versiones) return;
-    d.versiones.forEach(function (x) { var v = String(x.version || ""); if (/^\d+\.\d+$/.test(v) && versionNum(v) >= 10082 && VERSIONES.indexOf(v) < 0) VERSIONES.push(v); });
-    VERSIONES.sort(function (a, b) { return versionNum(b) - versionNum(a); });
+    await asegurarVersiones();
     var actual = sel.value; sel.textContent = ""; versionesOpc().forEach(function (o) { sel.appendChild(o); }); sel.value = actual;
   }
   function filtrosBase(extra) {
@@ -487,17 +537,31 @@
   }
   function tarjetaError(f) {
     var lec = f.lector_lectura || {}, ia = f.ia_lectura || {}, hu = f.referencia || null;
-    var m = marcas(lec, ia, hu);
-    function una(t, l) { return l; }
-    return el("article", { clase: "error-tarjeta", "data-id": String(f.id) }, [
-      el("div", { clase: "error-cab" }, [el("a", { href: "#errores/" + f.id, clase: "enlace", texto: "#" + f.id, onclick: function (ev) {
-          if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ev.preventDefault(); ir("errores", String(f.id)); return; }
-          ev.preventDefault(); var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
-          document.querySelectorAll(".error-tarjeta.sel").forEach(function (x) { x.classList.remove("sel"); }); ev.target.closest(".error-tarjeta").classList.add("sel");
-          expediente(l, f.id); l.scrollTop = 0; } }),
-        el("span", { clase: "detalle", texto: (TIPO_TXT[f.tipo] || txt(f.tipo)) + " · " + txt(f.app) + " " + txt(f.version) }), el("span", { clase: "detalle fecha", texto: fechaHora(f.creado) })]),
-      comparar3(lec, ia, hu),
-      el("div", { clase: "error-pie" }, [etiquetaVeredicto(f.estado_veredicto), el("span", { clase: "detalle", texto: f.tiene_captura ? "con captura" : "sin captura" })])]);
+    var CAMPOS = [["Tarifa", "tarifa", function (v) { return "$" + v; }], ["Km", "km", function (v) { return String(v); }], ["Min", "min", function (v) { return String(v); }]];
+    var nulo = function (v) { return v === null || v === undefined; };
+    var dif = el("div", { clase: "caso-dif" });
+    if (ia.oferta === false) dif.append("Lector ", el("b", { texto: tkm(lec).join(" · ") }), " · IA ", el("em", { texto: "no era oferta" }));
+    else {
+      var c = CAMPOS.filter(function (k) { var ref = hu && !nulo(hu[k[1]]) ? hu[k[1]] : ia[k[1]]; return !nulo(lec[k[1]]) && !nulo(ref) && String(lec[k[1]]) !== String(ref) || (hu && !nulo(hu[k[1]]) && !nulo(ia[k[1]]) && String(ia[k[1]]) !== String(hu[k[1]])); })[0];
+      if (c) dif.append(c[0] + ": Lector ", el("b", { texto: nulo(lec[c[1]]) ? "—" : c[2](lec[c[1]]) }), " · IA ", el("em", { texto: nulo(ia[c[1]]) ? "—" : c[2](ia[c[1]]) }), hu && !nulo(hu[c[1]]) ? " · Humano " + c[2](hu[c[1]]) : "");
+      else dif.append(el("b", { texto: tkm(lec).join(" · ") }));
+    }
+    var app = String(f.app || "").toLowerCase(), ve = VER_ET[f.estado_veredicto] || ["SIN DATO", "nd"];
+    function abrir(ev) {
+      ev.preventDefault();
+      if (!(window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches)) { ir("errores", String(f.id)); return; }
+      var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
+      document.querySelectorAll(".error-tarjeta.sel").forEach(function (x) { x.classList.remove("sel"); }); fila.classList.add("sel");
+      expediente(l, f.id); l.scrollTop = 0;
+    }
+    var fila = el("a", { href: "#revisar/" + f.id, clase: "error-tarjeta caso-fila", "data-id": String(f.id), onclick: abrir }, [
+      el("span", { clase: "plat " + (app === "didi" ? "d" : app === "uber" ? "u" : "x"), "aria-hidden": "true", texto: app === "didi" ? "D" : app === "uber" ? "U" : "?" }),
+      el("span", { clase: "caso-tx" }, [
+        el("span", { clase: "caso-l1" }, [el("b", { texto: "#" + f.id }), el("span", { texto: fechaHora(f.creado) })]),
+        dif,
+        el("span", { clase: "caso-meta" }, [el("span", { clase: "punto " + ve[1], "aria-hidden": "true" }), (TIPO_TXT[f.tipo] || txt(f.tipo)) + " · " + ve[0].charAt(0) + ve[0].slice(1).toLowerCase() + " · " + txt(f.app) + " " + txt(f.version) + (f.tiene_captura ? " · con captura" : "")])]),
+      el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]);
+    return fila;
   }
   function pasosSeg(estado) {
     var k = ESTADOS_SEG.indexOf(estado);
@@ -963,9 +1027,9 @@
   // Cuántas capturas esperan revisión (solo lectura; si falla, simplemente no se muestra).
   async function pendientesRev() {
     try { var r = await cli.rpc("admin_capturas_pendientes", { p_nivel: "rojo", p_limite: 1 }), d = r && r.data; if (!d || d.error) return null;
-      var p = d.pendientes || {}; return Object.keys(p).reduce(function (t, k) { return t + (Number(p[k]) || 0); }, 0); } catch (x) { return null; }
+      var suma = function (o) { return Object.keys(o || {}).reduce(function (t, k) { return t + (Number(o[k]) || 0); }, 0); };
+      return { pend: suma(d.pendientes), rev: suma(d.revisadas) }; } catch (x) { return null; }
   }
-  function textoRevisar(n) { return n === null ? "Revisar capturas de ofertas" : n > 0 ? "Revisar capturas · " + n + " esperando" : "Revisar capturas · todo al día"; }
   // ---------- Revisar › Historial: todas las lecturas del periodo (antes «Ofertas») ----------
   async function historial(c) {
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
@@ -1421,8 +1485,8 @@
     raiz.appendChild(nav); raiz.appendChild(marco);
     marco.appendChild(barraEstado());
     // Título de la pestaña y sus subpestañas (no en Hoy ni dentro del detalle de un error).
-    if (vista !== "hoy" && !enDetalle()) {
-      marco.appendChild(el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] }));
+    if (!enDetalle()) {
+      marco.appendChild(el("div", { clase: "titulo-wrap" }, [el("div", { clase: "fecha-hoy", texto: fechaLarga() }), el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] })]));
       if (SUBS[vista]) {
         var sa = subActual();
         marco.appendChild(el("div", { clase: "subtabs", role: "group", "aria-label": "Secciones de " + vista }, SUBS[vista].map(function (x) {
