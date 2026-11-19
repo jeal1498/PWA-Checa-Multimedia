@@ -908,8 +908,8 @@
     });
     var tablaV = valoresCard(campos, refE ? ["Lector", "IA", "Humano"] : ["Lector", "IA"]);
     var sugErr = null;
-    var colNota = esRev && !sha ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: "No se puede decidir: captura no verificable." })]) : null;
     var tieneCaptura = !!(e.evidencia && e.evidencia.captura);
+    var colNota = esRev && (!sha || !tieneCaptura) ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: !sha ? "No se puede decidir: captura no verificable." : "Sin captura: no se puede comprobar. Solo puedes descartarlo." })]) : null;
     var checkBtn = tieneCaptura ? el("button", { type: "button", id: "check-ia", clase: "ia-btn", texto: "Check IA", onclick: pedirCheck }) : null;
     var TOL = { tarifa: 0.01, km: 0.15, min: 1 };
     function marcarSugerido(idBtn) {
@@ -961,7 +961,15 @@
     // Decisión: siempre a la vista.
     if (esRev) {
       var iaOk = iaNo || ["tarifa", "km", "min"].every(function (k) { return Number(ia[k]) > 0; }), off = sha ? null : "";
-      c.appendChild(el("div", { clase: "ficha-bar", id: "barra-acc" }, sha ? [
+      var descartar = async function () {
+        var args = { objetivo: "error_lector", objetivo_id: String(e.id), clase: "ilegible", tarifa: null, km: null, min: null, confianza: "alta", evidencia_sha256: sha, nota: "Sin captura: descartado" };
+        var enviar = async function () { var r = await llamar("admin_veredicto", args); return !!(r && r.id); };
+        await commitirPendiente(); programarVeredicto(e.id, enviar); avanzarError(e.id);
+      };
+      c.appendChild(el("div", { clase: "ficha-bar", id: "barra-acc" }, sha && !tieneCaptura ? [
+        el("button", { type: "button", id: "ver-descartar", clase: "p", texto: "Descartar: sin captura", onclick: descartar }),
+        sigE ? el("button", { type: "button", id: "pasar", texto: "Pasar al siguiente", onclick: function () { ir("errores", String(sigE)); } }) : el("button", { type: "button", id: "pasar", texto: "Volver a la lista", onclick: function () { ir("revisar"); } })]
+        : sha ? [
         el("button", { type: "button", id: "ver-lector", clase: "p", texto: "Acertó el Lector", onclick: function () { veredictoRapido(e, lec, ia, "lector", sugErr); } }),
         el("button", { type: "button", id: "ver-ia", clase: "p", disabled: iaOk ? null : "", texto: iaNo ? "Acertó la IA: no era oferta" : "Acertó la IA", onclick: function () { veredictoRapido(e, lec, ia, "ia", sugErr); } }),
         el("button", { type: "button", id: "ver-corregir", texto: "Otro valor", onclick: function () { hojaVeredicto(e, lec, ia, sugErr, sugErr); } }),
@@ -1306,7 +1314,7 @@
   function subsDe(R, kpi, lin) {
     if (kpi === "todo") return [];
     var g = lin === "error" ? R.err : (R.pop && R.pop[lin]) || {}, o;
-    if (kpi === "pend") { o = EDADES.map(function (e) { return [e[0], e[1], Number((g.edad || {})[e[0]] || 0), e[2]]; }); if (lin === "error") o.push(["sin_captura", "Sin captura (no se pueden decidir)", Number(g.sin_captura || 0), "Sin captura: no se pueden decidir"]); return o; }
+    if (kpi === "pend") { o = EDADES.map(function (e) { return [e[0], e[1], Number((g.edad || {})[e[0]] || 0), e[2]]; }); if (lin === "error") o.push(["sin_captura", "Sin captura (solo se pueden descartar)", Number(g.sin_captura || 0), "Sin captura: solo descartar"]); return o; }
     return (lin === "error" ? RES_ERR : RES_POP).map(function (e) { return [e[0], e[1], Number(((lin === "error" ? g.veredictos : g.resultados) || {})[e[0]] || 0), e[2]]; });
   }
   function aplicaSub(it, kpi, lin, sub) {
@@ -1376,6 +1384,7 @@
       }
       if (kpi === "pend") {
         des.appendChild(el("div", { clase: "kp-pie" }, [el("span", { texto: "El más viejo sin revisar" }), el("b", { texto: R.mas_viejo ? haceTxt(R.mas_viejo.creado) + " · " + (R.mas_viejo.t === "error" ? "error" : "pop-up") : "nada pendiente" })]));
+        if (Number((R.err || {}).no_decidibles || 0) > 0) des.appendChild(el("div", { clase: "kp-pie" }, [el("span", { texto: "Sin captura ni huella: no se pueden decidir, no cuentan" }), el("b", { texto: String(R.err.no_decidibles) })]));
         if (esRevisor && NUM.pend) des.appendChild(el("a", { href: "#revisar", id: "empezar", clase: "empezar-v", onclick: function (ev) { ev.preventDefault(); if (empezarAbrir) empezarAbrir(); } }, [sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico-play" }, [sv("path", { d: "M8 5l11 7-11 7z", fill: "currentColor" })]), "Empezar por el más viejo"]));
       } else if (kpi === "rev") {
         var ac = R.acierto || {}, nA = Number(ac.n || 0);
