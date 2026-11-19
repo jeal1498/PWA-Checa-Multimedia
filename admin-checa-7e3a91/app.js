@@ -848,9 +848,9 @@
     var hayDif = campos.some(function (c) { return c.estado === "dif"; }), cols = rot.length;
     var cab = el("div", { clase: "vq-cab qg" + cols }, rot.map(function (r, i) { return el("span", { clase: "vq-h" + (i > 0 ? (i === cols - 1 ? " r" : " m") : ""), texto: r }); }));
     var bloques = orden.map(function (c) {
-      var cuerpo = c.estado === "ok" ? el("div", { clase: "vq-v", texto: "Coinciden " + c.v[0] })
+      var cuerpo = c.estado === "ok" ? el("div", { clase: "vq-v ok" }, [el("small", { texto: "Coinciden" }), el("b", { texto: c.v[0] })])
         : !c.estado && cols === 1 ? el("div", { clase: "vq-v", texto: c.v[0] })
-        : el("div", { clase: "vq-fila qg" + cols }, c.v.slice(0, cols).map(function (v, i) { return el("span", { clase: "vq-v" + (i > 0 ? (i === cols - 1 ? " r" : " m") : "") + (i === 1 && c.estado === "dif" ? " red" : ""), texto: v }); }));
+        : el("div", { clase: "vq-fila qg" + cols }, c.v.slice(0, cols).map(function (v, i) { return (function () { var mu = cols >= 3 ? /^(.+) (km|min)$/.exec(v) : null; var at = { clase: "vq-v" + (i > 0 ? (i === cols - 1 ? " r" : " m") : "") + (i === 1 && c.estado === "dif" ? " red" : "") }; if (mu) return el("span", at, [el("b", { texto: mu[1] }), el("small", { texto: mu[2] })]); at.texto = v; return el("span", at); })(); }));
       return el("div", { clase: "vq-b", "data-metrica": c.k }, [el("span", { clase: "vq-h", texto: c.nom }), cuerpo]);
     });
     return el("div", { clase: "vtc2" + (hayDif ? " dif" : ""), id: "comparar" }, [cab, el("div", { clase: "vbox" }, bloques)]);
