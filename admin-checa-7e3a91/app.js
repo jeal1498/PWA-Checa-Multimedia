@@ -855,10 +855,7 @@
   }
   // La captura toma la altura de la columna de valores y conserva su proporción.
   function fichaFila(capEl, hijosCol, id) {
-    var cap = el("div", { clase: "ficha-cap" }, [capEl]), col = el("div", { clase: "ficha-col" }, hijosCol), fila = el("div", { clase: "ficha-fila", id: id || null }, [cap, col]);
-    function ajustar() { var h = Math.round(col.getBoundingClientRect().height); if (h > 120) { cap.style.height = h + "px"; cap.style.width = Math.round(h * 468 / 1011) + "px"; } }
-    if (window.ResizeObserver) new ResizeObserver(ajustar).observe(col); else setTimeout(ajustar, 50);
-    return fila;
+    return el("div", { clase: "ficha-fila", id: id || null }, [el("div", { clase: "ficha-cap" }, [capEl]), el("div", { clase: "ficha-col" }, hijosCol)]);
   }
   // Un toque: guarda el veredicto con los valores del Lector o de la IA. Se puede deshacer 7 segundos.
   async function veredictoRapido(e, lec, ia, quien, sug) {
@@ -901,7 +898,7 @@
     });
     var tablaV = valoresCard(campos, refE ? ["Lector", "IA", "Humano"] : ["Lector", "IA"]);
     var cajaSug = null, sugErr = null, colSug = el("div", { clase: "ficha-colsug" });
-    var colNota = esRev && !sha ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: "No se puede decidir: la captura no se puede comprobar." })]) : null;
+    var colNota = esRev && !sha ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: "No se puede decidir: captura no verificable." })]) : null;
     c.appendChild(fichaFila(marcoCaptura(e), [tablaV, colNota, colSug]));
     if (e.evidencia && e.evidencia.captura) {
       var cajaIA = el("div", { id: "ia-vision" });
