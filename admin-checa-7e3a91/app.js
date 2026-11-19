@@ -938,8 +938,8 @@
     function aplicarCheck(sug) {
       if (checkBtn) { checkBtn.disabled = true; checkBtn.classList.add("ok"); checkBtn.textContent = ""; checkBtn.appendChild(icoOkV()); checkBtn.appendChild(document.createTextNode("Verificado")); }
       var vig = sug.estado === "vigente";
-      if (vig) METR.forEach(function (m) { var b = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (b) b.appendChild(el("div", { clase: "chk", texto: "IA " + fmtV(m[1], sug[m[1]]) })); });
-      else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "IA: " + (sug.estado === "vencida" ? "oferta vencida" : sug.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
+      if (vig) METR.forEach(function (m) { var b = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (b) b.appendChild(el("div", { clase: "chk", texto: "Imagen " + fmtV(m[1], sug[m[1]]) })); });
+      else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "Imagen: " + (sug.estado === "vencida" ? "oferta vencida" : sug.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
       var reco;
       if (!vig) reco = "ver-no";
       else {
