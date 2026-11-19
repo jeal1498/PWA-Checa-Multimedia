@@ -1131,3 +1131,18 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 .modo-ficha .contenido { min-height:100dvh; display:flex; flex-direction:column; }
 .modo-ficha .vista-cuerpo, .modo-ficha #rev-cuerpo { flex:1; display:flex; flex-direction:column; }
 .ficha-bar { margin:auto -16px 0; }
+
+/* ===== Tarjeta de valores: difiere (un bloque por campo) + coinciden. Escala: etiqueta 11 · fila 13 · valor 16 ===== */
+.ficha-fila { align-items:flex-start; }
+.ficha-cap { width:137px; height:296px; }
+.vtc { background:var(--tablero); border:1px solid var(--hb); border-radius:22px; overflow:hidden; }
+.dd { padding:12px 14px 10px; background:color-mix(in srgb, var(--luz-r) 13%, var(--tablero)); } .dd + .dd { border-top:1px solid color-mix(in srgb, var(--luz-r) 22%, var(--tablero)); }
+.dt, .co .cab { font:700 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--gm); }
+.dt { display:flex; justify-content:space-between; align-items:center; } .dt em { font-style:normal; color:var(--rojo); }
+.dl { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-top:6px; font:500 13px "DM Sans", system-ui, sans-serif; color:var(--gm); }
+.dl b, .ci b { font:700 16px "JetBrains Mono", ui-monospace, monospace; letter-spacing:-.04em; white-space:nowrap; color:var(--texto); } .dl.iav b { color:var(--rojo); }
+.co { padding:0 14px 4px; } .dd + .co, .co + .co { border-top:1px solid var(--hb); } .co .cab { padding-top:12px; }
+.ci { display:flex; align-items:center; gap:6px; min-height:46px; font:500 13px "DM Sans", system-ui, sans-serif; color:var(--gm); } .ci + .ci { border-top:1px solid var(--hb); } .ci b { margin-left:auto; }
+.ci-ic { width:18px; height:18px; border-radius:50%; background:var(--luz-v); color:#04210F; display:grid; place-items:center; flex:none; } .ci-ic svg { width:12px; height:12px; }
+.ci.sin { padding-left:0; }
+.ficha-col .ia-btn { min-height:52px; flex:none; } .ficha-col { gap:10px; }

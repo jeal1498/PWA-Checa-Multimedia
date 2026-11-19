@@ -840,6 +840,26 @@
   }
   // Valores redondeados: 18.8 km, no 18.799999999999997.
   function fmtV(k, v) { if (v === null || v === undefined || isNaN(Number(v))) return "—"; if (k === "tarifa") return "$" + Number(v).toFixed(2); var x = +Number(v).toFixed(1); return k === "km" ? x + " km" : x + " min"; }
+  // Tarjeta de valores: primero lo que difiere (un bloque por campo) y debajo lo que coincide.
+  // Una sola escala de letra: etiqueta 11 · fila 13 · valor 16.
+  function icoOkV() { return el("span", { clase: "ci-ic", "aria-hidden": "true" }, [sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3.4", "stroke-linecap": "round", "stroke-linejoin": "round" }, [sv("path", { d: "M5 12.5l4.5 4.5L19 7" })])]); }
+  function valoresCard(campos, rot, tituloSin) {
+    var dd = campos.filter(function (c) { return c.estado === "dif"; }), ok = campos.filter(function (c) { return c.estado === "ok"; }), sc = campos.filter(function (c) { return !c.estado; }), nodos = [];
+    dd.forEach(function (c) {
+      nodos.push(el("div", { clase: "dd", "data-metrica": c.k }, [el("div", { clase: "dt" }, [el("span", { texto: c.nom }), el("em", { texto: "Difiere" })])]
+        .concat(rot.map(function (r, i) { return el("div", { clase: "dl" + (i === 1 ? " iav" : "") }, [el("span", { texto: r }), el("b", { texto: c.v[i] })]); }))));
+    });
+    if (ok.length) nodos.push(el("div", { clase: "co" }, [el("div", { clase: "cab", texto: "Coinciden" })].concat(ok.map(function (c) { return el("div", { clase: "ci", "data-metrica": c.k }, [icoOkV(), el("span", { texto: c.nom }), el("b", { texto: c.v[0] })]); }))));
+    if (sc.length) nodos.push(el("div", { clase: "co" }, [el("div", { clase: "cab", texto: tituloSin || "Sin comparar" })].concat(sc.map(function (c) { return el("div", { clase: "ci sin", "data-metrica": c.k }, [el("span", { texto: c.nom }), el("b", { texto: c.v[0] })]); }))));
+    return el("div", { clase: "vtc", id: "comparar" }, nodos);
+  }
+  // La captura toma la altura de la columna de valores y conserva su proporción.
+  function fichaFila(capEl, hijosCol, id) {
+    var cap = el("div", { clase: "ficha-cap" }, [capEl]), col = el("div", { clase: "ficha-col" }, hijosCol), fila = el("div", { clase: "ficha-fila", id: id || null }, [cap, col]);
+    function ajustar() { var h = Math.round(col.getBoundingClientRect().height); if (h > 120) { cap.style.height = h + "px"; cap.style.width = Math.round(h * 468 / 1011) + "px"; } }
+    if (window.ResizeObserver) new ResizeObserver(ajustar).observe(col); else setTimeout(ajustar, 50);
+    return fila;
+  }
   // Un toque: guarda el veredicto con los valores del Lector o de la IA. Se puede deshacer 7 segundos.
   async function veredictoRapido(e, lec, ia, quien, sug) {
     var src = quien === "lector" ? lec : ia, no = quien === "ia" && ia.oferta === false;
@@ -872,19 +892,17 @@
       el("div", { clase: "ficha-sub", texto: (TIPO_TXT[e.tipo] || txt(e.tipo)) + " · " + appTxt(e.app) + " " + txt(e.version) + " · " + fechaHora(e.creado) })]));
     var sha = e.enlace && e.enlace.captura_sha256, esRev = !!(yo && yo.rol === "revisor");
     var METR = [["Tarifa", "tarifa"], ["Distancia", "km"], ["Tiempo", "min"]];
-    var filasV = METR.map(function (m) {
+    var campos = METR.map(function (m) {
       var k = m[1], L = lec[k], I = iaNo ? undefined : ia[k], H = refE ? refE[k] : undefined, estado = null;
       if (refE && !nulo(H)) estado = (String(L) !== String(H) || iaNo || (!nulo(I) && String(I) !== String(H))) ? "dif" : "ok";
       else if (!iaNo && !nulo(L) && !nulo(I)) estado = String(L) !== String(I) ? "dif" : "ok";
       else if (iaNo) estado = "dif";
-      return el("div", { clase: "vt-r" + (estado === "dif" ? " dif" : ""), "data-metrica": k }, [
-        el("small", {}, [m[0], estado === "ok" ? el("span", { clase: "fv-eq", texto: "igual" }) : null]),
-        el("b", { texto: fmtV(k, L) }), el("b", { texto: iaNo ? "no era oferta" : fmtV(k, I) }), refE ? el("b", { texto: nulo(H) ? (refE.clase || "—") : fmtV(k, H) }) : null]);
+      return { nom: m[0], k: k, estado: estado, v: [fmtV(k, L), iaNo ? "no era oferta" : fmtV(k, I)].concat(refE ? [nulo(H) ? (refE.clase || "—") : fmtV(k, H)] : []) };
     });
-    var tablaV = el("div", { clase: "vt" + (refE ? " c3" : ""), id: "comparar" }, [el("div", { clase: "vt-h" }, [el("span", { texto: "Lector" }), el("span", { texto: "IA" }), refE ? el("span", { texto: "Humano" }) : null])].concat(filasV));
+    var tablaV = valoresCard(campos, refE ? ["Lector", "IA", "Humano"] : ["Lector", "IA"]);
     var cajaSug = null, sugErr = null, colSug = el("div", { clase: "ficha-colsug" });
     var colNota = esRev && !sha ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: "No se puede decidir: la captura no se puede comprobar." })]) : null;
-    c.appendChild(el("div", { clase: "ficha-fila" }, [el("div", { clase: "ficha-cap" }, [marcoCaptura(e)]), el("div", { clase: "ficha-col" }, [tablaV, colNota, colSug])]));
+    c.appendChild(fichaFila(marcoCaptura(e), [tablaV, colNota, colSug]));
     if (e.evidencia && e.evidencia.captura) {
       var cajaIA = el("div", { id: "ia-vision" });
       var pintarIA = function (sug, pidiendo) {
@@ -1114,16 +1132,15 @@
         marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(estado.url, it.id); } })); }
       else marco.appendChild(el("div", { clase: "marco-centro" }, [el("span", { texto: "La captura ya no está disponible." })]));
       marco.appendChild(el("span", { clase: "marco-hora", texto: hora(it.creado) }));
-      var CAMPOS = [["Tarifa", "tarifa", pop.tarifa, Sx && Sx.tarifa, 0.01, null], ["Distancia", "km", pop.km, Sx && Sx.km, 0.15, rec("recKm", "km")], ["Tiempo", "min", pop.min, Sx && Sx.min, 1, rec("recMin", "min")]];
-      var filasV = CAMPOS.map(function (m) {
-        var dif = Sx && (!vig || (m[3] !== null && m[3] !== undefined && m[2] !== null && Math.abs(m[3] - m[2]) > m[4]));
-        return el("div", { clase: "vt-r" + (dif ? " dif" : ""), "data-metrica": m[1] }, [el("small", {}, [m[0], Sx && vig && !dif ? el("span", { clase: "fv-eq", texto: "igual" }) : null]),
-          el("b", { texto: fmtV(m[1], m[2]) }), Sx ? el("b", { texto: vig ? fmtV(m[1], m[3]) : "no es oferta" }) : null, m[5] ? el("div", { clase: "fv-n", texto: m[5] }) : null]);
+      var CAMPOS = [["Tarifa", "tarifa", pop.tarifa, Sx && Sx.tarifa, 0.01], ["Distancia", "km", pop.km, Sx && Sx.km, 0.15], ["Tiempo", "min", pop.min, Sx && Sx.min, 1]];
+      var campos = CAMPOS.map(function (m) {
+        var estado = !Sx ? null : (!vig || (m[3] !== null && m[3] !== undefined && m[2] !== null && Math.abs(m[3] - m[2]) > m[4])) ? "dif" : "ok";
+        return { nom: m[0], k: m[1], estado: estado, v: [fmtV(m[1], m[2]), vig ? fmtV(m[1], m[3]) : "no es oferta"] };
       });
-      var tablaV = el("div", { clase: "vt" + (Sx ? "" : " c1") }, [el("div", { clase: "vt-h" }, [el("span", { texto: "App" }), Sx ? el("span", { texto: "IA" }) : null])].concat(filasV));
-      var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" }), cajaRes = null;
+      var tablaV = valoresCard(campos, Sx ? ["App", "IA"] : ["App"], "Lo que mostró el pop-up");
+      var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" });
       if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo con la IA…" : "Sugerencia de la IA", onclick: pedirIA }));
-      cuerpo.appendChild(el("div", { clase: "ficha-fila", id: "rev-actual" }, [el("div", { clase: "ficha-cap" }, [marco]), el("div", { clase: "ficha-col" }, [tablaV, colSug])]));
+      cuerpo.appendChild(fichaFila(marco, [tablaV, colSug], "rev-actual"));
       if (S) {
         var vigente = S.estado === "vigente", motivoSug = S.estado === "sin_oferta" ? "no_oferta" : "vencida";
         cuerpo.appendChild(el("div", { clase: "rev-ia-caja", id: "rev-ia-caja" }, [
@@ -1138,7 +1155,8 @@
       cuerpo.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre esta revisión" }));
       var barra = el("i"); barra.style.width = (tot ? Math.round(hechas / tot * 100) : 0) + "%";
       var P = estado.prec;
-      cuerpo.appendChild(el("div", { clase: "ficha-lista" }, [fichaAcc("Cómo va la revisión", hechas + " de " + tot, [el("div", { clase: "progreso-v3" }, [el("span", { clase: "medidor" }, [barra]), el("span", { texto: hechas + " de " + tot + " · 10.82" })]),
+      var recTxt = [rec("recKm", "km"), rec("recMin", "min")].filter(Boolean);
+      cuerpo.appendChild(el("div", { clase: "ficha-lista" }, [recTxt.length ? fichaAcc("Recogida", null, recTxt.map(function (t) { return el("div", { clase: "detalle", texto: t }); }), false, "rev-recogida") : null, fichaAcc("Cómo va la revisión", hechas + " de " + tot, [el("div", { clase: "progreso-v3" }, [el("span", { clase: "medidor" }, [barra]), el("span", { texto: hechas + " de " + tot + " · 10.82" })]),
         el("div", { clase: "detalle meta-color", texto: rotulo[1] + ": " + (estado.rev[revNivel] || 0) + " de " + REV_META + " para la meta de este color" }),
         P && P.n > 0 ? el("div", { clase: "detalle", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · pocos casos para opinar (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }) : null], false, "rev-progreso")]));
       if (esRevisor) cuerpo.appendChild(el("div", { clase: "ficha-bar", id: "rev-botones" }, [
