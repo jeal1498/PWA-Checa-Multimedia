@@ -3,7 +3,7 @@
 // (nada de innerHTML con datos). No guarda nada en el navegador. Ningún dato inventado: sin datos → gris «sin datos».
 (function () {
   "use strict";
-  var cli = null, yo = null, vista = "inicio", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
+  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, vista = "inicio", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
   var SVG = "http://www.w3.org/2000/svg";
   // [id, nombre completo, nombre corto para la barra inferior del teléfono]
   var MODULOS = [["inicio", "Inicio · Salud", "Salud"], ["errores", "Errores", "Errores"], ["ofertas", "Ofertas", "Ofertas"], ["versiones", "Versiones", "Versiones"],
@@ -58,12 +58,29 @@
   function icono(id) {
     return sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }, [sv("path", { d: ICONOS[id] })]);
   }
-  function aviso(t) { var a = document.getElementById("aviso"); a.textContent = t || ""; a.hidden = !t; }
+  function aviso(t, reintentar, detalle) {
+    var a = document.getElementById("aviso"); a.textContent = "";
+    if (!t) { a.hidden = true; return; }
+    a.appendChild(el("span", { clase: "aviso-t", texto: t }));
+    if (detalle) a.appendChild(el("small", { texto: detalle }));
+    if (reintentar) a.appendChild(el("button", { type: "button", texto: "Reintentar", onclick: function () { pintar(); } }));
+    a.appendChild(el("button", { type: "button", clase: "cerrar-aviso", texto: "Cerrar", "aria-label": "Cerrar aviso", onclick: function () { aviso(""); } }));
+    a.hidden = false;
+  }
   function txt(v) { return v === null || v === undefined || v === "" ? "—" : String(v); }
   function pct(v) { return v === null || v === undefined ? "—" : (Number(v) * 100).toFixed(1) + " %"; }
-  function iso(d) { return d.toISOString().slice(0, 10); }
+  var TZ = "America/Mexico_City";
+  function iso(d) { return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d); }
+  function hora(f) { var d = new Date(f); return !f || isNaN(d) ? "—" : new Intl.DateTimeFormat("es-MX", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(d); }
+  // «hoy 20:10», «ayer 08:05», «12 nov 20:10»: siempre en hora de México, nunca en UTC.
+  function fechaHora(f) {
+    var d = new Date(f); if (!f || isNaN(d)) return "—";
+    var dia = iso(d), hoy = iso(new Date()), ayer = iso(new Date(Date.now() - 864e5));
+    var pre = dia === hoy ? "hoy" : dia === ayer ? "ayer" : new Intl.DateTimeFormat("es-MX", { timeZone: TZ, day: "numeric", month: "short" }).format(d).replace(".", "");
+    return pre + " " + hora(f);
+  }
   function rango() {
-    return { desde: (F.desde || iso(new Date(Date.now() - dias * 864e5))) + "T00:00:00Z", hasta: (F.hasta || iso(new Date(Date.now() + 864e5))) + "T00:00:00Z" };
+    return { desde: (F.desde || iso(new Date(Date.now() - dias * 864e5))) + "T06:00:00Z", hasta: (F.hasta || iso(new Date(Date.now() + 864e5))) + "T06:00:00Z" };
   }
   function esc(s) { return s; }
   function punto(estado) { return el("span", { clase: "punto " + (ESTADO[estado] || "nd"), title: TEXTO[estado] || estado }); }
@@ -72,8 +89,8 @@
   async function llamar(fn, args) {
     aviso("");
     var r;
-    try { r = await cli.rpc(fn, args || {}); } catch (e) { aviso("Sin conexión con el servidor. Intenta de nuevo."); return null; }
-    if (r.error) { aviso("Error del servidor: " + (r.error.message || r.error.code || "desconocido")); return null; }
+    try { r = await cli.rpc(fn, args || {}); } catch (e) { falloCarga = true; aviso("No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.", true); return null; }
+    if (r.error) { falloCarga = true; aviso("No pudimos cargar los datos. Intenta de nuevo en un momento.", true, "Detalle técnico: " + (r.error.message || r.error.code || "desconocido")); return null; }
     var d = r.data;
     if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : d.error === "veredicto_invalido" ? "El veredicto no es válido: revisa los valores (la oferta necesita tarifa, distancia y tiempo mayores que cero)." : d.error === "revision_invalida" ? "La revisión no es válida: revisa los valores o el motivo." : d.error === "objetivo_o_evidencia" ? "No se puede comprobar la captura de este caso: no admite veredicto." : "Filtro inválido: " + d.error); return null; }
     return d;
@@ -216,7 +233,7 @@
         var aclara = al ? aclaracion(al) : null;
         detalleCadena.appendChild(el("div", { clase: "fila" }, [insignia(p.estado), el("strong", { texto: p.paso.nombre + " · " + pq[0] })]));
         detalleCadena.appendChild(el("div", { clase: "aclara", texto: aclara || RESPUESTA[p.estado] || TEXTO[p.estado] }));
-        if (x.ultima_comprobacion) detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + String(x.ultima_comprobacion).slice(0, 16).replace("T", " ") + " UTC" }));
+        if (x.ultima_comprobacion) detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + fechaHora(x.ultima_comprobacion) }));
         if (al) detalleCadena.appendChild(enlace(al.componente === "revision_ia" ? "Abrir Auditoría IA" : al.componente === "revision_humana" ? "Abrir errores" : "Abrir ofertas", al.componente === "revision_ia" ? "ia" : al.componente === "revision_humana" ? "errores" : "ofertas"));
       } else detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Toca un paso para ver qué significa." }));
       cadena.appendChild(detalleCadena);
@@ -233,8 +250,8 @@
         el("div", { clase: "fila" }, [el("span", { clase: "tag " + a.gravedad, texto: GRAVEDAD[a.gravedad] || a.gravedad.toUpperCase() }), el("strong", { texto: a.titulo })]),
         aclara ? el("div", { clase: "aclara", texto: aclara }) : null,
         el("details", {}, [el("summary", { texto: "Más detalle" }),
-          el("div", { clase: "detalle", texto: a.descripcion + " · parte: " + a.componente }),
-          el("div", { clase: "detalle", texto: "Evidencia: " + a.evidencia + " · " + a.estado })]),
+          el("div", { clase: "detalle", texto: a.descripcion }),
+          el("div", { clase: "detalle", texto: "Dato técnico: " + a.evidencia })]),
         enlace("Abrir", a.componente === "revision_ia" ? "ia" : a.componente === "revision_humana" ? "errores" : "ofertas")]);
     }
     c.appendChild(el("h2", { texto: "Por revisar" + (atn.length ? " (" + atn.length + ")" : "") }));
@@ -307,7 +324,7 @@
   }
   async function cargarVersiones(sel) {
     if (versionesCargadas) return; versionesCargadas = true;
-    var d = await llamar("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T00:00:00Z" });
+    var d = await llamar("admin_versiones", { desde: "2026-11-01T00:00:00Z", hasta: iso(new Date(Date.now() + 864e5)) + "T06:00:00Z" });
     if (!d || !d.versiones) return;
     d.versiones.forEach(function (x) { var v = String(x.version || ""); if (/^\d+\.\d+$/.test(v) && versionNum(v) >= 10082 && VERSIONES.indexOf(v) < 0) VERSIONES.push(v); });
     VERSIONES.sort(function (a, b) { return versionNum(b) - versionNum(a); });
@@ -334,19 +351,25 @@
     });
     var n = Object.keys(F).filter(function (k) { return F[k] && k.indexOf("f-") === 0 && k !== "f-desde" && k !== "f-hasta"; }).length;
     var pleg = el("details", { clase: "filtros-hoja" }, [el("summary", { texto: "Filtros" + (n ? " (" + n + ")" : "") }), nodo]);
-    pleg.open = true;
+    var movil = !!(window.matchMedia && matchMedia("(max-width:760px)").matches);
+    pleg.open = movil ? filtrosAbiertos : true;
+    pleg.addEventListener("toggle", function () { if (movil) filtrosAbiertos = pleg.open; });
     return pleg;
   }
-  function opciones(id, etiqueta, vals) {
-    return el("label", {}, [etiqueta, el("select", { id: id }, vals.map(function (v) { return el("option", { value: v, texto: v || "Todos" }); }))]);
+  function opciones(id, etiqueta, vals, mapa) {
+    return el("label", {}, [etiqueta, el("select", { id: id }, vals.map(function (v) { return el("option", { value: v, texto: (mapa && mapa[v]) || v || "Todos" }); }))]);
   }
+  var VER_TXT = { referencia_doble: "Persona e IA de acuerdo", referencia_adjudicada: "Resuelto tras revisar", referencia_humana: "Revisado por una persona", conflicto_humano: "Personas en desacuerdo",
+                  solo_ia: "Solo opinó la IA", heredado_no_revisado: "Caso viejo, sin revisar", sin_veredicto: "Sin revisar" };
+  var TIPO_TXT = { diferencia: "Diferencia", rescate: "Rescate", desacuerdo: "Desacuerdo", reporte: "Reporte" };
+  var RES_TXT = { oferta: "Oferta", duplicada: "Duplicada", varias: "Varias ofertas", abstencion: "Sin lectura", no_oferta: "No era oferta", descartada: "Descartada", timeout: "Tardó demasiado", error: "Error" };
   var VEREDICTOS = ["", "referencia_doble", "referencia_adjudicada", "referencia_humana", "conflicto_humano", "solo_ia", "heredado_no_revisado", "sin_veredicto"];
   function valor(id) { return F[id] ? F[id] : null; }
 
   // ---------- Errores: tarjetas con la comparación a la vista ----------
-  var VER_ET = { solo_ia: ["SOLO IA", "aviso"], conflicto_humano: ["CONFLICTO", "mal"], referencia_doble: ["CON REFERENCIA", "ok"], referencia_adjudicada: ["CON REFERENCIA", "ok"],
-                 referencia_humana: ["CON REFERENCIA", "ok"], heredado_no_revisado: ["ANTERIOR", "nd"], sin_veredicto: ["SIN VEREDICTO", "nd"] };
-  var CHIPS = [["", "Todos"], ["solo_ia", "Solo IA"], ["conflicto_humano", "Conflicto"], ["referencia_humana", "Con referencia"]];
+  var VER_ET = { solo_ia: ["SOLO IA", "aviso"], conflicto_humano: ["EN DESACUERDO", "mal"], referencia_doble: ["REVISADO", "ok"], referencia_adjudicada: ["REVISADO", "ok"],
+                 referencia_humana: ["REVISADO", "ok"], heredado_no_revisado: ["CASO VIEJO", "nd"], sin_veredicto: ["SIN REVISAR", "nd"] };
+  var CHIPS = [["", "Todos"], ["solo_ia", "Solo IA"], ["conflicto_humano", "En desacuerdo"], ["referencia_humana", "Revisados"]];
   function etiquetaVeredicto(v) { var x = VER_ET[v] || [v ? String(v).toUpperCase() : "SIN DATO", "nd"]; return el("span", { clase: "vb " + x[1], texto: x[0] }); }
   function tkm(l) { return [l.tarifa === null || l.tarifa === undefined ? "—" : "$" + l.tarifa, l.km === null || l.km === undefined ? "—" : l.km + " km", l.min === null || l.min === undefined ? "—" : l.min + "'"]; }
   function clave3(l) { return [l.tarifa, l.km, l.min].map(txt).join("|"); }
@@ -374,7 +397,7 @@
           ev.preventDefault(); var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
           document.querySelectorAll(".error-tarjeta.sel").forEach(function (x) { x.classList.remove("sel"); }); ev.target.closest(".error-tarjeta").classList.add("sel");
           expediente(l, f.id); l.scrollTop = 0; } }),
-        el("span", { clase: "detalle", texto: txt(f.tipo) + " · " + txt(f.app) + " " + txt(f.version) }), el("span", { clase: "detalle fecha", texto: (f.creado || "").slice(0, 16).replace("T", " ") })]),
+        el("span", { clase: "detalle", texto: (TIPO_TXT[f.tipo] || txt(f.tipo)) + " · " + txt(f.app) + " " + txt(f.version) }), el("span", { clase: "detalle fecha", texto: fechaHora(f.creado) })]),
       comparar3(lec, ia, hu),
       el("div", { clase: "error-pie" }, [etiquetaVeredicto(f.estado_veredicto), el("span", { clase: "detalle", texto: f.tiene_captura ? "con captura" : "sin captura" })])]);
   }
@@ -387,7 +410,7 @@
     if (param) return expediente(c, Number(param));
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Veredicto" }, CHIPS.map(function (ch) {
       return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-estado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-estado"] = ch[0]; pag.errores = 1; pintar(); } }); })));
-    c.appendChild(filtrosBase([opciones("f-tipo", "Tipo", ["", "diferencia", "rescate", "desacuerdo", "reporte"]), opciones("f-estado", "Veredicto", VEREDICTOS)]));
+    c.appendChild(filtrosBase([opciones("f-tipo", "Tipo", ["", "diferencia", "rescate", "desacuerdo", "reporte"], TIPO_TXT), opciones("f-estado", "Estado de revisión", VEREDICTOS, VER_TXT)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_errores", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
       tipo: valor("f-tipo"), estado_veredicto: valor("f-estado"), pagina: pag.errores, por_pagina: 50 });
@@ -441,7 +464,7 @@
       img.addEventListener("click", function () { abrirVisor(url, e.id); });
       marco.appendChild(img);
       marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(url, e.id); } }));
-      if (e.creado) marco.appendChild(el("span", { clase: "marco-hora", texto: (e.creado || "").slice(11, 16) }));
+      if (e.creado) marco.appendChild(el("span", { clase: "marco-hora", texto: hora(e.creado) }));
     }
     if (e.evidencia && e.evidencia.captura) vacio("Se carga aquí", true); else vacio("Sin captura (se borra sola a los 7 días).", false);
     return marco;
@@ -501,7 +524,7 @@
     var h = el("div", { id: "hoja-ver", role: "dialog", "aria-modal": "true", "aria-label": "Dar veredicto", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
       el("div", { clase: "velo", onclick: cerrar }),
       el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Dar veredicto" }),
-        el("div", { clase: "detalle", texto: "Según la captura de las " + (e.creado || "").slice(11, 16) + ". Queda guardada como evidencia de tu veredicto." }),
+        el("div", { clase: "detalle", texto: "Según la captura de las " + hora(e.creado) + ". Queda guardada como evidencia de tu veredicto." }),
         el("div", { clase: "etq", texto: "Atajos" }), atajos,
         el("div", { clase: "etq", texto: "Qué es" }), el("label", { clase: "campo-v" }, [selClase]),
         el("div", { clase: "campos-v" }, [inT, inK, inM]),
@@ -518,7 +541,7 @@
     var e = await llamar("admin_error", { id: id });
     if (!e) return;
     c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { id: "exp-titulo", texto: "Error #" + e.id }), (e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : null]));
-    c.appendChild(el("div", { clase: "detalle", texto: txt(e.app) + " " + txt(e.version) + " · " + txt(e.tipo) + " · conductor " + txt(e.conductor) + " · " + (e.creado || "").slice(0, 16).replace("T", " ") }));
+    c.appendChild(el("div", { clase: "detalle", texto: txt(e.app) + " " + txt(e.version) + " · " + txt(e.tipo) + " · conductor " + txt(e.conductor) + " · " + fechaHora(e.creado) }));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
     var refE = hu && hu.clase ? hu : null, mE = marcas(lec, ia, refE);
     var iaNo = ia.oferta === false;
@@ -584,7 +607,7 @@
         ? "Datos internos: imagen " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · código de la captura " + txt(en.captura_sha256)
         : "Este caso es anterior a la 10.82 o no tiene lectura guardada: no se puede comprobar que la captura sea la correcta." })])]));
     c.appendChild(el("details", { clase: "tecnico", id: "historial" }, [el("summary", { texto: "Historial (" + (e.historial || []).length + ")" }), el("div", { clase: "tecnico-cuerpo" }, [
-      tabla([["Fecha", function (h) { return (h.creado || "").slice(0, 19); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
+      tabla([["Fecha", function (h) { return fechaHora(h.creado); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
         ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía.")])]));
     // Registro de seguimiento: inline en el panel lateral; barra corta + hoja en teléfono y tableta vertical.
     if (yo && yo.rol === "revisor") {
@@ -602,7 +625,7 @@
   // ---------- 03 Ofertas ----------
   var RES = { oferta: ["OFERTA", "ok"], no_oferta: ["NO OFERTA", "nd"], descartada: ["DESCARTADA", "nd"], duplicada: ["DUPLICADA", "nd"], varias: ["VARIAS", "aviso"],
               abstencion: ["SIN LECTURA", "aviso"], timeout: ["TARDÓ DEMASIADO", "mal"], error: ["ERROR", "mal"] };
-  var RES_CHIPS = [["", "Todos"], ["abstencion", "Abstención"], ["error", "Error"], ["duplicada", "Duplicada"]];
+  var RES_CHIPS = [["", "Todos"], ["abstencion", "Sin lectura"], ["error", "Error"], ["duplicada", "Duplicada"]];
   var RES_BARRA = [["Oferta", ["oferta"], "var(--luz-v)"], ["No oferta", ["no_oferta", "descartada"], "var(--gris)"], ["Duplicada", ["duplicada", "varias"], "var(--amarillo)"],
                    ["Sin lectura", ["abstencion"], "var(--luz-a)"], ["Error o tardó demasiado", ["error", "timeout"], "var(--luz-r)"]];
   function etiquetaResultado(r) { var x = RES[r] || [r ? String(r).toUpperCase() : "—", "nd"]; return el("span", { clase: "vb " + x[1], texto: x[0] }); }
@@ -641,11 +664,11 @@
       if (window.matchMedia && matchMedia("(min-width:1000px) and (orientation:landscape)").matches) {
         var l = document.getElementById("lado"); if (!l) return; l.textContent = ""; l.hidden = false;
         document.querySelectorAll(".evento.sel").forEach(function (x) { x.classList.remove("sel"); }); art.classList.add("sel");
-        l.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { texto: "Evento · " + (f.ts_evento || "").slice(11, 16) }), etiquetaResultado(f.resultado)])); l.appendChild(detalleEvento(f)); l.scrollTop = 0; return;
+        l.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { texto: "Evento · " + hora(f.ts_evento) }), etiquetaResultado(f.resultado)])); l.appendChild(detalleEvento(f)); l.scrollTop = 0; return;
       }
       if (cuerpo) { cuerpo.remove(); cuerpo = null; cab.setAttribute("aria-expanded", "false"); art.classList.remove("abierto"); }
       else { cuerpo = detalleEvento(f); art.appendChild(cuerpo); cab.setAttribute("aria-expanded", "true"); art.classList.add("abierto"); } } }, [
-      el("div", { clase: "evento-fila" }, [el("b", { texto: (f.ts_evento || "").slice(11, 16) }), etiquetaResultado(f.resultado), el("span", { clase: "detalle der", texto: txt(f.app) + " " + txt(f.version_app) })]),
+      el("div", { clase: "evento-fila" }, [el("b", { texto: hora(f.ts_evento) }), etiquetaResultado(f.resultado), el("span", { clase: "detalle der", texto: txt(f.app) + " " + txt(f.version_app) })]),
       el("div", { clase: "evento-valor" }, [punto(f.nivel), el("span", { texto: [f.tarifa, f.km, f.min].every(function (x) { return x === null || x === undefined; }) ? "—" : tkm({ tarifa: f.tarifa, km: f.km, min: f.min }).join(" · ") })]),
       f.motivo ? el("div", { clase: "detalle", texto: f.motivo }) : null,
       el("div", { clase: "mini", "aria-hidden": "true" }, (f.etapas || []).map(function (e) { return el("i", { clase: claseEtapa(e.estado) }); }))]);
@@ -758,7 +781,7 @@
       if (estado.url) { var img = el("img", { src: estado.url, alt: "Captura de la oferta " + it.id, clase: "captura-img" }); img.addEventListener("click", function () { abrirVisor(estado.url, it.id); }); marco.appendChild(img);
         marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(estado.url, it.id); } })); }
       else marco.appendChild(el("div", { clase: "marco-centro" }, [el("span", { texto: "La captura ya no está disponible." })]));
-      marco.appendChild(el("span", { clase: "marco-hora", texto: (it.creado || "").slice(11, 16) + " · " + txt(it.app) + (it.version ? " · " + it.version : "") }));
+      marco.appendChild(el("span", { clase: "marco-hora", texto: hora(it.creado) + " · " + txt(it.app) + (it.version ? " · " + it.version : "") }));
       function tile(nom, val, extra) { return el("div", { clase: "pop-tile " + it.nivel }, [el("div", { clase: "pop-nom", texto: nom }), el("div", { clase: "pop-val", texto: val }), extra ? el("div", { clase: "pop-extra", texto: extra }) : null]); }
       var L = it.local || {}, I = it.ia || {};
       function rec(k, u) { var a1 = L[k], b1 = I[k]; if (a1 === undefined && b1 === undefined) return null; return "recogida · Lector " + (a1 === undefined ? "—" : a1) + " " + u + (b1 === undefined ? "" : " · IA " + b1 + " " + u); }
@@ -795,7 +818,7 @@
     c.appendChild(el("a", { href: "#revisar", id: "ir-revisar", clase: "boton-enlace revisar-entrada", texto: "Revisar capturas de ofertas (aceptar, considerar, rechazar)", onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
       return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-resultado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-resultado"] = ch[0]; pag.ofertas = 1; pintar(); } }); })));
-    c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"]), opciones("f-estado", "Veredicto", VEREDICTOS)]));
+    c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"], RES_TXT), opciones("f-estado", "Estado de revisión", VEREDICTOS, VER_TXT)]));
     skeleton(c);
     var r = rango(), m = await llamar("admin_metricas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version") });
     var d = await llamar("admin_ofertas", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
@@ -1066,7 +1089,7 @@
         interruptor("vision", "La IA ve la imagen de la oferta", "Si se apaga, el teléfono sigue solo con su lector.", !!ie.vision),
         interruptor("texto", "IA de texto (la de antes)", "Se usa en teléfonos sin imagen. Apagada, esos teléfonos usan solo su lector.", !!ie.texto),
         modo("vision", "Con imagen"), modo("texto", "De texto"),
-        el("div", { clase: "detalle", texto: "Los cambios tardan hasta 30 segundos en llegar a los teléfonos. Último cambio: " + (ie.actualizado ? String(ie.actualizado).slice(0, 16).replace("T", " ") + " UTC" : "—") + (ie.por ? " por " + ie.por : "") + "." })], true));
+        el("div", { clase: "detalle", texto: "Los cambios tardan hasta 30 segundos en llegar a los teléfonos. Último cambio: " + (ie.actualizado ? fechaHora(ie.actualizado) : "—") + (ie.por ? " por " + ie.por : "") + "." })], true));
     }
     // 1 · Costo de la IA
     if (k) {
@@ -1118,7 +1141,7 @@
     // 5 · Historial
     if (b) {
       var fs = b.filas || [];
-      var fila = function (f) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: (f.creado || "").slice(0, 16).replace("T", " ") + " · " + txt(f.admin) }), el("small", { texto: txt(f.accion) })]), el("span", { clase: "sev nd", texto: txt(f.resultado) + (f.filas !== null && f.filas !== undefined ? " · " + f.filas : "") })]); };
+      var fila = function (f) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: fechaHora(f.creado) + " · " + txt(f.admin) }), el("small", { texto: txt(f.accion) })]), el("span", { clase: "sev nd", texto: txt(f.resultado) + (f.filas !== null && f.filas !== undefined ? " · " + f.filas : "") })]); };
       var resto = fs.slice(10);
       der.appendChild(acordeon("cfg-historial", "Qué se ha hecho en el Admin", "acciones registradas", String(fs.length), [
         fs.length ? el("div", {}, fs.slice(0, 10).map(fila)) : el("div", { clase: "vacio", texto: "Sin acciones registradas." }),
@@ -1140,6 +1163,7 @@
     function cerrar() { hoja(false); if (mas) mas.focus(); }
     var items = MODULOS.filter(function (m) { return ["inicio", "errores", "ofertas"].indexOf(m[0]) < 0; }).map(function (m) {
       return el("button", { type: "button", clase: "item", "aria-current": m[0] === vista ? "page" : null, onclick: function () { hoja(false); ir(m[0]); } }, [icono(m[0]), el("span", { texto: m[1] })]); });
+    if (correo) items.unshift(el("div", { clase: "cuenta-hoja", texto: correo }));
     items.push(el("button", { type: "button", clase: "item", onclick: function () { document.getElementById("tema").click(); cerrar(); } }, [el("span", { texto: temaActual() === "dark" ? "Modo claro" : "Modo oscuro" })]));
     items.push(el("button", { type: "button", clase: "item peligro", onclick: function () { document.getElementById("salir").click(); } }, [el("span", { texto: "Salir" })]));
     var hoja_ = el("div", { id: "hoja", role: "dialog", "aria-modal": "true", "aria-label": "Más opciones", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } },
@@ -1156,7 +1180,7 @@
   function textoEstado() {
     var t = document.getElementById("est-texto"), p = document.getElementById("est-punto"); if (!t) return;
     var off = navigator.onLine === false, m = Math.floor((Date.now() - ultima) / 60000);
-    t.textContent = off ? "Sin conexión. Se muestran los últimos datos." : "Actualizado " + (m < 1 ? "hace un momento" : "hace " + m + " min");
+    t.textContent = off ? "Sin conexión. Lo que ves puede no estar al día." : "Actualizado " + (m < 1 ? "hace un momento" : "hace " + m + " min");
     p.className = "punto " + (off ? "mal" : m >= 10 ? "aviso" : "ok");
   }
   setInterval(textoEstado, 30000);
@@ -1180,7 +1204,10 @@
     var c = el("section", { id: "vista-" + vista, clase: "contenido" });
     raiz.appendChild(nav); raiz.appendChild(c);
     c.appendChild(barraEstado());
-    await VISTAS[vista](c);
+    falloCarga = false;
+    function fallo(msg) { return el("div", { clase: "vacio fallo", role: "status" }, [el("p", { texto: msg }), el("button", { type: "button", texto: "Reintentar", onclick: function () { pintar(); } })]); }
+    try { await VISTAS[vista](c); } catch (e) { if (window.console) console.error(e); c.textContent = ""; c.appendChild(fallo("Algo salió mal al mostrar esta pantalla.")); falloCarga = false; }
+    if (falloCarga && c.isConnected) c.appendChild(fallo("Algunos datos no se pudieron cargar."));
     if (!document.querySelector(".estado-barra") && c.isConnected) c.insertBefore(barraEstado(), c.firstChild);
     ultima = Date.now(); textoEstado();
   }
@@ -1197,7 +1224,7 @@
     }
     var h = (location.hash || "").replace(/^#/, "").split("/");
     if (VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; }
-    document.getElementById("quien").textContent = "Sesión iniciada";
+    correo = (s.user && s.user.email) || ""; document.getElementById("quien").textContent = correo || "Sesión iniciada";
     var salir = document.getElementById("salir");
     salir.hidden = false;
     salir.onclick = async function () { await cli.auth.signOut(); location.reload(); };
