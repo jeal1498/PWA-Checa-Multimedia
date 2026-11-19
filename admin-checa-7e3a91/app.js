@@ -909,7 +909,7 @@
       var b = idBtn && document.getElementById(idBtn); if (b) { b.classList.add("rec"); b.appendChild(el("small", { texto: "Sugerido" })); }
     }
     function aplicarCheck(sug) {
-      if (checkBtn) { checkBtn.disabled = true; checkBtn.textContent = "Check IA listo"; }
+      if (checkBtn) { checkBtn.disabled = true; checkBtn.classList.add("ok"); checkBtn.textContent = ""; checkBtn.appendChild(icoOkV()); checkBtn.appendChild(document.createTextNode("Check IA listo")); }
       var vig = sug.estado === "vigente";
       if (vig) METR.forEach(function (m) { var b = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (b) b.appendChild(el("div", { clase: "chk", texto: "Check IA " + fmtV(m[1], sug[m[1]]) })); });
       else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "Check IA: " + (sug.estado === "vencida" ? "oferta vencida" : sug.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
@@ -930,7 +930,9 @@
       aviso(st === 403 ? "No autorizado para leer capturas." : st === 404 ? "La captura ya no existe." : st === 503 ? "La lectura con IA no está activa (falta la clave de DeepSeek)." : st === 502 ? "La IA no pudo leer esta captura (revisa el saldo de DeepSeek)." : "No se pudo hacer el Check IA.");
       checkBtn.disabled = false; checkBtn.textContent = "Check IA";
     }
-    c.appendChild(fichaFila(marcoCaptura(e), [tablaV, colNota, checkBtn]));
+    if (colNota) tablaV.appendChild(colNota);
+    if (checkBtn) tablaV.appendChild(checkBtn);
+    c.appendChild(fichaFila(marcoCaptura(e), [tablaV]));
     // Más sobre este caso: plegado, para quien quiera investigar.
     function acc(titulo, meta, cuerpo, abierto, idA) {
       var d = el("details", { clase: "ficha-acc", id: idA || null }, [el("summary", {}, [el("span", { texto: titulo }), meta ? el("span", { clase: "ficha-m", texto: meta }) : null, el("span", { clase: "ficha-ch", "aria-hidden": "true" })]), el("div", { clase: "ficha-ab" }, cuerpo)]);
@@ -1144,8 +1146,9 @@
       var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" });
       var vigS = S && S.estado === "vigente", recAcc = !S ? null : !vigS ? "falso" : (CAMPOS.every(function (m) { return m[3] !== null && m[3] !== undefined && m[2] !== null && m[2] !== undefined && Math.abs(m[3] - m[2]) <= m[4]; }) ? "ok" : "corregir");
       if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Check IA", onclick: pedirIA }));
-      else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn", disabled: "", texto: "Check IA listo" }));
-      cuerpo.appendChild(fichaFila(marco, [tablaV, colSug], "rev-actual"));
+      else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn ok", disabled: "" }, [icoOkV(), "Check IA listo"]));
+      tablaV.appendChild(colSug);
+      cuerpo.appendChild(fichaFila(marco, [tablaV], "rev-actual"));
       cuerpo.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre esta revisión" }));
       var barra = el("i"); barra.style.width = (tot ? Math.round(hechas / tot * 100) : 0) + "%";
       var P = estado.prec;
