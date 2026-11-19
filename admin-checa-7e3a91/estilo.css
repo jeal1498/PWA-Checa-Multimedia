@@ -1178,3 +1178,29 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 .vtc2 .ia-btn .ci-ic { background:transparent; color:currentColor; width:14px; height:14px; } .vtc2 .ia-btn .ci-ic svg { width:14px; height:14px; }
 .vtc2 .ficha-nota { margin-top:10px; flex:none; }
 @media (max-width:375px) { .vq-b { padding:3px 8px; min-height:76px; } .vq-b .chk { margin-top:4px; padding:2px 6px; } .vq-b > .vq-h { margin-bottom:2px; } .vtc2 { padding:10px; } .vtc2 .ia-btn { min-height:40px; margin-top:8px; } }
+
+/* ===== Revisar: tres cuadros (Pendientes · Revisadas · Revisables), desglose y lista ===== */
+.kp3 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin:14px 0 0; }
+.kp-c { display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:12px 6px; border-radius:20px; background:var(--tablero); border:1.5px solid var(--hb); color:var(--texto); cursor:pointer; min-height:44px; }
+.kp-c small { font:600 10.5px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.04em; text-transform:uppercase; color:var(--gm); }
+.kp-n { font:800 30px/1.05 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing:-.03em; }
+.kp-s { font:500 11px/1.25 "DM Sans", system-ui, sans-serif; color:var(--gm); }
+.kp-c.p { background:var(--texto); border-color:var(--texto); color:var(--fondo); } .kp-c.p small, .kp-c.p .kp-s { color:color-mix(in srgb, var(--fondo) 72%, var(--texto)); }
+.kp-c.on { box-shadow:0 0 0 3px color-mix(in srgb, var(--luz-v) 70%, transparent); }
+.kp-d { margin-top:8px; padding:4px 14px 14px; border-radius:20px; background:var(--tablero); border:1.5px solid var(--texto); }
+.kp-l { display:flex; align-items:center; gap:10px; width:100%; min-height:48px; padding:6px 0; background:transparent; border:0; border-top:1.5px solid var(--hb); color:var(--texto); font:600 14px "DM Sans", system-ui, sans-serif; text-align:left; cursor:pointer; }
+.kp-d > .kp-l:first-child { border-top:0; }
+.kp-l span { flex:1; } .kp-l b { font:800 20px "Bricolage Grotesque", system-ui, sans-serif; }
+.kp-dot { width:12px; height:12px; border-radius:50%; flex:none; background:var(--gm); } .kp-dot.dr { background:var(--luz-r); } .kp-dot.da { background:var(--luz-a); } .kp-dot.dv { background:var(--luz-v); }
+.kp-ch { width:14px; height:14px; flex:none; background:var(--gm); -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5l7 7-7 7'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5l7 7-7 7'/%3E%3C/svg%3E") center/contain no-repeat; }
+.kp-l.on .kp-ch { transform:rotate(90deg); background:var(--texto); }
+.kp-sub { margin:0 0 6px 22px; padding:2px 0 6px 12px; border-left:2px solid var(--hb); }
+.kp-sr { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:40px; padding:4px 8px; border:0; border-radius:12px; background:transparent; color:var(--texto); font:500 13.5px "DM Sans", system-ui, sans-serif; text-align:left; cursor:pointer; }
+.kp-sr b { font:800 16px "Bricolage Grotesque", system-ui, sans-serif; } .kp-sr.on { background:var(--panel); font-weight:700; } .kp-sr.warn span, .kp-sr.warn b { color:var(--rojo); font-weight:700; }
+.kp-pie { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:10px 0 6px; border-top:1.5px solid var(--hb); font:500 12.5px "DM Sans", system-ui, sans-serif; color:var(--gm); }
+.kp-pie b { color:var(--texto); font-weight:700; text-align:right; white-space:nowrap; }
+.kp-d .empezar-v { margin-top:10px; }
+.fv-st { flex:none; padding:2px 6px; border-radius:6px; border:1.5px solid var(--texto); font:600 10.5px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.02em; } .fv-st.ok { border-color:var(--hb); color:var(--gm); }
+.vacio-v { display:flex; flex-direction:column; align-items:center; gap:6px; padding:26px 16px; text-align:center; } .vacio-v b { font:800 17px "Bricolage Grotesque", system-ui, sans-serif; } .vacio-v span { font:500 13px "DM Sans", system-ui, sans-serif; color:var(--gm); } .vacio-v .primario { margin-top:8px; width:100%; }
+@media (max-width:360px) { .kp-n { font-size:26px; } .kp-c small { font-size:9.5px; } }
+.kp-l { border-radius:0; } .fv-l1 .fv-st { margin-left:8px; margin-right:auto; align-self:center; } .fv-l1 .fv-h { flex:none; }
