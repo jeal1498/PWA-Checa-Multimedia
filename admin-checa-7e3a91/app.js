@@ -442,21 +442,39 @@
     // Cada parte del sistema, a un toque (los números y gráficas de calidad viven en Calidad › Resumen).
     var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todas las partes del sistema" })]);
     var cuerpo = el("div", { clase: "completo-cuerpo" }); completo.appendChild(cuerpo); c.appendChild(completo); c = cuerpo;
-    var ordenados = d.componentes.slice().sort(function (a, b) { return (ORDEN[a.estado] === undefined ? 9 : ORDEN[a.estado]) - (ORDEN[b.estado] === undefined ? 9 : ORDEN[b.estado]); });
-    c.appendChild(el("div", { clase: "carriles", id: "componentes" }, ordenados.map(function (x) {
-      var pq = PREGUNTA[x.clave] || [x.nombre, x.nombre];
-      return el("div", { clase: "carril comp " + (ESTADO[x.estado] || "nd"), "data-clave": x.clave }, [
-        punto(x.estado),
-        el("div", { clase: "carril-texto" }, [
-          el("strong", { texto: pq[0] }),
-          el("div", { clase: "respuesta", texto: RESPUESTA[x.estado] || TEXTO[x.estado] }),
-          el("details", {}, [el("summary", { texto: "Detalle" }), el("p", { texto: pq[1] }),
-            el("div", { clase: "detalle", texto: x.nombre + " · cómo se comprueba: " + txt(x.comprobacion) }),
-            el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + (x.ultima_comprobacion ? String(x.ultima_comprobacion).slice(0, 19).replace("T", " ") : "—") }),
-            x.k !== undefined ? el("div", { clase: "detalle", texto: casos(x.k, x.n) }) : null,
-            x.ms ? el("div", { clase: "detalle", texto: "Tiempo típico: " + x.ms + " ms" }) : null,
-            el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])])]);
-    })));
+    // Resumen en una barra y las partes agrupadas por estado: primero lo que falla, luego lo que funciona, luego lo que aún no se sabe.
+    function pasoDe(x) { var p = PASOS.filter(function (q) { return q.claves.indexOf(x.clave) >= 0; })[0]; return p ? p.nombre : ""; }
+    function posPaso(x) { for (var k = 0; k < PASOS.length; k++) if (PASOS[k].claves.indexOf(x.clave) >= 0) return k; return 99; }
+    var GRUPOS = [["Con problemas", ["fuera_de_servicio", "degradado"]], ["Funcionan", ["operativo"]], ["Aún no se sabe", ["sin_comprobar", "sin_datos", "no_aplicable"]]];
+    var conocidos = [].concat.apply([], GRUPOS.map(function (g) { return g[1]; }));
+    var porGrupo = GRUPOS.map(function (g, gi) {
+      return d.componentes.filter(function (x) { return g[1].indexOf(x.estado) >= 0 || (gi === 2 && conocidos.indexOf(x.estado) < 0); }).sort(function (a, b) { return posPaso(a) - posPaso(b); });
+    });
+    var nP = porGrupo[0].length, nB = porGrupo[1].length, nN = porGrupo[2].length;
+    function claseP(x, gi) { return gi === 0 ? (x.estado === "degradado" ? "av" : "mal") : gi === 1 ? "ok" : "nd"; }
+    var ICO_P = { ok: "M5 12.5l4.5 4.5L19 7", nd: "M6 12h12", av: "M12 5v9M12 19v.2", mal: "M12 5v9M12 19v.2" };
+    function icoParte(cls) { return el("span", { clase: "parte-ic " + cls, "aria-hidden": "true" }, [sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3.4", "stroke-linecap": "round", "stroke-linejoin": "round" }, [sv("path", { d: ICO_P[cls] })])]); }
+    function leyenda(cls, n, t) { return el("span", {}, [el("i", { clase: cls }), el("b", { texto: String(n) }), t]); }
+    var segs = []; porGrupo.forEach(function (lst, gi) { lst.forEach(function (x) { segs.push(el("i", { clase: claseP(x, gi) })); }); });
+    c.appendChild(el("div", { clase: "res-cuerpo" }, [el("div", { clase: "res-seg", role: "img", "aria-label": nB + " funcionan, " + nN + " sin medir, " + nP + " con fallas" }, segs),
+      el("div", { clase: "res-leg" }, [leyenda("ok", nB, "bien"), leyenda("nd", nN, "sin medir"), leyenda("mal", nP, "con fallas")])]));
+    function filaParte(x, gi) {
+      var pq = PREGUNTA[x.clave] || [x.nombre, x.nombre], cls = claseP(x, gi);
+      return el("details", { clase: "parte " + cls, "data-clave": x.clave }, [
+        el("summary", {}, [icoParte(cls), el("span", { clase: "parte-tx" }, [el("b", { texto: pq[0] }), gi === 1 ? null : el("small", { texto: RESPUESTA[x.estado] || TEXTO[x.estado] })]),
+          el("span", { clase: "parte-tag", texto: pasoDe(x) }), el("span", { clase: "parte-ch", "aria-hidden": "true" })]),
+        el("div", { clase: "parte-det" }, [el("p", { texto: pq[1] }),
+          el("div", { clase: "detalle", texto: x.nombre + " · cómo se comprueba: " + txt(x.comprobacion) }),
+          el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + (x.ultima_comprobacion ? fechaHora(x.ultima_comprobacion) : "—") }),
+          x.k !== undefined ? el("div", { clase: "detalle", texto: casos(x.k, x.n) }) : null,
+          x.ms ? el("div", { clase: "detalle", texto: "Tiempo típico: " + x.ms + " ms" }) : null,
+          el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])]);
+    }
+    porGrupo.forEach(function (lst, gi) {
+      if (!lst.length) return;
+      c.appendChild(el("h2", { clase: "grupo-h" }, [el("span", { texto: GRUPOS[gi][0] }), el("span", { texto: String(lst.length) })]));
+      c.appendChild(el("div", { clase: "grupo-l", id: gi === 1 ? "componentes" : null }, lst.map(function (x) { return filaParte(x, gi); })));
+    });
   }
 
   // ---------- Calidad › Resumen: qué tan bien lee la app, con todos sus números ----------
