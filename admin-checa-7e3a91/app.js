@@ -4,13 +4,13 @@
 (function () {
   "use strict";
   var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, colaErrores = [], scrollErrores = 0, restaurarScroll = null, ultimaClave = "", vista = "hoy", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
-  var urgentes = null, buscarEq = "";
+  var urgentes = null, capPend = 0, buscarEq = "";
+  function totalPend() { return (urgentes || 0) + (capPend || 0); }
   var SVG = "http://www.w3.org/2000/svg";
   // Cuatro pestañas, una pregunta cada una: ¿qué pasa? ¿qué decido? ¿qué tan bien va? ¿cómo está configurado?
   var MODULOS = [["hoy", "Hoy", "Hoy"], ["revisar", "Revisar", "Revisar"], ["calidad", "Calidad", "Calidad"], ["ajustes", "Ajustes", "Ajustes"]];
   // Subpestañas: [id, nombre]. La primera es la que se abre por omisión.
-  var SUBS = { revisar: [["errores", "Errores"], ["capturas", "Capturas"], ["historial", "Historial"]],
-               calidad: [["resumen", "Resumen"], ["versiones", "Versiones"], ["ia", "IA"], ["conductores", "Conductores"]] };
+  var SUBS = { calidad: [["resumen", "Resumen"], ["versiones", "Versiones"], ["ia", "IA"], ["conductores", "Conductores"]] };
   // Rutas de antes (#errores, #ofertas…) → [pestaña, subpestaña]. Mantienen vivos los enlaces guardados.
   var ANTIGUAS = { inicio: ["hoy", null], errores: ["revisar", null], ofertas: ["revisar", "historial"], versiones: ["calidad", "versiones"],
                    dispositivos: ["calidad", "conductores"], ia: ["calidad", "ia"], config: ["ajustes", null] };
@@ -21,7 +21,7 @@
   }
   function esId(p) { return p !== null && p !== undefined && /^\d+$/.test(String(p)); }
   function enDetalle() { return vista === "revisar" && esId(param); }
-  function enListaErrores() { return vista === "revisar" && (!param || param === "errores"); }
+  function enListaErrores() { return vista === "revisar" && !esId(param) && param !== "capturas"; }
   var ESTADO = { operativo: "ok", degradado: "aviso", fuera_de_servicio: "mal", sin_comprobar: "nd", sin_datos: "nd", no_aplicable: "nd",
                  verde: "ok", amarillo: "aviso", amarillo_parcial: "aviso", rojo: "mal", gris: "nd" };
   // Palabras de todos los días: quien lo lee no tiene que ser técnico.
@@ -295,7 +295,7 @@
     urgPorVersion = {}; vs.forEach(function (ver, i) { urgPorVersion[ver] = res[i]; });
     var ok = res.filter(function (x) { return x !== null; });
     urgentes = ok.length ? ok.reduce(function (a, b) { return a + b; }, 0) : null;
-    var b = document.getElementById("insignia-revisar"); if (b) { b.textContent = urgentes ? String(urgentes) : ""; b.hidden = !urgentes; }
+    var b = document.getElementById("insignia-revisar"); if (b) { b.textContent = totalPend() ? String(totalPend()) : ""; b.hidden = !totalPend(); }
     return urgentes;
   }
   function aclaracion(a) {
@@ -1006,12 +1006,13 @@
   var REV_META = 30;
   var REV_MOTIVOS = [["no_oferta", "No era una oferta", "mapa, aviso, otra pantalla"], ["vencida", "Oferta vencida o aceptada", "ya no estaba disponible"],
                      ["otra_tarjeta", "Era otra tarjeta", "mostró los datos de otra oferta"], ["ilegible", "No se ve bien", "la captura no permite decidir"]];
-  var revNivel = "rojo";
+  var revNivel = "rojo", capturaObjetivo = null;
   // Lo que mostró el pop-up sale del nombre: ok-<color>-<tarifa>-<km>-<min>-<ms>-n<id>.webp
   function popDeNombre(n) { var m = /^ok-[a-z]+-([\d.]+)-([\d.]+)-([\d.]+)-/.exec(n || ""); return m ? { tarifa: Number(m[1]), km: Number(m[2]), min: Number(m[3]) } : { tarifa: null, km: null, min: null }; }
   async function huella(blob) { try { var b = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()); return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); } catch (e) { return null; } }
 
   async function capturas(c) {
+    c.appendChild(el("button", { id: "volver", type: "button", clase: "volver", "aria-label": "Volver a Revisar", texto: "‹ Revisar", onclick: function () { ir("revisar"); } }));
     c.appendChild(el("p", { clase: "detalle", texto: "Capturas de ofertas de la 10.82 en adelante: confirma una a la vez si la app leyó bien." }));
     var esRevisor = !!(yo && yo.rol === "revisor");
     var cuerpo = el("div", { id: "rev-cuerpo" }); c.appendChild(cuerpo);
@@ -1019,9 +1020,10 @@
     function soltar() { if (estado.url) { URL.revokeObjectURL(estado.url); estado.url = null; } estado.blob = null; estado.sug = null; estado.pidiendo = false; }
 
     async function cargarCola() {
-      var d = await llamar("admin_capturas_pendientes", { p_nivel: revNivel, p_limite: 10 });
+      var d = await llamar("admin_capturas_pendientes", { p_nivel: revNivel, p_limite: capturaObjetivo ? 50 : 10 });
       if (!d) return false;
       estado.pend = d.pendientes || {}; estado.rev = d.revisadas || {}; estado.items = d.items || [];
+      if (capturaObjetivo) { var k = estado.items.map(function (x) { return x.id; }).indexOf(capturaObjetivo); if (k > 0) estado.items.unshift(estado.items.splice(k, 1)[0]); capturaObjetivo = null; }
       return true;
     }
     async function cargarPrecision() { var d = await llamar("admin_ia_precision"); estado.prec = d && !d.error ? d : null; }
@@ -1177,6 +1179,146 @@
     c.appendChild(el("div", { clase: "dividido" }, [lista, lado]));
     lista.appendChild(el("div", { clase: "error-lista", id: "eventos" }, (d.filas || []).length ? d.filas.map(tarjetaEvento) : [el("div", { clase: "vacio", texto: "Sin lecturas con estos filtros." })]));
     lista.appendChild(paginas("ofertas", d));
+  }
+
+  // ---------- Revisar: todas las capturas en una sola lista, con el filtro que tú elijas ----------
+  var VER = [["sin_revisar", "Sin revisar"], ["erroneas", "Erróneas"], ["correctas", "Correctas"], ["todas", "Todas"]];
+  var ICO_V = { ok: "M5 12.5l4.5 4.5L19 7", mal: "M12 5v9M12 19v.2", nd: "M6 12h12" };
+  function icoEst(cls) { return el("span", { clase: "fv-ic " + cls, "aria-hidden": "true" }, [sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3.2", "stroke-linecap": "round", "stroke-linejoin": "round" }, [sv("path", { d: ICO_V[cls] })])]); }
+  // Qué campo difiere entre el Lector y la IA (o la referencia humana), como se ve en la lista.
+  function difDe(f) {
+    var lec = f.lector_lectura || {}, ia = f.ia_lectura || {}, hu = f.referencia || null;
+    var CAMPOS = [["Tarifa", "tarifa", function (v) { return "$" + v; }], ["Km", "km", function (v) { return String(v); }], ["Min", "min", function (v) { return String(v); }]];
+    var nulo = function (v) { return v === null || v === undefined; }, dif = el("span", { clase: "caso-dif" });
+    if (ia.oferta === false) { dif.append("Lector ", el("b", { texto: tkm(lec).join(" · ") }), " vs IA ", el("em", { texto: "no era oferta" })); return dif; }
+    var c = CAMPOS.filter(function (k) { var ref = hu && !nulo(hu[k[1]]) ? hu[k[1]] : ia[k[1]]; return !nulo(lec[k[1]]) && !nulo(ref) && String(lec[k[1]]) !== String(ref) || (hu && !nulo(hu[k[1]]) && !nulo(ia[k[1]]) && String(ia[k[1]]) !== String(hu[k[1]])); })[0];
+    if (c) dif.append(c[0] + " Lector ", el("b", { texto: nulo(lec[c[1]]) ? "—" : c[2](lec[c[1]]) }), " vs IA ", el("em", { texto: nulo(ia[c[1]]) ? "—" : c[2](ia[c[1]]) }));
+    else dif.append(el("b", { texto: tkm(lec).join(" · ") }));
+    return dif;
+  }
+  function appTxt(a) { var x = String(a || "").toLowerCase(); return x === "didi" ? "DiDi" : x === "uber" ? "Uber" : txt(a); }
+  function textoValores(t, k, m) { var n = function (v) { return v === null || v === undefined; }; return n(t) && n(k) && n(m) ? "—" : tkm({ tarifa: t, km: k, min: m }).join(" · "); }
+  function itemError(f) { return { tipo: "error", id: f.id, ok: false, creado: f.creado, etiqueta: "#" + f.id, texto: difDe(f), meta: appTxt(f.app) + " " + txt(f.version) + (f.tiene_captura ? " · con captura" : ""),
+    abrir: function () { ir("revisar", String(f.id)); } }; }
+  function itemCaptura(x) { var p = popDeNombre(x.nombre); return { tipo: "captura", id: x.id, ok: true, creado: x.creado, etiqueta: "Captura " + x.id, texto: el("b", { texto: textoValores(p.tarifa, p.km, p.min) }),
+    meta: appTxt(x.app) + " " + txt(x.version) + " · pop-up " + ((REV_COLORES.filter(function (k) { return k[0] === x.nivel; })[0] || [0, x.nivel])[1]).toLowerCase(),
+    abrir: function () { capturaObjetivo = x.id; revNivel = x.nivel; ir("revisar", "capturas"); } }; }
+  function itemLectura(f) { return { tipo: "lectura", id: f.id, ok: f.resultado === "oferta", creado: f.ts_evento, etiqueta: "Lectura " + f.id,
+    texto: el("b", { texto: [f.tarifa, f.km, f.min].every(function (x) { return x === null || x === undefined; }) ? ((RES[f.resultado] || [f.resultado || "—"])[0]).toLowerCase() : textoValores(f.tarifa, f.km, f.min) }),
+    meta: appTxt(f.app) + " " + txt(f.version_app) + " · " + ((RES[f.resultado] || [f.resultado || "—"])[0]).toLowerCase(), detalle: f }; }
+  function etiquetaDia(f) {
+    var d = new Date(f); if (!f || isNaN(d)) return "Sin fecha";
+    var dia = iso(d), hoyS = iso(new Date()), ayer = iso(new Date(Date.now() - 864e5));
+    return dia === hoyS ? "Hoy" : dia === ayer ? "Ayer" : corto(dia);
+  }
+  function filaUnif(it) {
+    var cuerpo = null, wrap = el("div", { clase: "fv-w" });
+    var a = el("a", { href: "#revisar", clase: "fv", "data-id": String(it.id), "data-tipo": it.tipo, onclick: function (ev) {
+      ev.preventDefault();
+      if (it.detalle) { if (cuerpo) { cuerpo.remove(); cuerpo = null; wrap.classList.remove("abierto"); } else { cuerpo = detalleEvento(it.detalle); wrap.appendChild(cuerpo); wrap.classList.add("abierto"); } return; }
+      it.abrir();
+    } }, [icoEst(it.ok ? "ok" : "mal"),
+      el("span", { clase: "fv-tx" }, [el("span", { clase: "fv-l1" }, [el("b", { texto: it.etiqueta }), el("span", { texto: hora(it.creado) })]), el("span", { clase: "fv-l2" }, [it.texto]), el("small", { texto: it.meta })]),
+      el("span", { clase: "fv-ch", "aria-hidden": "true" })]);
+    wrap.appendChild(a); return wrap;
+  }
+  function abrirFiltros(ver) {
+    var viejo = document.getElementById("hoja-filtros"); if (viejo) viejo.remove();
+    function cerrar() { h.remove(); }
+    var rg = rango();
+    var selVer = el("select", { id: "fh-version" }, versionesOpc()); selVer.value = F["f-version"] || "";
+    var selApp = el("select", { id: "fh-app" }, [el("option", { value: "", texto: "Todas" }), el("option", { value: "uber", texto: "Uber" }), el("option", { value: "didi", texto: "DiDi" })]); selApp.value = F["f-app"] || "";
+    cargarVersiones(selVer);
+    var extra = ver === "todas" ? ["f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"], RES_TXT]
+              : ver === "erroneas" || ver === "sin_revisar" ? ["f-tipo", "Tipo", ["", "diferencia", "rescate", "desacuerdo", "reporte"], TIPO_TXT] : null;
+    var selEx = extra ? el("select", { id: "fh-extra" }, extra[2].map(function (v) { return el("option", { value: v, texto: (extra[3] && extra[3][v]) || v || "Todos" }); })) : null;
+    if (selEx) selEx.value = F[extra[0]] || "";
+    var dd = el("input", { id: "fh-desde", type: "date", value: rg.desde.slice(0, 10) }), dh = el("input", { id: "fh-hasta", type: "date", value: rg.hasta.slice(0, 10) });
+    function lab(t, x) { return el("label", { clase: "campo-v" }, [el("span", { texto: t }), x]); }
+    var h = el("div", { id: "hoja-filtros", role: "dialog", "aria-modal": "true", "aria-label": "Filtros", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Filtros" }),
+        el("div", { clase: "dos-col" }, [lab("App", selApp), lab("Versión", selVer)]), selEx ? lab(extra[1], selEx) : null,
+        el("div", { clase: "dos-col" }, [lab("Desde", dd), lab("Hasta", dh)]),
+        el("button", { type: "button", id: "fh-aplicar", clase: "primario", texto: "Aplicar", onclick: function () {
+          F["f-app"] = selApp.value; F["f-version"] = selVer.value; if (selEx) F[extra[0]] = selEx.value;
+          F["f-desde"] = dd.value; F["f-hasta"] = dh.value; F.desde = dd.value || null; F.hasta = dh.value || null;
+          if (dd.value === rg.desde.slice(0, 10) && dh.value === rg.hasta.slice(0, 10)) { F.desde = F.hasta = null; F["f-desde"] = F["f-hasta"] = ""; }
+          pag.errores = pag.ofertas = 1; scrollErrores = 0; cerrar(); pintar(); } }),
+        el("button", { type: "button", id: "fh-limpiar", texto: "Limpiar todo", onclick: function () { var v = F["f-ver"]; F = {}; if (v) F["f-ver"] = v; pag.errores = pag.ofertas = 1; cerrar(); pintar(); } })])]);
+    document.body.appendChild(h); selApp.focus();
+  }
+  function filtrosActivos() {
+    var a = [];
+    if (F["f-version"]) a.push(["f-version", "v" + F["f-version"]]);
+    if (F["f-app"]) a.push(["f-app", F["f-app"] === "didi" ? "DiDi" : "Uber"]);
+    if (F["f-tipo"]) a.push(["f-tipo", TIPO_TXT[F["f-tipo"]] || F["f-tipo"]]);
+    if (F["f-resultado"]) a.push(["f-resultado", RES_TXT[F["f-resultado"]] || F["f-resultado"]]);
+    if (F.desde || F.hasta) a.push(["desde", corto(F.desde) + " – " + corto(F.hasta)]);
+    return a;
+  }
+  async function revisarTodo(c) {
+    if (esId(param)) return expediente(c, Number(param));
+    if (param === "capturas") return capturas(c);
+    if (param === "historial" && F["f-ver"] === undefined) F["f-ver"] = "todas";
+    var ver = VER.map(function (x) { return x[0]; }).indexOf(F["f-ver"]) >= 0 ? F["f-ver"] : "sin_revisar";
+    var esRevisor = !!(yo && yo.rol === "revisor"), r = rango(), vf = valor("f-version"), af = valor("f-app");
+    var tiles = el("div", { clase: "tiles-v", role: "group", "aria-label": "Qué capturas ver" }); c.appendChild(tiles);
+    skeleton(c);
+    var base = { desde: r.desde, hasta: r.hasta, app: af, version: vf };
+    var cifras = await Promise.all([contarUrgentes(), pendientesRev(),
+      llamar("admin_errores", Object.assign({ tipo: null, estado_veredicto: null, pagina: 1, por_pagina: 1 }, base)),
+      llamar("admin_ofertas", Object.assign({ resultado: null, estado_veredicto: null, pagina: 1, por_pagina: 1 }, base)),
+      llamar("admin_ofertas", Object.assign({ resultado: "oferta", estado_veredicto: null, pagina: 1, por_pagina: 1 }, base))]);
+    capPend = cifras[1] ? cifras[1].pend : 0;
+    var nSin = totalPend(), nErr = cifras[2] ? Number(cifras[2].total) : null, nTodas = cifras[3] ? Number(cifras[3].total) : null, nOk = cifras[4] ? Number(cifras[4].total) : null;
+    var b = document.getElementById("insignia-revisar"); if (b) { b.textContent = nSin ? String(nSin) : ""; b.hidden = !nSin; }
+    var NUM = { sin_revisar: nSin, erroneas: nErr, correctas: nOk, todas: nTodas }, TONO = { sin_revisar: "", erroneas: " mal", correctas: " ok", todas: "" };
+    function pc(k) { return nTodas ? Math.max(k === "todas" ? 100 : 1.5, Math.min(100, (NUM[k] || 0) / nTodas * 100)) : 0; }
+    VER.forEach(function (x) {
+      var barra = el("i"); barra.style.width = pc(x[0]).toFixed(1) + "%";
+      tiles.appendChild(el("button", { type: "button", id: "ver-" + x[0], clase: "tile-v" + TONO[x[0]] + (ver === x[0] ? " on" : ""), "aria-pressed": String(ver === x[0]),
+        onclick: function () { F["f-ver"] = x[0]; pag.errores = pag.ofertas = 1; scrollErrores = 0; pintar(); } },
+        [el("small", { texto: x[1] }), el("span", { clase: "tile-n", texto: NUM[x[0]] === null || NUM[x[0]] === undefined ? "—" : NUM[x[0]].toLocaleString("en-US") }), el("span", { clase: "tile-b" }, [barra])]));
+    });
+    var act = filtrosActivos();
+    c.appendChild(el("div", { clase: "fl-v" }, [
+      el("button", { type: "button", id: "btn-filtros", clase: "fb-v", onclick: function () { abrirFiltros(ver); } }, [icono("ajustes"), "Filtros", act.length ? el("b", { texto: String(act.length) }) : null])]
+      .concat(act.map(function (x) { return el("button", { type: "button", clase: "ac-v", "aria-label": "Quitar filtro " + x[1], onclick: function () {
+        if (x[0] === "desde") { F.desde = F.hasta = null; F["f-desde"] = F["f-hasta"] = ""; } else F[x[0]] = ""; pag.errores = pag.ofertas = 1; pintar(); } }, [x[1], el("span", { clase: "ac-x", "aria-hidden": "true" })]); }))
+      .concat(act.length ? [el("button", { type: "button", id: "f-limpiar", clase: "lim-v", texto: "Limpiar", onclick: function () { F = { "f-ver": ver }; pag.errores = pag.ofertas = 1; pintar(); } })] : [])));
+    var items = [], pie = null, titulo = "", error = null;
+    if (ver === "sin_revisar") {
+      var pe = await llamar("admin_errores", Object.assign({ tipo: valor("f-tipo"), estado_veredicto: "sin_veredicto", pagina: 1, por_pagina: 50 }, base));
+      var pcap = await llamar("admin_capturas_pendientes", { p_nivel: null, p_limite: 50 });
+      if (pe) pe.filas.forEach(function (f) { items.push(itemError(f)); });
+      if (pcap) (pcap.items || []).filter(function (x) { return (!vf || x.version === vf) && (!af || String(x.app).toLowerCase() === af); }).forEach(function (x) { items.push(itemCaptura(x)); });
+      items.sort(function (x, y) { return String(y.creado).localeCompare(String(x.creado)); });
+      titulo = "Sin revisar";
+      colaErrores = items.filter(function (x) { return x.tipo === "error"; }).map(function (x) { return Number(x.id); });
+      if (esRevisor && items.length) c.appendChild(el("a", { href: "#revisar", id: "empezar", clase: "empezar-v", onclick: function (ev) { ev.preventDefault(); items[0].abrir(); } }, [sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico-play" }, [sv("path", { d: "M8 5l11 7-11 7z", fill: "currentColor" })]), "Empezar a revisar · " + nSin.toLocaleString("en-US")]));
+      if (pe && pe.total > pe.filas.length) pie = el("div", { clase: "detalle fv-pie", texto: "Se muestran los más recientes. Quedan " + (pe.total - pe.filas.length) + " errores más: revísalos y vuelve a entrar." });
+    } else if (ver === "erroneas") {
+      var d1 = await llamar("admin_errores", Object.assign({ tipo: valor("f-tipo"), estado_veredicto: null, pagina: pag.errores, por_pagina: 50 }, base));
+      if (d1) { d1.filas.forEach(function (f) { items.push(itemError(f)); }); pie = paginas("errores", d1); colaErrores = d1.filas.map(function (f) { return Number(f.id); }); }
+      titulo = "Erróneas";
+    } else {
+      var d2 = await llamar("admin_ofertas", Object.assign({ resultado: ver === "correctas" ? "oferta" : valor("f-resultado"), estado_veredicto: null, pagina: pag.ofertas, por_pagina: 50 }, base));
+      if (d2) { (d2.filas || []).forEach(function (f) { items.push(itemLectura(f)); }); pie = paginas("ofertas", d2); }
+      titulo = ver === "correctas" ? "Correctas" : "Todas";
+    }
+    var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
+    c.appendChild(el("h2", { clase: "grupo-h" }, [el("span", { texto: titulo }), el("span", { texto: String(items.length) })]));
+    var lista = el("div", { clase: "lista-v", id: "lista-v" }), dia = null;
+    if (!items.length) lista.appendChild(el("div", { clase: "vacio", texto: ver === "sin_revisar" ? "No hay nada por revisar con estos filtros." : "Sin resultados con estos filtros." }));
+    items.forEach(function (it) {
+      var d = etiquetaDia(it.creado);
+      if (d !== dia) { dia = d; lista.appendChild(el("div", { clase: "dia-v" }, [el("span", { texto: d }), el("span", { clase: "dia-n", "data-dia": d })])); }
+      lista.appendChild(filaUnif(it));
+    });
+    var cuenta = {}; items.forEach(function (it) { var k = etiquetaDia(it.creado); cuenta[k] = (cuenta[k] || 0) + 1; });
+    lista.querySelectorAll(".dia-n").forEach(function (n) { n.textContent = String(cuenta[n.getAttribute("data-dia")] || ""); });
+    c.appendChild(lista); if (pie) c.appendChild(pie);
   }
 
   // ---------- 04 Versiones ----------
@@ -1557,7 +1699,7 @@
   });
 
   // Cada pestaña es una vista, o un grupo de subvistas.
-  var VISTAS = { hoy: inicio, revisar: { errores: errores, capturas: capturas, historial: historial },
+  var VISTAS = { hoy: inicio, revisar: revisarTodo,
                  calidad: { resumen: resumen, versiones: versiones, ia: ia, conductores: dispositivos }, ajustes: config };
   function subActual() {
     if (!SUBS[vista]) return null;
@@ -1633,15 +1775,15 @@
     var botones = MODULOS.map(function (m) {
       return el("button", { id: "t-" + m[0], type: "button", "aria-current": m[0] === vista ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
         [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] }),
-         m[0] === "revisar" ? el("span", { id: "insignia-revisar", clase: "insignia-nav", "aria-label": "errores sin veredicto", hidden: urgentes ? null : "", texto: urgentes ? String(urgentes) : "" }) : null]); });
+         m[0] === "revisar" ? el("span", { id: "insignia-revisar", clase: "insignia-nav", "aria-label": "errores sin veredicto", hidden: totalPend() ? null : "", texto: totalPend() ? String(totalPend()) : "" }) : null]); });
     var nav = el("nav", { id: "menu", "aria-label": "Secciones" }, [el("div", { clase: "pestanas" }, botones)]);
     var marco = el("section", { id: "vista-" + vista, clase: "contenido" });
     raiz.appendChild(nav); raiz.appendChild(marco);
     marco.appendChild(barraEstado());
     // Título de la pestaña y sus subpestañas (no en Hoy ni dentro del detalle de un error).
     if (!enDetalle()) {
-      if (vista !== "hoy") marco.appendChild(el("div", { clase: "titulo-wrap" }, [el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] })]));
-      if (vista === "revisar") marco.appendChild(el("button", { type: "button", clase: "buscador", id: "buscador", onclick: abrirBusqueda }, [icono("buscar"), "Buscar # de caso o conductor"]));
+      if (vista !== "hoy" && vista !== "revisar") marco.appendChild(el("div", { clase: "titulo-wrap" }, [el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] })]));
+      if (vista === "revisar" && param !== "capturas") marco.appendChild(el("button", { type: "button", clase: "buscador", id: "buscador", onclick: abrirBusqueda }, [icono("buscar"), "Buscar # de caso o conductor"]));
       if (SUBS[vista]) {
         var sa = subActual();
         marco.appendChild(el("div", { clase: "subtabs", role: "group", "aria-label": "Secciones de " + vista }, SUBS[vista].map(function (x) {
