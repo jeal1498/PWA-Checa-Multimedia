@@ -370,10 +370,10 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 .barra-seg-t { flex:1; display:flex; flex-direction:column; font-size:12px; color:var(--tenue); } .barra-seg-t b { color:var(--texto); font-size:14px; }
 .primario { background:var(--texto); color:var(--fondo); border-color:var(--texto); font-weight:800; min-height:48px; padding:0 20px; }
 @media (max-width:760px) { .barra-seg { bottom:calc(64px + env(safe-area-inset-bottom)); margin-inline:-14px; border-radius:0; border-width:1px 0 0; box-shadow:0 -6px 20px #0002; } }
-#hoja-seg { position:fixed; inset:0; z-index:30; }
-#hoja-seg .velo { position:absolute; inset:0; background:rgba(12,12,16,.5); }
-#hoja-seg .panel-hoja { position:absolute; left:0; right:0; bottom:0; max-width:560px; margin:0 auto; background:var(--tablero); border-radius:22px 22px 0 0; padding:10px 16px calc(16px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:10px; box-shadow:0 -8px 30px #0004; }
-#hoja-seg .asa { width:40px; height:4px; border-radius:2px; background:var(--borde); align-self:center; }
+#hoja-seg, #hoja-conf { position:fixed; inset:0; z-index:30; }
+#hoja-conf .velo, #hoja-seg .velo { position:absolute; inset:0; background:rgba(12,12,16,.5); }
+#hoja-conf .panel-hoja, #hoja-seg .panel-hoja { position:absolute; left:0; right:0; bottom:0; max-width:560px; margin:0 auto; background:var(--tablero); border-radius:22px 22px 0 0; padding:10px 16px calc(16px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:10px; box-shadow:0 -8px 30px #0004; }
+#hoja-conf .asa, #hoja-seg .asa { width:40px; height:4px; border-radius:2px; background:var(--borde); align-self:center; }
 #hoja-seg h2 { margin:0; } #hoja-seg label { display:flex; flex-direction:column; font-size:12px; color:var(--tenue); gap:2px; } #hoja-seg .dos-col { display:grid; grid-template-columns:1fr 1fr; gap:8px; } #hoja-seg select, #hoja-seg input { width:100%; font-size:16px; }
 .lado .duo { grid-template-columns:42% minmax(0,1fr); }
 @media (min-width:1000px) and (orientation:landscape) { .marco-captura { max-height:58vh; } }
@@ -479,3 +479,7 @@ details.def-ayuda > summary { display:flex; align-items:center; min-height:44px;
 #seguimiento.barra-seg { position:static; margin:16px 0 0; border-radius:12px; border-width:1px; box-shadow:none; }
 #exp-pos { margin-bottom:4px; }
 #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(140px + env(safe-area-inset-bottom)); z-index:40; max-width:min(92vw,420px); padding:10px 16px; border-radius:10px; background:var(--texto); color:var(--fondo); font-weight:600; box-shadow:0 6px 20px #0004; }
+
+/* Fase 4: confirmaciones con consecuencia */
+#hoja-conf h2 { margin:0; font-size:18px; text-transform:none; letter-spacing:0; color:var(--texto); } #hoja-conf p { margin:0; line-height:1.5; font-size:15px; }
+#hoja-conf button { min-height:48px; }

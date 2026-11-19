@@ -179,6 +179,14 @@
     rojo:             ["Hay algo que atender", "Mira primero la sección «Por revisar».", "luz-r"],
     gris:             ["Aún no se sabe", "Todavía no hay datos suficientes para opinar.", ""]
   };
+  // A dónde lleva cada alerta: al lugar donde se puede hacer algo.
+  function destinoAlerta(a) {
+    var comp = a.componente, t = (a.titulo || "") + " " + (a.descripcion || "");
+    if (comp === "revision_ia") return /402/.test(t) ? ["config", "Ver saldo o apagar la IA"] : ["ia", "Abrir Auditoría IA"];
+    if (comp === "revision_humana") return ["errores", "Abrir errores"];
+    if (comp === "ingesta" || comp === "aplicacion_android") return ["dispositivos", "Ver equipos"];
+    return ["ofertas", "Abrir ofertas"];
+  }
   function aclaracion(a) {
     if (a.componente === "revision_ia") return /402/.test(a.titulo + " " + a.descripcion) ? "Se acabó el saldo del revisor automático. Recárgalo." : "El revisor automático está fallando. Mira el detalle.";
     if (a.componente === "revision_humana") return "Nadie ha confirmado si estas lecturas estaban bien o mal. " + (a.gravedad === "baja" ? "No hagas nada ahora." : "Conviene revisarlas.");
@@ -242,7 +250,7 @@
         detalleCadena.appendChild(el("div", { clase: "fila" }, [insignia(p.estado), el("strong", { texto: p.paso.nombre + " · " + pq[0] })]));
         detalleCadena.appendChild(el("div", { clase: "aclara", texto: aclara || RESPUESTA[p.estado] || TEXTO[p.estado] }));
         if (x.ultima_comprobacion) detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + fechaHora(x.ultima_comprobacion) }));
-        if (al) detalleCadena.appendChild(enlace(al.componente === "revision_ia" ? "Abrir Auditoría IA" : al.componente === "revision_humana" ? "Abrir errores" : "Abrir ofertas", al.componente === "revision_ia" ? "ia" : al.componente === "revision_humana" ? "errores" : "ofertas"));
+        if (al) detalleCadena.appendChild(enlace(destinoAlerta(al)[1], destinoAlerta(al)[0]));
       } else detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Toca un paso para ver qué significa." }));
       cadena.appendChild(detalleCadena);
     }
@@ -260,7 +268,7 @@
         el("details", {}, [el("summary", { texto: "Más detalle" }),
           el("div", { clase: "detalle", texto: a.descripcion }),
           el("div", { clase: "detalle", texto: "Dato técnico: " + a.evidencia })]),
-        enlace("Abrir", a.componente === "revision_ia" ? "ia" : a.componente === "revision_humana" ? "errores" : "ofertas")]);
+        enlace(destinoAlerta(a)[1], destinoAlerta(a)[0])]);
     }
     c.appendChild(el("h2", { texto: "Por revisar" + (atn.length ? " (" + atn.length + ")" : "") }));
     c.appendChild(el("div", { id: "alertas", clase: "atencion" }, atn.length ? atn.slice(0, 3).map(tarjetaAlerta).concat(atn.length > 3 ?
@@ -662,7 +670,7 @@
     var n = filas.length; if (!n) return null;
     var cuenta = RES_BARRA.map(function (g) { return filas.filter(function (f) { return g[1].indexOf(f.resultado) >= 0; }).length; });
     return el("section", { clase: "barra-res", id: "resultados" }, [
-      el("div", { clase: "h-fila" }, [el("h2", { texto: "Qué pasó con las lecturas" }), el("span", { clase: "detalle", texto: total ? total + " en total" : "" })]),
+      el("div", { clase: "h-fila" }, [el("h2", { texto: "Qué pasó con las lecturas" }), el("span", { clase: "detalle", texto: total && total > n ? "Solo las " + n + " más recientes (hay " + total + ")" : n + " en total" })]),
       el("div", { clase: "barra", role: "img", "aria-label": RES_BARRA.map(function (g, k) { return g[0] + " " + Math.round(cuenta[k] / n * 100) + "%"; }).join(", ") },
         RES_BARRA.map(function (g, k) { if (!cuenta[k]) return null; var s = el("i"); s.style.width = (cuenta[k] / n * 100) + "%"; s.style.background = g[2]; return s; })),
       el("div", { clase: "leyenda" }, RES_BARRA.map(function (g, k) { var p = el("i"); p.style.background = g[2]; return el("span", {}, [p, g[0] + " " + Math.round(cuenta[k] / n * 100) + "%"]); })),
@@ -861,6 +869,7 @@
       resultado: valor("f-resultado"), estado_veredicto: valor("f-estado"), pagina: pag.ofertas, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     var b = d ? barraResultados(d.filas || [], d.total) : null; if (b) c.appendChild(b);
+    var masNodo = null;
     if (m) {
       var ms = m.metricas || [];
       var clave = ["precision_humana", "captura_exacta"], destac = clave.map(function (k) { return ms.filter(function (x) { return x.clave === k; })[0]; }).filter(Boolean);
@@ -873,14 +882,15 @@
         mas.appendChild(el("h2", { texto: grupos[g] }));
         mas.appendChild(el("div", { clase: "tarjetas" }, gs.map(metricaTarjeta)));
       });
-      c.appendChild(mas);
+      masNodo = mas;
     }
-    if (!d) return;
+    if (!d) { if (masNodo) c.appendChild(masNodo); return; }
     c.appendChild(el("h2", { texto: "Lecturas" }));
     var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle de la lectura", hidden: "" });
     c.appendChild(el("div", { clase: "dividido" }, [lista, lado]));
     lista.appendChild(el("div", { clase: "error-lista", id: "eventos" }, (d.filas || []).length ? d.filas.map(tarjetaEvento) : [el("div", { clase: "vacio", texto: "Sin lecturas con estos filtros." })]));
     lista.appendChild(paginas("ofertas", d));
+    if (masNodo) c.appendChild(masNodo);
   }
 
   // ---------- 04 Versiones ----------
@@ -1095,6 +1105,35 @@
     if (abierto) d.open = true; return d;
   }
   function filaKV(t, v, tono) { return el("div", { clase: "kv-fila" }, [el("span", { texto: t }), el("b", { clase: tono || "", texto: txt(v) })]); }
+  // Confirmación de una acción con efecto en los teléfonos: dice qué va a pasar y pide una decisión clara.
+  function hojaConfirmar(titulo, texto, textoSi, onSi) {
+    var viejo = document.getElementById("hoja-conf"); if (viejo) viejo.remove();
+    function cerrar() { h.remove(); }
+    var si = el("button", { type: "button", id: "conf-si", clase: "primario", texto: textoSi, onclick: async function () { si.disabled = true; si.textContent = "Guardando…"; var ok = await onSi(); if (ok) cerrar(); else { si.disabled = false; si.textContent = textoSi; } } });
+    var h = el("div", { id: "hoja-conf", role: "dialog", "aria-modal": "true", "aria-label": titulo, onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: titulo }), el("p", { texto: texto }), si,
+        el("button", { type: "button", id: "conf-no", texto: "Cancelar", onclick: cerrar })])]);
+    document.body.appendChild(h); h.querySelector("#conf-no").focus();
+  }
+  // Supuestos de la cuenta «cuánto te queda»: se pueden cambiar y se recuerdan en este navegador.
+  function supuestos() {
+    var sp = { ingreso: 99, cambio: 18.5 };
+    try { var g = JSON.parse(localStorage.getItem("checa-supuestos") || "null"); if (g && g.ingreso > 0 && g.cambio > 0) sp = { ingreso: Number(g.ingreso), cambio: Number(g.cambio) }; } catch (x) { /* sin almacenamiento */ }
+    return sp;
+  }
+  function editorSupuestos(ingreso, cambio) {
+    var inI = el("input", { id: "sp-ingreso", inputmode: "decimal", autocomplete: "off", value: String(ingreso) }), inC = el("input", { id: "sp-cambio", inputmode: "decimal", autocomplete: "off", value: String(cambio) });
+    var err = el("div", { clase: "aviso-cmp", hidden: "" });
+    return el("details", { clase: "sub", id: "sp-editor" }, [el("summary", { texto: "Cambiar la cuenta" }), el("div", { clase: "campos-v" }, [
+      el("label", { clase: "campo-v" }, [el("span", { texto: "Te queda por usuario ($ al mes)" }), inI]), el("label", { clase: "campo-v" }, [el("span", { texto: "Pesos por dólar" }), inC])]), err,
+      el("button", { type: "button", id: "sp-guardar", texto: "Guardar", onclick: function () {
+        var i = parseFloat(inI.value.replace(",", ".")), k = parseFloat(inC.value.replace(",", "."));
+        if (!(i > 0 && k > 0)) { err.textContent = "Escribe números mayores que cero."; err.hidden = false; return; }
+        try { localStorage.setItem("checa-supuestos", JSON.stringify({ ingreso: i, cambio: k })); } catch (x) { err.textContent = "Este navegador no deja guardar el cambio."; err.hidden = false; return; }
+        pintar(); } }),
+      el("div", { clase: "detalle", texto: "Se guarda solo en este navegador." })]);
+  }
   async function config(c) {
     c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Configuración" }), selPeriodo(pintar)]));
     skeleton(c);
@@ -1108,10 +1147,13 @@
       var seg = function (ms) { return ms === null || ms === undefined ? "—" : (ms / 1000).toFixed(1) + " s"; };
       var esRev = !!(yo && yo.rol === "revisor");
       var interruptor = function (que, titulo, detalle, activo) {
-        var pend = false, btn = el("button", { type: "button", id: "ia-sw-" + que, clase: "ia-sw", "aria-pressed": String(activo), disabled: esRev ? null : "", texto: activo ? "Encendida · Apagar" : "Apagada · Encender", onclick: async function () {
-          if (!pend) { pend = true; btn.textContent = "¿Seguro? Toca otra vez para " + (activo ? "apagarla" : "encenderla"); return; }
-          var r = await llamar("admin_ia_interruptor", { p_que: que, p_activo: !activo }); if (r && r.ok) pintar(); else { pend = false; btn.textContent = activo ? "Encendida · Apagar" : "Apagada · Encender"; } } });
-        return el("div", { clase: "ia-fila" }, [el("div", {}, [el("b", { texto: titulo }), el("div", { clase: "detalle", texto: detalle })]), btn]);
+        var consecuencia = que === "vision"
+          ? (activo ? "Los teléfonos dejarán de pedirle a la IA que mire la imagen de la oferta y seguirán solo con su lector. Tarda unos 30 segundos en llegar a todos." : "Los teléfonos volverán a pedirle a la IA que mire la imagen de la oferta. Cada consulta tiene costo. Tarda unos 30 segundos en llegar a todos.")
+          : (activo ? "Los teléfonos sin imagen usarán solo su lector. Tarda unos 30 segundos en llegar a todos." : "Los teléfonos sin imagen volverán a consultar a la IA de texto. Cada consulta tiene costo. Tarda unos 30 segundos en llegar a todos.");
+        var btn = el("button", { type: "button", id: "ia-sw-" + que, clase: "ia-sw", "aria-pressed": String(activo), disabled: esRev ? null : "", texto: activo ? "Encendida · Apagar" : "Apagada · Encender", onclick: function () {
+          hojaConfirmar((activo ? "¿Apagar " : "¿Encender ") + (que === "vision" ? "la IA con imagen" : "la IA de texto") + "?", consecuencia, activo ? "Sí, apagar" : "Sí, encender", async function () {
+            var r = await llamar("admin_ia_interruptor", { p_que: que, p_activo: !activo }); if (r && r.ok) { pintar(); return true; } return false; }); } });
+        return el("div", { clase: "ia-fila" }, [el("div", {}, [el("b", { texto: titulo }), el("div", { clase: "detalle", texto: detalle }), esRev ? null : el("div", { clase: "detalle", texto: "Solo un revisor puede cambiarlo. Tu rol es de solo lectura." })]), btn]);
       };
       var modo = function (m, nombre) {
         var d = (ie.modos || {})[m];
@@ -1139,7 +1181,7 @@
     }
     // 1b · Costo por usuario y lo que te queda de su pago
     if (cu && cu.usuarios) {
-      var INGRESO = 99, CAMBIO = 18.5, us = cu.usuarios, mxn = function (v) { return "$" + Math.round(v) + " MXN"; };
+      var sp = supuestos(), INGRESO = sp.ingreso, CAMBIO = sp.cambio, us = cu.usuarios, mxn = function (v) { return "$" + Math.round(v) + " MXN"; };
       var gastoMes = function (x) { return Number(x.usd_mes || 0) * CAMBIO; };
       var prom = us.length ? us.reduce(function (t, x) { return t + gastoMes(x); }, 0) / us.length : 0;
       var peor = us.length ? gastoMes(us[0]) : 0;
@@ -1152,7 +1194,7 @@
         us.length ? el("details", { clase: "sub" }, [el("summary", { texto: "Ver cada usuario" }), el("div", {}, us.map(function (x) {
           return filaKV(x.usuario + " · " + x.llamadas_dia + " consultas al día · " + x.dias + " días", mxn(gastoMes(x)) + " al mes");
         }))]) : null,
-        el("div", { clase: "detalle", texto: "Cuenta de $" + INGRESO + " MXN netos por usuario y $" + CAMBIO + " MXN por dólar. El gasto al mes es el promedio de sus días con uso por 30. Si el periodo es corto, es solo una idea; con 7 días o más es más confiable." })], ancho));
+        el("div", { clase: "detalle", texto: "Cuenta de $" + INGRESO + " MXN netos por usuario y $" + CAMBIO + " MXN por dólar. El gasto al mes es el promedio de sus días con uso por 30. Si el periodo es corto, es solo una idea; con 7 días o más es más confiable." }), editorSupuestos(INGRESO, CAMBIO)], ancho));
     }
     if (g) {
       var al = g.almacenamiento || {}, rt = g.retencion || {};
