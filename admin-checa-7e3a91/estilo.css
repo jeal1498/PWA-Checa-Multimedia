@@ -1212,3 +1212,22 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 @media (prefers-reduced-motion: reduce) { .campo-sw input[type=checkbox], .campo-sw input[type=checkbox]::after { transition:none; } }
 .campo-sw > span { flex:1; min-width:0; }
 .campo-sw input[type=checkbox] { width:48px; min-width:48px; max-width:48px; height:28px; min-height:28px; padding:0; border:0; }
+
+/* Desglose en mosaicos: 4 en una fila */
+.kp-d { padding:10px; }
+.kp-q { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; }
+.kp-d .kp-l { flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; width:auto; min-height:76px; padding:10px 2px 8px; border:1.5px solid var(--hb); border-radius:16px; background:var(--tablero); text-align:center; font:600 9.5px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.02em; text-transform:uppercase; color:var(--gm); }
+.kp-d .kp-l b { font:800 26px/1 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing:-.03em; color:var(--texto); }
+.kp-d .kp-l span { flex:none; }
+.kp-d .kp-l .kp-dot { width:10px; height:10px; }
+.kp-d .kp-l.on { background:var(--texto); border-color:var(--texto); color:color-mix(in srgb, var(--fondo) 75%, var(--texto)); } .kp-d .kp-l.on b { color:var(--fondo); }
+.kp-st { margin:12px 2px 6px; font:700 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.05em; text-transform:uppercase; color:var(--gm); }
+.kp-d .kp-sub { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; margin:0; padding:0; border:0; }
+.kp-d .kp-sr { flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:60px; padding:8px 2px; border:1.5px solid var(--hb); border-radius:14px; background:var(--tablero); text-align:center; font:500 10.5px/1.2 "DM Sans", system-ui, sans-serif; color:var(--gm); }
+.kp-d .kp-sr b { font:800 20px/1 "Bricolage Grotesque", system-ui, sans-serif; color:var(--texto); }
+.kp-d .kp-sr:nth-child(5) { grid-column:1 / -1; }
+.kp-d .kp-sr.bien { background:color-mix(in srgb, var(--luz-v) 12%, var(--tablero)); border-color:color-mix(in srgb, var(--luz-v) 45%, var(--hb)); } .kp-d .kp-sr.bien b { color:var(--verde); }
+.kp-d .kp-sr.warn { background:color-mix(in srgb, var(--luz-r) 10%, var(--tablero)); border-color:color-mix(in srgb, var(--luz-r) 40%, var(--hb)); } .kp-d .kp-sr.warn b, .kp-d .kp-sr.warn span { color:var(--rojo); }
+.kp-d .kp-sr.on { background:var(--texto); border-color:var(--texto); color:color-mix(in srgb, var(--fondo) 75%, var(--texto)); } .kp-d .kp-sr.on b { color:var(--fondo); }
+.kp-d .kp-pie { margin-top:10px; }
+@media (max-width:340px) { .kp-d .kp-l b { font-size:22px; } .kp-d .kp-l { font-size:8.5px; } }

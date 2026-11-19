@@ -1285,10 +1285,10 @@
   }
   // ---------- Revisar: tres cuadros (Pendientes · Revisadas · Revisables), su desglose y la lista filtrada ----------
   var KPIS = [["pend", "Pendientes"], ["rev", "Revisadas"], ["todo", "Revisables"]];
-  var LINEAS = [["rojo", "Pop-ups rojos", "dr"], ["amarillo", "Pop-ups amarillos", "da"], ["verde", "Pop-ups verdes", "dv"], ["error", "Errores del Lector", "dg"]];
-  var EDADES = [["hoy", "De hoy"], ["ayer", "De ayer"], ["d2_4", "De 2 a 4 días"], ["borrarse", "Por borrarse (5 días o más)"]];
-  var RES_POP = [["correcta", "Correctas"], ["valores_mal", "Valores mal"], ["falso_positivo", "Falsos positivos"]];
-  var RES_ERR = [["ia", "Acertó la IA"], ["lector", "Acertó el Lector"], ["ilegible", "Ilegible"], ["otro_valor", "Otro valor"], ["no_oferta", "No era oferta"]];
+  var LINEAS = [["rojo", "Pop-ups rojos", "dr", "Rojos"], ["amarillo", "Pop-ups amarillos", "da", "Amarillos"], ["verde", "Pop-ups verdes", "dv", "Verdes"], ["error", "Errores del Lector", "dg", "Errores"]];
+  var EDADES = [["hoy", "De hoy", "De hoy"], ["ayer", "De ayer", "De ayer"], ["d2_4", "De 2 a 4 días", "2 a 4 días"], ["borrarse", "Por borrarse (5 días o más)", "Por borrarse"]];
+  var RES_POP = [["correcta", "Correctas", "Correctas"], ["valores_mal", "Valores mal", "Valores mal"], ["falso_positivo", "Falsos positivos", "Falsos +"]];
+  var RES_ERR = [["ia", "Acertó la IA", "Acertó la IA"], ["lector", "Acertó el Lector", "Acertó el Lector"], ["ilegible", "Ilegible", "Ilegible"], ["otro_valor", "Otro valor", "Otro valor"], ["no_oferta", "No era oferta", "No era oferta"]];
   function fechaMX(f) { try { return new Date(f).toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }); } catch (e) { return ""; } }
   function edadDe(f) {
     var a = fechaMX(f), b = fechaMX(new Date()); if (!a || !b) return "hoy";
@@ -1306,8 +1306,8 @@
   function subsDe(R, kpi, lin) {
     if (kpi === "todo") return [];
     var g = lin === "error" ? R.err : (R.pop && R.pop[lin]) || {}, o;
-    if (kpi === "pend") { o = EDADES.map(function (e) { return [e[0], e[1], Number((g.edad || {})[e[0]] || 0)]; }); if (lin === "error") o.push(["sin_captura", "Sin captura (no se pueden decidir)", Number(g.sin_captura || 0)]); return o; }
-    return (lin === "error" ? RES_ERR : RES_POP).map(function (e) { return [e[0], e[1], Number(((lin === "error" ? g.veredictos : g.resultados) || {})[e[0]] || 0)]; });
+    if (kpi === "pend") { o = EDADES.map(function (e) { return [e[0], e[1], Number((g.edad || {})[e[0]] || 0), e[2]]; }); if (lin === "error") o.push(["sin_captura", "Sin captura (no se pueden decidir)", Number(g.sin_captura || 0), "Sin captura: no se pueden decidir"]); return o; }
+    return (lin === "error" ? RES_ERR : RES_POP).map(function (e) { return [e[0], e[1], Number(((lin === "error" ? g.veredictos : g.resultados) || {})[e[0]] || 0), e[2]]; });
   }
   function aplicaSub(it, kpi, lin, sub) {
     if (!sub) return true;
@@ -1342,15 +1342,21 @@
     // Desglose del cuadro elegido
     if (abierto) {
       var des = el("div", { clase: "kp-d", id: "kp-desglose" });
+      var cuad = el("div", { clase: "kp-q" }); des.appendChild(cuad);
       LINEAS.forEach(function (L) {
-        var n = nUn(R, kpi, L[0]), on = lin === L[0], ss = on ? subsDe(R, kpi, L[0]) : [];
-        des.appendChild(el("button", { type: "button", clase: "kp-l" + (on ? " on" : ""), "data-lin": L[0], "aria-expanded": String(on), onclick: function () { F["f-lin"] = on ? "" : L[0]; F["f-sub"] = ""; pag.errores = pag.ofertas = 1; pintar(); } },
-          [el("i", { clase: "kp-dot " + L[2] }), el("span", { texto: L[1] }), el("b", { texto: String(n) }), el("em", { clase: "kp-ch", "aria-hidden": "true" })]));
-        if (ss.length) des.appendChild(el("div", { clase: "kp-sub" }, ss.map(function (x) {
-          var activo = sub === x[0];
-          return el("button", { type: "button", clase: "kp-sr" + (activo ? " on" : "") + (x[0] === "borrarse" && x[2] ? " warn" : ""), "data-sub": x[0], "aria-pressed": String(activo), onclick: function () { F["f-sub"] = activo ? "" : x[0]; pintar(); } }, [el("span", { texto: x[1] }), el("b", { texto: String(x[2]) })]);
-        })));
+        var n = nUn(R, kpi, L[0]), on = lin === L[0];
+        cuad.appendChild(el("button", { type: "button", clase: "kp-l" + (on ? " on" : ""), "data-lin": L[0], "aria-pressed": String(on), "aria-label": L[1] + ": " + n, onclick: function () { F["f-lin"] = on ? "" : L[0]; F["f-sub"] = ""; pag.errores = pag.ofertas = 1; pintar(); } },
+          [el("i", { clase: "kp-dot " + L[2] }), el("b", { texto: String(n) }), el("span", { texto: L[3] })]));
       });
+      var ss = lin ? subsDe(R, kpi, lin).filter(function (x) { return x[2] > 0 || x[0] !== "no_oferta" || sub === x[0]; }) : [];
+      if (ss.length) {
+        var LN = LINEAS.filter(function (x) { return x[0] === lin; })[0];
+        des.appendChild(el("div", { clase: "kp-st", texto: kpi === "pend" ? LN[1] + " por antigüedad" : lin === "error" ? "Errores: qué decidiste" : LN[1] + ": qué decidiste" }));
+        des.appendChild(el("div", { clase: "kp-sub" }, ss.map(function (x) {
+          var activo = sub === x[0];
+          return el("button", { type: "button", clase: "kp-sr" + (activo ? " on" : "") + (x[0] === "borrarse" && x[2] ? " warn" : "") + (x[0] === "ia" || x[0] === "correcta" ? " bien" : ""), "data-sub": x[0], "aria-pressed": String(activo), onclick: function () { F["f-sub"] = activo ? "" : x[0]; pintar(); } }, [el("b", { texto: String(x[2]) }), el("span", { texto: x[3] })]);
+        })));
+      }
       if (kpi === "pend") {
         des.appendChild(el("div", { clase: "kp-pie" }, [el("span", { texto: "El más viejo sin revisar" }), el("b", { texto: R.mas_viejo ? haceTxt(R.mas_viejo.creado) + " · " + (R.mas_viejo.t === "error" ? "error" : "pop-up") : "nada pendiente" })]));
         if (esRevisor && NUM.pend) des.appendChild(el("a", { href: "#revisar", id: "empezar", clase: "empezar-v", onclick: function (ev) { ev.preventDefault(); if (empezarAbrir) empezarAbrir(); } }, [sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico-play" }, [sv("path", { d: "M8 5l11 7-11 7z", fill: "currentColor" })]), "Empezar por el más viejo"]));
