@@ -1039,7 +1039,7 @@
   async function config(c) {
     c.appendChild(el("div", { clase: "encabezado" }, [el("h1", { texto: "Configuración" }), selPeriodo(pintar)]));
     skeleton(c);
-    var r = rango(), g = await llamar("admin_config"), k = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta }), b = await llamar("admin_bitacora", { pagina: 1 });
+    var r = rango(), g = await llamar("admin_config"), k = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta }), cu = await llamar("admin_costo_usuarios", { desde: r.desde, hasta: r.hasta }), b = await llamar("admin_bitacora", { pagina: 1 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     var ie = null; try { var rr = await cli.rpc("admin_ia_estado"); ie = rr && rr.data && !rr.data.error ? rr.data : null; } catch (x) { ie = null; }
     var ancho = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
@@ -1077,6 +1077,23 @@
         (k.por_modelo || []).length ? el("div", { clase: "detalle", texto: "Tokens: " + tok(ti) + " entrada · " + tok(ts) + " salida." }) : null,
         el("details", { clase: "sub" }, [el("summary", { texto: "Precio de cada IA" }), el("div", {}, (k.tarifas || []).map(function (x) { return filaKV(x.modelo, "$" + x.usd_mtok_entrada + " entrada · $" + x.usd_mtok_salida + " salida (por M tokens)"); }))]),
         k.nota ? el("div", { clase: "detalle", texto: k.nota }) : null], ancho));
+    }
+    // 1b · Costo por usuario y lo que te queda de su pago
+    if (cu && cu.usuarios) {
+      var INGRESO = 99, CAMBIO = 18.5, us = cu.usuarios, mxn = function (v) { return "$" + Math.round(v) + " MXN"; };
+      var gastoMes = function (x) { return Number(x.usd_mes || 0) * CAMBIO; };
+      var prom = us.length ? us.reduce(function (t, x) { return t + gastoMes(x); }, 0) / us.length : 0;
+      var peor = us.length ? gastoMes(us[0]) : 0;
+      izq.appendChild(acordeon("cfg-costo-usuario", "Costo por usuario", "al mes, de cada $" + INGRESO + " que te quedan", us.length ? "Te quedan " + mxn(INGRESO - prom) : "—", [
+        us.length ? el("div", {}, [
+          filaKV("Gasto de IA de un usuario típico al mes", mxn(prom)),
+          filaKV("Te queda de su pago (típico)", mxn(INGRESO - prom), INGRESO - prom < 30 ? "aviso-t" : ""),
+          filaKV("Usuario que más gasta · al mes", mxn(peor)),
+          filaKV("Te queda de su pago (el que más gasta)", mxn(INGRESO - peor), INGRESO - peor < 30 ? "aviso-t" : "")]) : el("div", { clase: "vacio", texto: "Sin consumo en el periodo." }),
+        us.length ? el("details", { clase: "sub" }, [el("summary", { texto: "Ver cada usuario" }), el("div", {}, us.map(function (x) {
+          return filaKV(x.usuario + " · " + x.llamadas_dia + " consultas al día · " + x.dias + " días", mxn(gastoMes(x)) + " al mes");
+        }))]) : null,
+        el("div", { clase: "detalle", texto: "Cuenta de $" + INGRESO + " MXN netos por usuario y $" + CAMBIO + " MXN por dólar. El gasto al mes es el promedio de sus días con uso por 30. Si el periodo es corto, es solo una idea; con 7 días o más es más confiable." })], ancho));
     }
     if (g) {
       var al = g.almacenamiento || {}, rt = g.retencion || {};
