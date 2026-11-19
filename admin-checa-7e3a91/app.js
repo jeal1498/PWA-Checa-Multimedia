@@ -1314,16 +1314,33 @@
     if (kpi === "pend") return sub === "sin_captura" ? !!it.sinCaptura : edadDe(it.creado) === sub;
     return lin === "error" ? it.quien === sub : it.resultado === sub;
   }
-  async function revisarTodo(c) {
+  // Los toques dentro de Revisar (cuadro, mosaico, subfiltro) solo repintan este cuerpo con los datos ya cargados:
+  // sin parpadeo, sin volver a pedir nada y sin mover la pantalla.
+  var cacheRev = { t: 0, d: {} }, cuerpoRev = null;
+  async function pedirRev(usar, fn, args) {
+    var k = fn + JSON.stringify(args || {});
+    if (usar && cacheRev.d[k] !== undefined && Date.now() - cacheRev.t < 120000) return cacheRev.d[k];
+    var r = await llamar(fn, args); cacheRev.d[k] = r; return r;
+  }
+  function refrescarRev() {
+    try { sessionStorage.setItem("checa-vista", JSON.stringify({ F: F, dias: dias, pag: pag })); } catch (x) { /* sin almacenamiento */ }
+    var y = window.scrollY, c = cuerpoRev; if (!c || !c.isConnected) return pintar();
+    // Se arma aparte y se cambia de golpe: lo anterior sigue a la vista hasta que lo nuevo está listo.
+    var nuevo = el("div", { clase: "vista-cuerpo", id: c.id });
+    revisarTodo(nuevo, true).then(function () { if (c.isConnected) { c.replaceWith(nuevo); cuerpoRev = nuevo; window.scrollTo(0, y); } });
+  }
+  async function revisarTodo(c, usarCache) {
+    if (esId(param) || param === "capturas") cacheRev = { t: 0, d: {} };
     if (esId(param)) return expediente(c, Number(param));
     if (param === "capturas") return capturas(c);
+    if (!usarCache) { cacheRev = { t: Date.now(), d: {} }; cuerpoRev = c; }
     var kpi = KPIS.map(function (x) { return x[0]; }).indexOf(F["f-kpi"]) >= 0 ? F["f-kpi"] : "pend";
     var lin = LINEAS.map(function (x) { return x[0]; }).indexOf(F["f-lin"]) >= 0 ? F["f-lin"] : "", sub = lin ? (F["f-sub"] || "") : "";
     var abierto = F["f-abierto"] !== "0";
     var esRevisor = !!(yo && yo.rol === "revisor"), vf = valor("f-version"), af = valor("f-app");
     var tarj = el("div", { clase: "kp3", role: "group", "aria-label": "Qué casos ver" }); c.appendChild(tarj);
-    skeleton(c);
-    var res = await Promise.all([llamar("admin_revisar_resumen"), contarUrgentes(), pendientesRev()]);
+    if (!usarCache) skeleton(c);
+    var res = await Promise.all([pedirRev(usarCache, "admin_revisar_resumen"), usarCache ? Promise.resolve() : contarUrgentes(), usarCache ? Promise.resolve() : pendientesRev()]);
     var R = res[0] && !res[0].error ? res[0] : null;
     if (!R) { var sk0 = c.querySelector(".skeleton"); if (sk0) sk0.remove(); c.appendChild(el("div", { clase: "vacio", texto: "No se pudo cargar el resumen. Intenta de nuevo." })); return; }
     var sumaPop = function (k) { return ["rojo", "amarillo", "verde"].reduce(function (t, n) { return t + Number((R.pop[n] || {})[k] || 0); }, 0); };
@@ -1336,7 +1353,7 @@
       tarj.appendChild(el("button", { type: "button", id: "kp-" + x[0], clase: "kp-c" + (x[0] === "pend" ? " p" : "") + (kpi === x[0] ? " on" : ""), "aria-pressed": String(kpi === x[0]), "aria-expanded": String(kpi === x[0] && abierto),
         onclick: function () {
           if (kpi === x[0]) F["f-abierto"] = abierto ? "0" : "1"; else { F["f-kpi"] = x[0]; F["f-lin"] = ""; F["f-sub"] = ""; F["f-abierto"] = "1"; }
-          pag.errores = pag.ofertas = 1; scrollErrores = 0; pintar(); } },
+          pag.errores = pag.ofertas = 1; scrollErrores = 0; refrescarRev(); } },
         [el("small", { texto: x[1] }), el("span", { clase: "kp-n", texto: NUM[x[0]].toLocaleString("en-US") }), el("span", { clase: "kp-s", texto: SUB[x[0]][0] + " errores" }), el("span", { clase: "kp-s", texto: SUB[x[0]][1] + " pop-ups" })]));
     });
     // Desglose del cuadro elegido
@@ -1345,7 +1362,7 @@
       var cuad = el("div", { clase: "kp-q" }); des.appendChild(cuad);
       LINEAS.forEach(function (L) {
         var n = nUn(R, kpi, L[0]), on = lin === L[0];
-        cuad.appendChild(el("button", { type: "button", clase: "kp-l" + (on ? " on" : ""), "data-lin": L[0], "aria-pressed": String(on), "aria-label": L[1] + ": " + n, onclick: function () { F["f-lin"] = on ? "" : L[0]; F["f-sub"] = ""; pag.errores = pag.ofertas = 1; pintar(); } },
+        cuad.appendChild(el("button", { type: "button", clase: "kp-l" + (on ? " on" : ""), "data-lin": L[0], "aria-pressed": String(on), "aria-label": L[1] + ": " + n, onclick: function () { F["f-lin"] = on ? "" : L[0]; F["f-sub"] = ""; pag.errores = pag.ofertas = 1; refrescarRev(); } },
           [el("i", { clase: "kp-dot " + L[2] }), el("b", { texto: String(n) }), el("span", { texto: L[3] })]));
       });
       var ss = lin ? subsDe(R, kpi, lin).filter(function (x) { return x[2] > 0 || x[0] !== "no_oferta" || sub === x[0]; }) : [];
@@ -1354,7 +1371,7 @@
         des.appendChild(el("div", { clase: "kp-st", texto: kpi === "pend" ? LN[1] + " por antigüedad" : lin === "error" ? "Errores: qué decidiste" : LN[1] + ": qué decidiste" }));
         des.appendChild(el("div", { clase: "kp-sub" }, ss.map(function (x) {
           var activo = sub === x[0];
-          return el("button", { type: "button", clase: "kp-sr" + (activo ? " on" : "") + (x[0] === "borrarse" && x[2] ? " warn" : "") + (x[0] === "ia" || x[0] === "correcta" ? " bien" : ""), "data-sub": x[0], "aria-pressed": String(activo), onclick: function () { F["f-sub"] = activo ? "" : x[0]; pintar(); } }, [el("b", { texto: String(x[2]) }), el("span", { texto: x[3] })]);
+          return el("button", { type: "button", clase: "kp-sr" + (activo ? " on" : "") + (x[0] === "borrarse" && x[2] ? " warn" : "") + (x[0] === "ia" || x[0] === "correcta" ? " bien" : ""), "data-sub": x[0], "aria-pressed": String(activo), onclick: function () { F["f-sub"] = activo ? "" : x[0]; refrescarRev(); } }, [el("b", { texto: String(x[2]) }), el("span", { texto: x[3] })]);
         })));
       }
       if (kpi === "pend") {
@@ -1372,7 +1389,7 @@
     var act = filtrosActivos(), lN = LINEAS.filter(function (x) { return x[0] === lin; })[0], sN = null;
     if (sub) { sN = subsDe(R, kpi, lin).filter(function (x) { return x[0] === sub; })[0]; }
     var migas = [KPIS.filter(function (x) { return x[0] === kpi; })[0][1]].concat(lN ? [lN[1]] : [], sN ? [sN[1]] : []).join(" › ");
-    var quitar = function () { F["f-lin"] = ""; F["f-sub"] = ""; pag.errores = pag.ofertas = 1; pintar(); };
+    var quitar = function () { F["f-lin"] = ""; F["f-sub"] = ""; pag.errores = pag.ofertas = 1; refrescarRev(); };
     c.appendChild(el("div", { clase: "fl-v" }, [
       el("button", { type: "button", id: "btn-filtros", clase: "fb-v", onclick: function () { abrirFiltros(null); } }, [icono("ajustes"), "Más filtros", act.length ? el("b", { texto: String(act.length) }) : null]),
       el("button", { type: "button", id: "etq-filtro", clase: "ac-v", "aria-label": lin ? "Quitar filtro " + migas : migas, onclick: lin ? quitar : null }, [migas, lin ? el("span", { clase: "ac-x", "aria-hidden": "true" }) : null])]
@@ -1382,11 +1399,11 @@
     // Lista según el cuadro, la línea y el subfiltro
     var items = [], estadoE = kpi, quien = kpi === "rev" && lin === "error" && sub ? sub : null;
     var pedir = [];
-    if (!lin || lin === "error") pedir.push(llamar("admin_errores_lista", { p_estado: estadoE, p_quien: quien, p_limite: 100 })); else pedir.push(Promise.resolve(null));
-    if (kpi !== "rev" && (!lin || lin !== "error")) pedir.push(llamar("admin_capturas_pendientes", { p_nivel: lin || null, p_limite: 50 })); else pedir.push(Promise.resolve(null));
-    if (kpi !== "pend" && (!lin || lin !== "error")) pedir.push(llamar("admin_capturas_revisadas", { p_nivel: lin || null, p_resultado: kpi === "rev" && lin && sub ? sub : null, p_limite: 100 })); else pedir.push(Promise.resolve(null));
+    if (!lin || lin === "error") pedir.push(pedirRev(usarCache, "admin_errores_lista", { p_estado: estadoE, p_quien: quien, p_limite: 100 })); else pedir.push(Promise.resolve(null));
+    if (kpi !== "rev" && (!lin || lin !== "error")) pedir.push(pedirRev(usarCache, "admin_capturas_pendientes", { p_nivel: lin || null, p_limite: 50 })); else pedir.push(Promise.resolve(null));
+    if (kpi !== "pend" && (!lin || lin !== "error")) pedir.push(pedirRev(usarCache, "admin_capturas_revisadas", { p_nivel: lin || null, p_resultado: kpi === "rev" && lin && sub ? sub : null, p_limite: 100 })); else pedir.push(Promise.resolve(null));
     var verDup = F["f-dup"] === "1" && kpi === "todo" && !lin, rg = rango();
-    pedir.push(verDup ? llamar("admin_ofertas", { desde: rg.desde, hasta: rg.hasta, app: af, version: vf, resultado: "duplicada", estado_veredicto: null, pagina: 1, por_pagina: 50 }) : Promise.resolve(null));
+    pedir.push(verDup ? pedirRev(usarCache, "admin_ofertas", { desde: rg.desde, hasta: rg.hasta, app: af, version: vf, resultado: "duplicada", estado_veredicto: null, pagina: 1, por_pagina: 50 }) : Promise.resolve(null));
     var got = await Promise.all(pedir);
     if (got[0]) (got[0].filas || []).forEach(function (f) { items.push(itemError(f)); });
     if (got[3]) (got[3].filas || []).forEach(function (f) { items.push(itemLectura(f)); });
