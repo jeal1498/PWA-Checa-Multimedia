@@ -1154,14 +1154,23 @@
         marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(estado.url, it.id); } })); }
       else marco.appendChild(el("div", { clase: "marco-centro" }, [el("span", { texto: "La captura ya no está disponible." })]));
       marco.appendChild(el("span", { clase: "marco-hora", texto: hora(it.creado) }));
-      var CAMPOS = [["Tarifa", "tarifa", pop.tarifa, Sx && Sx.tarifa, 0.01], ["Distancia", "km", pop.km, Sx && Sx.km, 0.15], ["Tiempo", "min", pop.min, Sx && Sx.min, 1]];
+      // La IA ya leyó este pop-up cuando se creó: su lectura se muestra desde el inicio. «Verificar» pide una segunda lectura sobre la imagen.
+      var hayI = !!(I && (I.oferta === false || ["tarifa", "km", "min"].some(function (k) { return I[k] !== null && I[k] !== undefined; })));
+      var iaNoOf = hayI && I.oferta === false;
+      var CAMPOS = [["Tarifa", "tarifa", pop.tarifa, I.tarifa, 0.01], ["Distancia", "km", pop.km, I.km, 0.15], ["Tiempo", "min", pop.min, I.min, 1]];
       var campos = CAMPOS.map(function (m) {
-        var estado = !Sx ? null : (!vig || (m[3] !== null && m[3] !== undefined && m[2] !== null && Math.abs(m[3] - m[2]) > m[4])) ? "dif" : "ok";
-        return { nom: m[0], k: m[1], estado: estado, v: [fmtV(m[1], m[2]), vig ? fmtV(m[1], m[3]) : "no es oferta"] };
+        var est = !hayI ? null : (iaNoOf || m[3] === null || m[3] === undefined || m[2] === null || m[2] === undefined || Math.abs(m[3] - m[2]) > m[4]) ? "dif" : "ok";
+        return { nom: m[0], k: m[1], estado: est, v: [fmtV(m[1], m[2])].concat(hayI ? [iaNoOf ? "no era oferta" : fmtV(m[1], m[3])] : []) };
       });
-      var tablaV = valoresCard(campos, Sx ? ["Lector", "IA"] : ["Lector"], "Lo que mostró el pop-up");
+      var tablaV = valoresCard(campos, hayI ? ["Lector", "IA"] : ["Lector"], "Lo que mostró el pop-up");
       var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" });
-      var vigS = S && S.estado === "vigente", recAcc = !S ? null : !vigS ? "falso" : (CAMPOS.every(function (m) { return m[3] !== null && m[3] !== undefined && m[2] !== null && m[2] !== undefined && Math.abs(m[3] - m[2]) <= m[4]; }) ? "ok" : "corregir");
+      // Lo sugerido sale de la lectura sobre la imagen si ya se verificó; si no, de la lectura guardada de la IA.
+      var vigS = S ? S.estado === "vigente" : hayI && !iaNoOf, SV = S || (hayI ? I : null);
+      var recAcc = !SV ? null : !vigS ? "falso" : (["tarifa", "km", "min"].every(function (k, ix) { var tol = [0.01, 0.15, 1][ix], pv = pop[k]; return SV[k] !== null && SV[k] !== undefined && pv !== null && pv !== undefined && Math.abs(SV[k] - pv) <= tol; }) ? "ok" : "corregir");
+      if (S) {
+        if (vigS) CAMPOS.forEach(function (m) { var bq = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (bq) bq.appendChild(el("div", { clase: "chk", texto: "Imagen " + fmtV(m[1], S[m[1]]) })); });
+        else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "Imagen: " + (S.estado === "vencida" ? "oferta vencida" : S.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
+      }
       if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Verificar", onclick: pedirIA }));
       else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn ok", disabled: "" }, [icoOkV(), "Verificado"]));
       tablaV.appendChild(colSug);
@@ -1175,8 +1184,8 @@
         P && P.n > 0 ? el("div", { clase: "detalle", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · pocos casos para opinar (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }) : null], false, "rev-progreso")]));
       if (esRevisor) cuerpo.appendChild(el("div", { clase: "ficha-bar", id: "rev-botones" }, [
         el("button", { type: "button", id: "rev-correcta", clase: "p ancho" + (recAcc === "ok" ? " rec" : ""), disabled: off ? "" : null, onclick: function () { guardar({ resultado: "correcta" }); } }, ["Está bien", recAcc === "ok" ? el("small", { texto: "Sugerido" }) : null]),
-        el("button", { type: "button", id: "rev-valores", clase: recAcc === "corregir" ? "rec" : "", disabled: off ? "" : null, onclick: function () { hojaValores(it, vig && Sx.tarifa !== null && Sx.km !== null && Sx.min !== null ? { tarifa: Sx.tarifa, km: Sx.km, min: Sx.min } : undefined); } }, ["Corregir", recAcc === "corregir" ? el("small", { texto: "Sugerido" }) : null]),
-        el("button", { type: "button", id: "rev-falso", clase: recAcc === "falso" ? "rec" : "", disabled: off ? "" : null, onclick: function () { hojaFalso(Sx && !vig ? (Sx.estado === "sin_oferta" ? "no_oferta" : "vencida") : undefined); } }, ["No es oferta", recAcc === "falso" ? el("small", { texto: "Sugerido" }) : null])]));
+        el("button", { type: "button", id: "rev-valores", clase: recAcc === "corregir" ? "rec" : "", disabled: off ? "" : null, onclick: function () { hojaValores(it, vigS && SV && SV.tarifa !== null && SV.km !== null && SV.min !== null && SV.tarifa !== undefined && SV.km !== undefined && SV.min !== undefined ? { tarifa: SV.tarifa, km: SV.km, min: SV.min } : undefined); } }, ["Corregir", recAcc === "corregir" ? el("small", { texto: "Sugerido" }) : null]),
+        el("button", { type: "button", id: "rev-falso", clase: recAcc === "falso" ? "rec" : "", disabled: off ? "" : null, onclick: function () { hojaFalso(SV && !vigS ? (SV.estado === "vencida" ? "vencida" : "no_oferta") : undefined); } }, ["No es oferta", recAcc === "falso" ? el("small", { texto: "Sugerido" }) : null])]));
       else cuerpo.appendChild(el("div", { clase: "solo-lectura", texto: "Tu rol es de solo lectura: no puedes revisar." }));
     }
     await cargarPrecision();
