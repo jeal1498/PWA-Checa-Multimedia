@@ -205,6 +205,23 @@
       sv("polyline", { points: pts.map(function (p) { return p.join(","); }).join(" "), fill: "none", stroke: "currentColor", "stroke-width": "1.8", "vector-effect": "non-scaling-stroke" }),
       sv("circle", { cx: u[0], cy: u[1], r: "2.5", fill: "currentColor" })]);
   }
+  // Barras de lecturas por día con una escala redonda; el último día resaltado.
+  function barrasDia(h) {
+    var vals = h.map(function (x) { return Number(x.lecturas) || 0; });
+    if (!vals.length) return el("div", { clase: "vacio", texto: "Sin datos en este periodo." });
+    var W = 340, H = 150, L = 34, B = 22, T = 8, max = Math.max.apply(null, vals) || 1;
+    var paso = Math.pow(10, Math.floor(Math.log10(max))), tope = Math.ceil(max / paso) * paso, pw = (W - L) / vals.length;
+    var g = [];
+    [0, tope / 2, tope].forEach(function (y) { var py = T + (H - T - B) * (1 - y / tope); g.push(sv("line", { x1: L, x2: W, y1: py, y2: py, stroke: "currentColor", "stroke-opacity": ".15" }));
+      var t = sv("text", { x: L - 6, y: py + 4, "text-anchor": "end", class: "eje" }); t.textContent = y >= 1000 ? (y / 1000).toLocaleString("es-MX") + "k" : String(Math.round(y)); g.push(t); });
+    vals.forEach(function (v, i) { var bh = (H - T - B) * v / tope, x = L + i * pw + pw * .2;
+      var r = sv("rect", { x: x.toFixed(1), y: (H - B - bh).toFixed(1), width: Math.max(1, pw * .6).toFixed(1), height: bh.toFixed(1), rx: "3", class: i === vals.length - 1 ? "bar ult" : "bar" });
+      var tt = sv("title"); tt.textContent = h[i].dia + ": " + v + " lecturas"; r.appendChild(tt); g.push(r); });
+    var a = sv("text", { x: L, y: H - 5, class: "eje" }); a.textContent = corto(h[0].dia);
+    var z = sv("text", { x: W, y: H - 5, "text-anchor": "end", class: "eje" }); z.textContent = corto(h[h.length - 1].dia) + " · " + vals[vals.length - 1].toLocaleString("en-US");
+    g.push(a, z);
+    return sv("svg", { viewBox: "0 0 " + W + " " + H, class: "barras-dia", role: "img", "aria-label": "Lecturas por día del " + h[0].dia + " al " + h[h.length - 1].dia + "; último día " + vals[vals.length - 1] }, g);
+  }
   // Toda la tarjeta lleva a su detalle (los «¿Qué significa?» de dentro siguen funcionando).
   function envolver(t, v, p) {
     t.classList.add("tocable"); t.setAttribute("role", "link"); t.tabIndex = 0;
@@ -282,12 +299,12 @@
     var heroEl;
     c.appendChild(heroEl = el("section", { clase: "hero estado-v3", id: "estado-general" }, [
       el("div", { clase: "estado-cab" }, [el("span", { clase: "latido " + (ESTADO[d.estado_general] || "nd"), "aria-hidden": "true" }), el("h2", { clase: "estado-t", texto: v[0] })]),
-      el("p", { clase: "estado-p", texto: v[1] + " " + fraseCadena + " " + comprobados + " de " + n + " cosas medidas." })]));
+      el("p", { clase: "estado-p", texto: rotos ? (rotos === 1 ? "Un paso tiene problemas." : rotos + " pasos tienen problemas.") + " Tócalo para ver el detalle." : v[1] })]));
 
     // 2 · Pasos de la lectura: un punto por paso; el que falla se abre solo.
     var peor = -1;
     pasos.forEach(function (x, k) { if (GRAVE[x.estado] <= 1 && (peor < 0 || GRAVE[x.estado] < GRAVE[pasos[peor].estado])) peor = k; });
-    var sel = peor;
+    var sel = -1;   // el detalle se abre al tocar un paso
     var cadena = el("section", { clase: "cadena", id: "cadena", "aria-label": "Pasos de la lectura" });
     var detalleCadena = el("div", { clase: "paso-detalle", "aria-live": "polite" });
     function pintarCadena() {
@@ -304,7 +321,7 @@
         detalleCadena.appendChild(el("div", { clase: "aclara", texto: aclara || RESPUESTA[p.estado] || TEXTO[p.estado] }));
         if (x.ultima_comprobacion) detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + fechaHora(x.ultima_comprobacion) }));
         if (al) detalleCadena.appendChild(enlace(destinoAlerta(al)[1], destinoAlerta(al)[0]));
-      } else detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Toca un paso para ver qué significa." }));
+      }
       cadena.appendChild(detalleCadena);
     }
     pintarCadena();
@@ -320,19 +337,17 @@
     }
     function accionIA() {
       if (!iaEst || !iaEst.vision) return null;
-      return el("button", { type: "button", clase: "accion-alerta", id: "apagar-ia", texto: "Apagar IA con imagen", onclick: function () {
+      return el("button", { type: "button", clase: "si", id: "apagar-ia", texto: "Apagar IA", onclick: function () {
         hojaConfirmar("¿Apagar la IA con imagen?", "Los teléfonos dejarán de pedirle a la IA que mire la imagen de la oferta y seguirán solo con su lector. Tarda unos 30 segundos en llegar a todos. Puedes volver a encenderla en Ajustes.", "Sí, apagar",
           async function () { var r = await llamar("admin_ia_interruptor", { p_que: "vision", p_activo: false }); if (r && r.ok) { toast("IA con imagen apagada"); pintar(); return true; } return false; }); } });
     }
     function tarjetaAlerta(a) {
-      var aclara = aclaracion(a);
+      var aclara = aclaracion(a) || a.descripcion, dest = destinoAlerta(a), acc = a.componente === "revision_ia" ? accionIA() : null;
       return el("div", { clase: "alerta " + a.gravedad }, [
-        el("div", { clase: "fila" }, [el("span", { clase: "tag " + a.gravedad, texto: GRAVEDAD[a.gravedad] || a.gravedad.toUpperCase() }), el("strong", { texto: a.titulo })]),
-        aclara ? el("div", { clase: "aclara", texto: aclara }) : null,
-        el("details", {}, [el("summary", { texto: "Más detalle" }),
-          el("div", { clase: "detalle", texto: a.descripcion }),
-          el("div", { clase: "detalle", texto: "Dato técnico: " + a.evidencia })]),
-        el("div", { clase: "fila acciones-alerta" }, [a.componente === "revision_ia" ? accionIA() : null, enlace(destinoAlerta(a)[1], destinoAlerta(a)[0])])]);
+        el("div", { clase: "alerta-l" }, [el("span", { clase: "alerta-ic", "aria-hidden": "true", texto: a.gravedad === "baja" ? "i" : "!" }),
+          el("div", { clase: "alerta-tx" }, [el("b", { texto: a.titulo }), el("small", { texto: aclara }),
+            el("details", { clase: "alerta-mas" }, [el("summary", { texto: "Dato técnico" }), el("div", { clase: "detalle", texto: a.evidencia })])])]),
+        el("div", { clase: "alerta-acc" }, [el("button", { type: "button", clase: acc ? "" : "si", texto: acc ? "Ver detalle" : dest[1], onclick: function () { ir(dest[0]); } }), acc])]);
     }
     // 3 · Atención: lo urgente primero (errores sin veredicto), luego las alertas y la meta de etiquetado.
     c.appendChild(el("h2", { texto: "Atención" }));
@@ -351,6 +366,27 @@
     atn.slice(0, 3).forEach(function (a) { at.appendChild(tarjetaAlerta(a)); });
     if (atn.length > 3) at.appendChild(el("details", { clase: "mas-alertas" }, [el("summary", { texto: "Ver las " + (atn.length - 3) + " alertas restantes" }), el("div", { clase: "atencion" }, atn.slice(3).map(tarjetaAlerta))]));
     c.appendChild(at);
+    // 4 · Cuatro cifras: cada una lleva a su detalle.
+    var porClave = {}; d.indicadores.forEach(function (i) { porClave[i.clave] = i; });
+    var DEST = { lecturas: ["calidad", "resumen"], tasa_errores: ["calidad", "versiones"], calidad_interpretacion: ["calidad", "ia"] };
+    var hs = d.historia || [];
+    var SPARK = { lecturas: hs.map(function (x) { return x.lecturas; }), tasa_errores: hs.map(function (x) { return x.lecturas ? x.errores / x.lecturas : null; }) };
+    var CORTO = { lecturas: "Lecturas", tasa_errores: "Errores", calidad_interpretacion: "Acierto" };
+    function valorInd(i) { var v = i.valor === undefined || i.valor === null ? (i.k !== undefined && i.n ? i.k / i.n : null) : i.valor; return v === null ? "—" : (i.unidad && i.unidad.indexOf("proporci") === 0 ? pct(v) : Number(v).toLocaleString("en-US")); }
+    function kpi(titulo, valor, sub, extra, v, p) {
+      return el("a", { href: "#" + v + (p ? "/" + p : ""), clase: "kpi", onclick: function (ev) { ev.preventDefault(); ir(v, p); } }, [
+        el("span", { clase: "kpi-t" }, [titulo, el("span", { "aria-hidden": "true", texto: "›" })]), el("span", { clase: "kpi-v", texto: valor }), el("span", { clase: "kpi-d", texto: sub }), extra]);
+    }
+    var cuatro = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean).map(function (i) {
+      var sub = i.n ? (i.clave === "lecturas" ? "en el periodo" : i.k + " de " + i.n) : i.clave === "lecturas" ? "en el periodo" : "aún sin casos";
+      var extra = SPARK[i.clave] ? spark(SPARK[i.clave]) : i.clave === "calidad_interpretacion" && i.n ? el("span", { clase: "medidor" }, [(function () { var b = el("i"); b.style.width = Math.round(i.k / i.n * 100) + "%"; b.style.background = "var(--verde)"; return b; })()]) : null;
+      return kpi(CORTO[i.clave], valorInd(i), sub, extra, DEST[i.clave][0], DEST[i.clave][1]); });
+    var kc = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta });
+    if (kc) {
+      var gasto = (kc.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0);
+      cuatro.push(kpi("Gasto en IA", (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—", "USD en el periodo", null, "ajustes"));
+    }
+    if (cuatro.length) { c.appendChild(el("h2", { texto: dias === 7 ? "Últimos 7 días" : "Últimos " + dias + " días" })); c.appendChild(el("div", { clase: "kpis", id: "esencial" }, cuatro)); }
     // Meta de etiquetado: capturas confirmadas por una persona.
     var metaN = el("b", { clase: "mono", texto: "—" }), metaS = el("small", { texto: "Capturas de ofertas confirmadas por una persona" }), metaB = el("i");
     c.appendChild(el("h2", { texto: "Meta de etiquetado" }));
@@ -363,31 +399,15 @@
       metaB.style.width = (x.rev + x.pend ? Math.round(x.rev / (x.rev + x.pend) * 100) : 0) + "%";
     });
 
-    // 4 · Cuatro cifras: cada una lleva a su detalle.
-    var porClave = {}; d.indicadores.forEach(function (i) { porClave[i.clave] = i; });
-    var DEST = { lecturas: ["calidad", "resumen"], tasa_errores: ["calidad", "versiones"], calidad_interpretacion: ["calidad", "ia"] };
-    var hs = d.historia || [];
-    var SPARK = { lecturas: hs.map(function (x) { return x.lecturas; }), tasa_errores: hs.map(function (x) { return x.lecturas ? x.errores / x.lecturas : null; }) };
-    var cuatro = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean).map(function (i) {
-      var t = tarjeta(i, [SPARK[i.clave] ? spark(SPARK[i.clave]) : null]);
-      return envolver(t, DEST[i.clave][0], DEST[i.clave][1]); });
-    var kc = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta });
-    if (kc) {
-      var gasto = (kc.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0);
-      cuatro.push(envolver(el("div", { clase: "tarjeta", "data-clave": "gasto_ia" }, [el("div", { clase: "detalle", texto: "Gasto en IA" }), el("div", { clase: "valor", texto: (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—" }),
-        el("div", { clase: "detalle", texto: "USD en el periodo" })]), "ajustes"));
-    }
-    if (cuatro.length) { c.appendChild(el("h2", { texto: "Lo esencial" })); c.appendChild(el("div", { clase: "tarjetas cuatro", id: "esencial" }, cuatro)); }
 
     // 5 · Tendencia
     var h0 = d.historia || [];
-    c.appendChild(el("div", { clase: "graficas una", id: "tendencia" }, [grafica("Lecturas y errores por día", [{ nombre: "Lecturas", clase: "a0", puntos: h0.map(function (x) { return { x: x.dia, y: x.lecturas }; }) },
-      { nombre: "Errores", clase: "a1", puntos: h0.map(function (x) { return { x: x.dia, y: x.errores }; }) }])]));
+    c.appendChild(el("h2", { texto: "Lecturas por día" }));
+    c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [barrasDia(h0)]));
 
     // Cada parte del sistema, a un toque (los números y gráficas de calidad viven en Calidad › Resumen).
     var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todas las partes del sistema" })]);
     var cuerpo = el("div", { clase: "completo-cuerpo" }); completo.appendChild(cuerpo); c.appendChild(completo); c = cuerpo;
-    c.appendChild(el("h2", { texto: "Cada parte, en una pregunta" }));
     var ordenados = d.componentes.slice().sort(function (a, b) { return (ORDEN[a.estado] === undefined ? 9 : ORDEN[a.estado]) - (ORDEN[b.estado] === undefined ? 9 : ORDEN[b.estado]); });
     c.appendChild(el("div", { clase: "carriles", id: "componentes" }, ordenados.map(function (x) {
       var pq = PREGUNTA[x.clave] || [x.nombre, x.nombre];
@@ -396,13 +416,12 @@
         el("div", { clase: "carril-texto" }, [
           el("strong", { texto: pq[0] }),
           el("div", { clase: "respuesta", texto: RESPUESTA[x.estado] || TEXTO[x.estado] }),
-          el("details", {}, [el("summary", { texto: "¿Qué significa?" }), el("p", { texto: pq[1] }),
+          el("details", {}, [el("summary", { texto: "Detalle" }), el("p", { texto: pq[1] }),
             el("div", { clase: "detalle", texto: x.nombre + " · cómo se comprueba: " + txt(x.comprobacion) }),
             el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + (x.ultima_comprobacion ? String(x.ultima_comprobacion).slice(0, 19).replace("T", " ") : "—") }),
             x.k !== undefined ? el("div", { clase: "detalle", texto: casos(x.k, x.n) }) : null,
             x.ms ? el("div", { clase: "detalle", texto: "Tiempo típico: " + x.ms + " ms" }) : null,
-            el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])]),
-        insignia(x.estado)]);
+            el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])])]);
     })));
   }
 
@@ -1430,8 +1449,18 @@
   function herramientas() {
     var h = document.getElementById("herr"); if (!h) return;
     h.textContent = "";
-    h.appendChild(selPeriodo(function () { contarUrgentes(); pintar(); }));
+    h.appendChild(el("button", { type: "button", id: "btn-periodo", clase: "pildora", "aria-haspopup": "dialog", "aria-label": "Periodo: " + dias + " días", onclick: abrirPeriodo }, [dias + " días", sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico-p" }, [sv("path", { d: "m7 10 5 5 5-5" })])]));
     h.appendChild(el("button", { type: "button", id: "btn-buscar", clase: "btn-buscar", "aria-label": "Buscar un caso o un conductor", onclick: abrirBusqueda }, [icono("buscar"), el("span", { clase: "largo", texto: "Buscar" })]));
+  }
+  function abrirPeriodo() {
+    var viejo = document.getElementById("hoja-buscar"); if (viejo) viejo.remove();
+    function cerrar() { h.remove(); }
+    var h = el("div", { id: "hoja-buscar", role: "dialog", "aria-modal": "true", "aria-label": "Periodo", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
+      el("div", { clase: "velo", onclick: cerrar }),
+      el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Periodo" }), el("p", { clase: "detalle", texto: "Aplica a toda la app: Hoy, Revisar y Calidad." }),
+        el("div", { clase: "lista-op" }, [7, 30, 90].map(function (n) {
+          return el("button", { type: "button", clase: "op", "aria-pressed": String(dias === n && !F.desde), onclick: function () { cerrar(); dias = n; F.desde = F.hasta = null; contarUrgentes(); pintar(); } }, [el("b", { texto: "Últimos " + n + " días" }), dias === n && !F.desde ? el("span", { texto: "✓" }) : null]); }))])]);
+    document.body.appendChild(h); var f = h.querySelector(".op"); if (f) f.focus();
   }
   function abrirBusqueda() {
     var viejo = document.getElementById("hoja-buscar"); if (viejo) viejo.remove();
@@ -1464,6 +1493,7 @@
     var off = navigator.onLine === false, m = Math.floor((Date.now() - ultima) / 60000);
     t.textContent = off ? "Sin conexión. Lo que ves puede no estar al día." : "Actualizado " + (m < 1 ? "hace un momento" : "hace " + m + " min");
     p.className = "punto " + (off ? "mal" : m >= 10 ? "aviso" : "ok");
+    var bar = t.closest(".estado-barra"); if (bar) bar.setAttribute("data-alerta", String(off || m >= 10));
   }
   setInterval(textoEstado, 30000);
   window.addEventListener("online", function () { textoEstado(); });
