@@ -83,7 +83,7 @@
     return { desde: (F.desde || iso(new Date(Date.now() - dias * 864e5))) + "T06:00:00Z", hasta: (F.hasta || iso(new Date(Date.now() + 864e5))) + "T06:00:00Z" };
   }
   function esc(s) { return s; }
-  function punto(estado) { return el("span", { clase: "punto " + (ESTADO[estado] || "nd"), title: TEXTO[estado] || estado }); }
+  function punto(estado) { return el("span", { clase: "punto " + (ESTADO[estado] || "nd"), role: "img", "aria-label": TEXTO[estado] || estado, title: TEXTO[estado] || estado }); }
   function insignia(estado) { return el("span", { clase: "insignia " + (ESTADO[estado] || "nd"), texto: TEXTO[estado] || estado }); }
 
   async function llamar(fn, args) {
@@ -103,7 +103,7 @@
     var est = t.estado || (t.n !== undefined && t.n !== null && t.n < 30 ? "insuficiente" : null);
     var valor = t.valor === undefined || t.valor === null ? (t.k !== undefined && t.n ? (t.k / t.n) : null) : t.valor;
     var texto = valor === null ? "—" : (t.unidad && t.unidad.indexOf("proporci") === 0 ? pct(valor) : String(valor));
-    return el("div", { clase: "tarjeta", "data-clave": t.clave, title: t.definicion || "" }, [
+    return el("div", { clase: "tarjeta", "data-clave": t.clave }, [
       el("div", { clase: "detalle", texto: t.nombre }),
       el("div", { clase: "valor", texto: texto }),
       el("div", { clase: "detalle", texto: (t.k !== undefined && t.k !== null ? t.k + " / " : "") + (t.n !== undefined && t.n !== null ? "n = " + t.n : "") + (t.unidad && t.unidad.indexOf("proporci") !== 0 ? " · " + t.unidad : "") }),
@@ -137,7 +137,7 @@
     var svg = sv("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": titulo, clase: "svg" });
     svg.setAttribute("class", "svg");
     svg.appendChild(sv("line", { x1: P, y1: H - P, x2: W - 4, y2: H - P, stroke: "currentColor", "stroke-opacity": "0.25" }));
-    var t0 = sv("text", { x: 2, y: 12, "font-size": "9", fill: "currentColor" }); t0.textContent = String(max) + (unidad || ""); svg.appendChild(t0);
+    var t0 = sv("text", { x: 2, y: 12, "font-size": "12", fill: "currentColor" }); t0.textContent = String(max) + (unidad || ""); svg.appendChild(t0);
     series.forEach(function (s, si) {
       var pts = s.puntos.map(function (p, i) { return p.y === null || p.y === undefined ? null :
         [P + (base.length === 1 ? (W - P - 4) / 2 : i * (W - P - 4) / (base.length - 1)), H - P - (p.y / max) * (H - P - 14)]; });
@@ -643,11 +643,12 @@
   function metricaTarjeta(x) {
     var PROP = ["duplicadas", "abstenciones", "captura_exacta", "con_referencia_humana", "precision_humana", "falsos_positivos_humana", "mezcla_tarjetas_humana", "acuerdo_ia_lector", "banco_heredado"];
     var v = x.valor === null || x.valor === undefined ? "—" : (PROP.indexOf(x.clave) >= 0 ? pct(x.valor) : String(x.valor));
-    return el("div", { clase: "tarjeta", "data-clave": x.clave, title: x.formula + " · población: " + x.poblacion + " · fuente: " + x.fuente }, [
+    return el("div", { clase: "tarjeta", "data-clave": x.clave }, [
       el("div", { clase: "detalle", texto: x.nombre }), el("div", { clase: "valor", texto: v }),
       el("div", { clase: "detalle", texto: (x.k !== null && x.k !== undefined ? x.k + " / " : "") + "n = " + txt(x.n) }),
       el("span", { clase: "etiqueta " + (x.estado === "suficiente" ? "ok" : x.estado === "no_medible" ? "mal" : "aviso"), texto: x.estado.replace("_", " ") }),
-      x.motivo ? el("div", { clase: "detalle", texto: x.motivo }) : null]);
+      x.motivo ? el("div", { clase: "detalle", texto: x.motivo }) : null,
+      el("details", { clase: "def-ayuda" }, [el("summary", { texto: "Cómo se calcula" }), el("div", { clase: "detalle", texto: "Cálculo: " + txt(x.formula) + ". Casos que cuenta: " + txt(x.poblacion) + ". De dónde sale: " + txt(x.fuente) + "." })])]);
   }
   function detalleEvento(f) {
     var ref = f.referencia;
@@ -959,8 +960,8 @@
     var cuerpo = el("div", { clase: "equipos-cuerpo" });
     function pintarEq() {
       cuerpo.textContent = "";
-      var tabs = el("div", { clase: "tabs2", role: "tablist", "aria-label": "Equipos" }, [["dispositivos", "Dispositivos " + disp.length], ["conductores", "Conductores " + cond.length]].map(function (t) {
-        return el("button", { type: "button", role: "tab", id: "tab-" + t[0], "aria-selected": String(tabEq === t[0]), texto: t[1], onclick: function () { tabEq = t[0]; pintarEq(); } }); }));
+      var tabs = el("div", { clase: "tabs2", role: "group", "aria-label": "Equipos" }, [["dispositivos", "Dispositivos " + disp.length], ["conductores", "Conductores " + cond.length]].map(function (t) {
+        return el("button", { type: "button", id: "tab-" + t[0], "aria-pressed": String(tabEq === t[0]), texto: t[1], onclick: function () { tabEq = t[0]; pintarEq(); } }); }));
       cuerpo.appendChild(tabs);
       cuerpo.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Orden" }, [["errores", "Más errores"], ["lecturas", "Más lecturas"], ["inactivos", "Sin actividad"]].map(function (o) {
         return el("button", { type: "button", clase: "chip", "aria-pressed": String(ordenEq === o[0]), texto: o[1], onclick: function () { ordenEq = o[0]; pintarEq(); } }); })));
@@ -1150,6 +1151,27 @@
     cont.appendChild(izq); cont.appendChild(der); c.appendChild(cont);
   }
 
+  // Diálogos: con uno abierto, el resto de la página no recibe foco ni toques (inert), Tab se queda dentro
+  // y al cerrar el foco vuelve a donde estaba.
+  var ultimoFoco = null, devolverFoco = null, modalActivo = false;
+  document.addEventListener("focusin", function (ev) { if (!(ev.target.closest && ev.target.closest('[aria-modal="true"]'))) ultimoFoco = ev.target; });
+  function fondoInerte(si) { ["raiz", "aviso"].forEach(function (id) { var x = document.getElementById(id); if (x) x.inert = si; }); var h = document.querySelector("header"); if (h) h.inert = si; }
+  new MutationObserver(function () {
+    var a = document.querySelector('[aria-modal="true"]');
+    if (a && !modalActivo) { modalActivo = true; devolverFoco = ultimoFoco; fondoInerte(true); }
+    else if (!a && modalActivo) { modalActivo = false; fondoInerte(false); if (devolverFoco && devolverFoco.isConnected && devolverFoco.focus) devolverFoco.focus(); devolverFoco = null; }
+  }).observe(document.body, { childList: true });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Tab") return;
+    var m = document.querySelector('[aria-modal="true"]'); if (!m) return;
+    var f = Array.prototype.filter.call(m.querySelectorAll("a[href], button, input, select, textarea, summary"), function (x) { return !x.disabled && !x.hidden && x.getClientRects().length > 0; });
+    if (!f.length) return;
+    var a = f[0], z = f[f.length - 1], act = document.activeElement;
+    if (!m.contains(act)) { ev.preventDefault(); a.focus(); }
+    else if (ev.shiftKey && act === a) { ev.preventDefault(); z.focus(); }
+    else if (!ev.shiftKey && act === z) { ev.preventDefault(); a.focus(); }
+  });
+
   var VISTAS = { inicio: inicio, errores: errores, ofertas: ofertas, revisar: revisar, versiones: versiones, dispositivos: dispositivos, ia: ia, config: config };
   var TITULOS = {}; MODULOS.forEach(function (m) { TITULOS[m[0]] = m[1]; });
 
@@ -1195,12 +1217,12 @@
     var enMas = PRINCIPALES.indexOf(vSel) < 0;
     var botones = MODULOS.map(function (m) {
       var activo = m[0] === vSel;
-      return el("button", { id: "t-" + m[0], type: "button", role: "tab", clase: PRINCIPALES.indexOf(m[0]) < 0 ? "sec" : "", "aria-selected": String(activo), "aria-current": activo ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
+      return el("button", { id: "t-" + m[0], type: "button", clase: PRINCIPALES.indexOf(m[0]) < 0 ? "sec" : "", "aria-current": activo ? "page" : null, "aria-label": m[1], onclick: function () { ir(m[0]); } },
         [icono(m[0]), el("span", { clase: "largo", texto: m[1] }), el("span", { clase: "corto", texto: m[2] })]); });
     var masIco = sv("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "ico", fill: "currentColor" }, [sv("circle", { cx: "5", cy: "12", r: "1.6" }), sv("circle", { cx: "12", cy: "12", r: "1.6" }), sv("circle", { cx: "19", cy: "12", r: "1.6" })]);
-    botones.push(el("button", { id: "t-mas", type: "button", clase: "mas", "aria-haspopup": "dialog", "aria-expanded": "false", "aria-selected": String(enMas), "aria-label": "Más secciones y cuenta", onclick: function () { hoja(true); } },
+    botones.push(el("button", { id: "t-mas", type: "button", clase: "mas", "aria-haspopup": "dialog", "aria-expanded": "false", "data-activo": String(enMas), "aria-label": "Más secciones y cuenta", onclick: function () { hoja(true); } },
       [masIco, el("span", { clase: "corto", texto: "Más" })]));
-    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, [el("div", { role: "tablist", "aria-label": "Módulos", clase: "pestanas" }, botones)]);
+    var nav = el("nav", { id: "menu", "aria-label": "Módulos" }, [el("div", { clase: "pestanas" }, botones)]);
     var c = el("section", { id: "vista-" + vista, clase: "contenido" });
     raiz.appendChild(nav); raiz.appendChild(c);
     c.appendChild(barraEstado());
