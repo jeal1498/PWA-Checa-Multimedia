@@ -1171,10 +1171,10 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 .ficha-cap { aspect-ratio:9 / 20; width:100%; border-radius:22px; overflow:hidden; border:1px solid var(--hb); background:var(--tablero); position:relative; }
 .ficha-col { min-width:0; display:flex; }
 .vtc2 { flex:1; min-width:0; display:flex; flex-direction:column; }
-.vbox { flex:1; display:flex; flex-direction:column; }
-.vq-b { flex:1; display:flex; flex-direction:column; justify-content:center; padding:6px 8px; }
-.vtc2 .ia-btn { flex:none; margin-top:10px; min-height:44px; white-space:nowrap; font-size:13.5px; padding:0 8px; gap:6px; }
+.vbox { flex:none; display:flex; flex-direction:column; margin-bottom:10px; }
+.vq-b { flex:none; display:flex; flex-direction:column; justify-content:flex-start; min-height:80px; padding:6px 8px; }
+.vtc2 .ia-btn { flex:none; margin-top:auto; min-height:44px; white-space:nowrap; font-size:13.5px; padding:0 8px; gap:6px; }
 .vtc2 .ia-btn.ok { background:var(--tablero); color:var(--verde); border:1.5px solid color-mix(in srgb, var(--luz-v) 55%, var(--tablero)); } .vtc2 .ia-btn.ok:disabled { opacity:1; }
 .vtc2 .ia-btn .ci-ic { background:transparent; color:currentColor; width:14px; height:14px; } .vtc2 .ia-btn .ci-ic svg { width:14px; height:14px; }
 .vtc2 .ficha-nota { margin-top:10px; flex:none; }
-@media (max-width:375px) { .vq-b { padding:3px 8px; } .vq-b .chk { margin-top:4px; padding:2px 6px; } .vq-b > .vq-h { margin-bottom:2px; } .vtc2 { padding:10px; } .vtc2 .ia-btn { min-height:40px; margin-top:8px; } }
+@media (max-width:375px) { .vq-b { padding:3px 8px; min-height:76px; } .vq-b .chk { margin-top:4px; padding:2px 6px; } .vq-b > .vq-h { margin-bottom:2px; } .vtc2 { padding:10px; } .vtc2 .ia-btn { min-height:40px; margin-top:8px; } }
