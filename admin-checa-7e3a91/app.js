@@ -150,65 +150,146 @@
   function skeleton(c) { c.appendChild(el("div", { clase: "skeleton", "aria-busy": "true" })); }
 
   // ---------- 01 Inicio (Salud) ----------
-  // Qué dice el veredicto, qué luz enciende y qué hacer. Nunca verde si faltan datos: lo decide el servidor (estado_general).
+  // Centro de control: ¿cómo está Checa? → qué requiere atención → cifras → pasos → actividad → todo el detalle.
+  // Nunca verde si faltan datos o hay fallas: lo decide el servidor (estado_general) y aquí solo se endurece, nunca se suaviza.
   var VEREDICTO = {
-    verde:            ["Todo funciona", "No tienes que hacer nada hoy.", "luz-v"],
-    amarillo:         ["Funciona, con avisos", "Revisa los avisos de abajo cuando tengas un momento.", "luz-a"],
-    amarillo_parcial: ["Todo lo medible funciona", "Aún no se puede medir todo: faltan datos en algunas cosas.", "luz-a"],
-    rojo:             ["Hay algo que atender", "Mira primero la sección «Por revisar».", "luz-r"],
-    gris:             ["Aún no se sabe", "Todavía no hay datos suficientes para opinar.", ""]
+    verde:            ["Todo funciona", "No tienes que hacer nada hoy.", "ok", "✓"],
+    amarillo:         ["Funciona, con avisos", "Revisa los avisos de abajo cuando tengas un momento.", "aviso", "!"],
+    amarillo_parcial: ["Todo lo medible funciona", "Aún no se puede medir todo: faltan datos en algunas cosas.", "aviso", "!"],
+    rojo:             ["Hay algo que atender", "Mira primero la sección «Requiere tu atención».", "mal", "✕"],
+    gris:             ["Aún no se sabe", "Todavía no hay datos suficientes para opinar.", "nd", "?"]
   };
+  var INSIGNIA_ENC = { verde: "Sistema saludable", amarillo: "Con avisos", amarillo_parcial: "Datos incompletos", rojo: "Requiere atención", gris: "No verificado" };
   function aclaracion(a) {
     if (a.componente === "revision_ia") return /402/.test(a.titulo + " " + a.descripcion) ? "Se acabó el saldo del revisor automático. Recárgalo." : "El revisor automático está fallando. Mira el detalle.";
     if (a.componente === "revision_humana") return "Nadie ha confirmado si estas lecturas estaban bien o mal. " + (a.gravedad === "baja" ? "No hagas nada ahora." : "Conviene revisarlas.");
     if (a.componente === "ingesta" || a.componente === "aplicacion_android") return "Dejaron de llegar datos de la app. Revisa que el teléfono tenga la app abierta y con internet.";
     return null;
   }
+  // Módulo donde se resuelve cada alerta.
+  function destinoAlerta(a) {
+    return a.componente === "revision_ia" ? ["ia", "Abrir Auditoría IA"] : a.componente === "revision_humana" ? ["errores", "Abrir errores"] : ["ofertas", "Abrir ofertas"];
+  }
   // Los 7 pasos de la cadena de lectura → componentes del servidor que los miden.
   var PASOS = [{ nombre: "Equipos", claves: ["aplicacion_android"] }, { nombre: "Datos", claves: ["base_de_datos", "api", "ingesta"] }, { nombre: "OCR", claves: ["ocr"] },
                { nombre: "Lectura", claves: ["interpretacion"] }, { nombre: "IA", claves: ["revision_ia"] }, { nombre: "Capturas", claves: ["almacenamiento"] },
                { nombre: "Cobros", claves: ["mercado_pago", "play_billing"] }];
   var GRAVE = { fuera_de_servicio: 0, degradado: 1, sin_comprobar: 2, sin_datos: 2, no_aplicable: 3, operativo: 4 };
+  // Estado de cada paso: ícono + palabra (lo que no se puede comprobar dice «No verificado», nunca «bien»).
+  var PASO_VIS = { operativo: ["✓", "Completado"], degradado: ["!", "Con problemas"], fuera_de_servicio: ["✕", "No funciona"], sin_comprobar: ["?", "No verificado"], sin_datos: ["?", "No verificado"], no_aplicable: ["–", "No aplica"] };
   function pasoEstado(paso, comps) {
     var ms = comps.filter(function (x) { return paso.claves.indexOf(x.clave) >= 0; });
     if (!ms.length) return { paso: paso, estado: "sin_datos", peor: { clave: paso.claves[0], nombre: paso.nombre, estado: "sin_datos" } };
     var peor = ms.reduce(function (m, x) { return (GRAVE[x.estado] === undefined ? 2 : GRAVE[x.estado]) < (GRAVE[m.estado] === undefined ? 2 : GRAVE[m.estado]) ? x : m; });
     return { paso: paso, estado: peor.estado, peor: peor };
   }
+  function hace(f) {
+    var t = new Date(f).getTime(); if (!f || isNaN(t)) return null;
+    var m = Math.max(0, Math.floor((Date.now() - t) / 60000));
+    return m < 1 ? "hace un momento" : m < 60 ? "hace " + m + " min" : m < 1440 ? "hace " + Math.floor(m / 60) + " h" : "hace " + Math.floor(m / 1440) + " d";
+  }
+  function valorIndicador(t) {
+    var valor = t.valor === undefined || t.valor === null ? (t.k !== undefined && t.n ? (t.k / t.n) : null) : t.valor;
+    return valor === null ? "—" : (t.unidad && t.unidad.indexOf("proporci") === 0 ? pct(valor) : String(valor));
+  }
+  // Minigráfica de tendencia (solo si hay al menos 2 puntos reales).
+  function chispa(vals) {
+    var p = vals.filter(function (v) { return v !== null && v !== undefined && !isNaN(v); });
+    if (p.length < 2) return null;
+    var max = Math.max.apply(null, p), min = Math.min.apply(null, p), W = 120, H = 36, rg = max - min || 1;
+    var d = p.map(function (v, i) { return (i ? "L" : "M") + (i * W / (p.length - 1)).toFixed(1) + " " + (H - 3 - ((v - min) / rg) * (H - 6)).toFixed(1); }).join(" ");
+    return sv("svg", { viewBox: "0 0 " + W + " " + H, class: "chispa", "aria-hidden": "true", preserveAspectRatio: "none" }, [sv("path", { d: d, fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" })]);
+  }
+  function fallaInicio(c) {
+    c.appendChild(el("section", { clase: "sl-hero nd", id: "estado-general" }, [el("div", { clase: "sl-ico", "aria-hidden": "true", texto: "?" }),
+      el("div", { clase: "sl-hero-t" }, [el("strong", { texto: "No se pudo verificar el estado" }), el("p", { texto: "No llegó respuesta del servidor, así que no se sabe si Checa funciona. Esto no significa que todo esté bien." }),
+        el("button", { type: "button", id: "reintentar", clase: "primario", texto: "Reintentar", onclick: function () { pintar(); } })])]));
+  }
   async function inicio(c) {
     skeleton(c);
     var r = rango(), d = await llamar("admin_salud", { desde: r.desde, hasta: r.hasta });
     c.textContent = "";
-    if (!d) return;
-    var inc = d.atencion.length, n = d.componentes.length;
-    var comprobados = d.componentes.filter(function (x) { return ["operativo", "degradado", "fuera_de_servicio"].indexOf(x.estado) >= 0; }).length;
-    var fallas = d.componentes.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
-    var v = VEREDICTO[d.estado_general] || VEREDICTO.gris;
-    var luces = ["luz-r", "luz-a", "luz-v"].map(function (l) { return el("i", { clase: v[2] === l ? "on " + l : "" }); });
     c.appendChild(barraEstado());
-    c.appendChild(el("div", { clase: "encabezado" }, [el("div", { clase: "detalle", texto: "Periodo: " + r.desde.slice(0, 10) + " → " + r.hasta.slice(0, 10) }), selPeriodo(pintar)]));
-
-    // 1 · Veredicto y frase de acción
+    c.appendChild(el("div", { clase: "sl-enc" }, [el("div", {}, [el("h1", { texto: "¿Cómo está Checa?" }), el("p", { clase: "sl-sub", texto: "Resumen del estado actual y lo que necesita tu atención." })])]));
+    if (!d || !d.componentes || !d.atencion || !d.indicadores) { fallaInicio(c); return; }
+    var n = d.componentes.length;
+    var comprobados = d.componentes.filter(function (x) { return ["operativo", "degradado", "fuera_de_servicio"].indexOf(x.estado) >= 0; }).length;
+    var rotas = d.componentes.filter(function (x) { return x.estado === "fuera_de_servicio"; }).length;
+    var degradadas = d.componentes.filter(function (x) { return x.estado === "degradado"; }).length;
+    var GR = { alta: 0, media: 1, baja: 2 };
+    var atn = d.atencion.slice().sort(function (x, y) { return (GR[x.gravedad] === undefined ? 3 : GR[x.gravedad]) - (GR[y.gravedad] === undefined ? 3 : GR[y.gravedad]); });
+    // Nunca «saludable» si hay fallas relevantes o nada medido.
+    var general = VEREDICTO[d.estado_general] ? d.estado_general : "gris";
+    if (general === "verde") {
+      if (rotas || atn.some(function (a) { return a.gravedad === "alta"; })) general = "rojo";
+      else if (degradadas || atn.length) general = "amarillo";
+      else if (!comprobados) general = "gris";
+    }
+    var v = VEREDICTO[general];
     var pasos = PASOS.map(function (p) { return pasoEstado(p, d.componentes); });
     var rotos = pasos.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
-    var fraseCadena = rotos ? "Falla " + rotos + (rotos === 1 ? " paso" : " pasos") + " de " + PASOS.length + "." : "Ningún paso de la cadena falla.";
-    c.appendChild(el("section", { clase: "hero", id: "estado-general" }, [
-      el("div", { clase: "semaforo", "aria-hidden": "true" }, luces),
-      el("div", { clase: "hero-texto" }, [el("h1", { texto: v[0] }), el("p", { texto: v[1] }), el("p", { texto: fraseCadena }),
-        el("div", { clase: "fila" }, [insignia(d.estado_general), el("span", { clase: "detalle", texto: comprobados + " de " + n + " cosas medidas" })])])]));
+    var sinVerificar = pasos.filter(function (x) { return GRAVE[x.estado] === 2; }).length;
+    var fraseCadena = rotos ? "Falla " + rotos + (rotos === 1 ? " paso" : " pasos") + " de " + PASOS.length + "." :
+      sinVerificar ? "Ningún paso falla; " + sinVerificar + (sinVerificar === 1 ? " no se puede verificar." : " no se pueden verificar.") : "Ningún paso de la cadena falla.";
+    var ult = d.componentes.map(function (x) { return x.ultima_comprobacion; }).filter(Boolean).sort().pop();
+    // Insignia del encabezado
+    c.querySelector(".sl-enc").appendChild(el("div", { clase: "sl-badge " + v[2], id: "insignia-estado" }, [el("span", { clase: "punto " + v[2] }), el("span", { texto: INSIGNIA_ENC[general] })]));
+    c.appendChild(el("div", { clase: "encabezado" }, [el("div", { clase: "detalle", texto: "Periodo: " + r.desde.slice(0, 10) + " → " + r.hasta.slice(0, 10) }), selPeriodo(pintar)]));
 
-    // 2 · Pasos de la lectura: un punto por paso; el que falla se abre solo.
+    // B · Estado general
+    c.appendChild(el("section", { clase: "sl-hero " + v[2], id: "estado-general" }, [
+      el("div", { clase: "sl-ico", "aria-hidden": "true", texto: v[3] }),
+      el("div", { clase: "sl-hero-t" }, [el("h2", { clase: "sl-h", texto: "Estado general: " + v[0] }), el("p", { texto: v[1] }), el("p", { clase: "detalle", texto: fraseCadena + " " + comprobados + " de " + n + " cosas medidas." })]),
+      el("div", { clase: "sl-rev" }, [el("span", { texto: "Última revisión" }), el("b", { texto: ult ? hace(ult) || "—" : "No verificado" })])]));
+
+    // C · Requiere tu atención (más grave primero; máximo 3 a la vista)
+    function tarjetaAlerta(a) {
+      var aclara = aclaracion(a), dest = destinoAlerta(a);
+      return el("div", { clase: "alerta " + a.gravedad }, [
+        el("div", { clase: "fila" }, [el("span", { clase: "tag " + a.gravedad, texto: GRAVEDAD[a.gravedad] || String(a.gravedad || "").toUpperCase() }), el("strong", { texto: a.titulo })]),
+        el("div", { clase: "aclara", texto: aclara || a.descripcion }),
+        el("details", {}, [el("summary", { texto: "Más detalle" }),
+          el("div", { clase: "detalle", texto: a.descripcion + " · parte: " + a.componente }),
+          el("div", { clase: "detalle", texto: "Evidencia: " + a.evidencia + " · " + a.estado })]),
+        el("a", { href: "#" + dest[0], clase: "sl-accion", texto: dest[1] + " →", onclick: function (ev) { ev.preventDefault(); ir(dest[0]); } })]);
+    }
+    c.appendChild(el("h2", { texto: "Requiere tu atención" + (atn.length ? " (" + atn.length + ")" : "") }));
+    c.appendChild(el("div", { id: "alertas", clase: "atencion" }, atn.length ? atn.slice(0, 3).map(tarjetaAlerta).concat(atn.length > 3 ?
+      [el("details", { clase: "mas-alertas" }, [el("summary", { texto: "Ver las " + (atn.length - 3) + " restantes" }), el("div", { clase: "atencion" }, atn.slice(3).map(tarjetaAlerta))])] : [])
+      : [el("div", { clase: "sl-vacio" + (general === "verde" ? "" : " nd"), texto: general === "verde" ? "✓ Nada requiere tu atención con los datos de este periodo." : "Sin alertas, pero el estado no es del todo confiable: " + v[0].toLowerCase() + "." })]));
+
+    // D · Métricas principales (solo las que entrega el servidor)
+    var porClave = {}; d.indicadores.forEach(function (i) { porClave[i.clave] = i; });
+    var h0 = d.historia || [];
+    var series = { lecturas: h0.map(function (x) { return x.lecturas; }), tasa_errores: h0.map(function (x) { return x.lecturas ? x.errores / x.lecturas : null; }) };
+    var COL = { lecturas: "azul", tasa_errores: "rojo", calidad_interpretacion: "morado", veredictos_pendientes: "azul" };
+    var DEST = { lecturas: ["ofertas", "Ver ofertas"], tasa_errores: ["errores", "Ver errores"], calidad_interpretacion: ["ia", "Ver detalle"], veredictos_pendientes: ["errores", "Ver errores"] };
+    var metr = ["lecturas", "tasa_errores", "calidad_interpretacion", "veredictos_pendientes"].map(function (k) { return porClave[k]; }).filter(Boolean);
+    if (metr.length) {
+      c.appendChild(el("h2", { texto: "Lo esencial" }));
+      c.appendChild(el("div", { clase: "sl-metricas", id: "esencial" }, metr.map(function (i) {
+        var dst = DEST[i.clave], g = chispa(series[i.clave] || []);
+        var pocos = i.estado === "insuficiente" || (i.n !== undefined && i.n !== null && i.n < 30);
+        return el("div", { clase: "sl-metrica " + (COL[i.clave] || ""), "data-clave": i.clave, title: i.definicion || "" }, [
+          el("div", { clase: "sl-m-cab" }, [el("span", { clase: "sl-m-nom", texto: i.nombre }), pocos ? el("span", { clase: "etiqueta aviso", texto: "pocos casos" }) : null]),
+          el("div", { clase: "sl-m-val", texto: valorIndicador(i) }),
+          g, dst ? el("a", { href: "#" + dst[0], clase: "enlace sl-m-lnk", texto: dst[1] + " →", onclick: function (ev) { ev.preventDefault(); ir(dst[0]); } }) : null]);
+      })));
+    }
+
+    // E · Estado del procesamiento. Todo bien → una fila discreta; con problema → se destaca y abre solo el paso afectado.
     var peor = -1;
     pasos.forEach(function (x, k) { if (GRAVE[x.estado] <= 1 && (peor < 0 || GRAVE[x.estado] < GRAVE[pasos[peor].estado])) peor = k; });
     var sel = peor;
-    var cadena = el("section", { clase: "cadena", id: "cadena", "aria-label": "Pasos de la lectura" });
+    var cadena = el("section", { clase: "cadena sl-cadena" + (rotos ? " con-falla" : ""), id: "cadena", "aria-label": "Pasos de la lectura" });
     var detalleCadena = el("div", { clase: "paso-detalle", "aria-live": "polite" });
     function pintarCadena() {
       cadena.textContent = "";
-      cadena.appendChild(el("div", { clase: "cadena-cab" }, [el("h2", { texto: "Pasos de la lectura" }), el("span", { clase: "detalle", texto: rotos ? rotos + (rotos === 1 ? " paso falla" : " pasos fallan") : "sin fallas" })]));
+      cadena.appendChild(el("div", { clase: "cadena-cab" }, [el("h2", { texto: "Estado del procesamiento" }), el("span", { clase: "detalle", texto: rotos ? rotos + (rotos === 1 ? " paso falla" : " pasos fallan") : sinVerificar ? "sin fallas · " + sinVerificar + " sin verificar" : "sin fallas" })]));
       cadena.appendChild(el("div", { clase: "pasos" }, pasos.map(function (p, k) {
-        return el("button", { type: "button", clase: "paso " + (ESTADO[p.estado] || "nd") + (k === sel ? " sel" : ""), "aria-pressed": String(k === sel), "aria-label": p.paso.nombre + ": " + (TEXTO[p.estado] || p.estado),
-          onclick: function () { sel = sel === k ? -1 : k; pintarCadena(); } }, [punto(p.estado), el("span", { texto: p.paso.nombre })]); })));
+        var vis = PASO_VIS[p.estado] || PASO_VIS.sin_datos;
+        return el("button", { type: "button", clase: "paso " + (ESTADO[p.estado] || "nd") + (k === sel ? " sel" : ""), "aria-pressed": String(k === sel), "aria-label": p.paso.nombre + ": " + vis[1],
+          onclick: function () { sel = sel === k ? -1 : k; pintarCadena(); } }, [el("span", { clase: "paso-ico", "aria-hidden": "true", texto: vis[0] }), el("span", { texto: p.paso.nombre }), el("small", { texto: vis[1] })]); })));
       detalleCadena.textContent = "";
       if (sel >= 0) {
         var p = pasos[sel], x = p.peor, pq = PREGUNTA[x.clave] || [x.nombre, x.nombre];
@@ -217,42 +298,26 @@
         detalleCadena.appendChild(el("div", { clase: "fila" }, [insignia(p.estado), el("strong", { texto: p.paso.nombre + " · " + pq[0] })]));
         detalleCadena.appendChild(el("div", { clase: "aclara", texto: aclara || RESPUESTA[p.estado] || TEXTO[p.estado] }));
         if (x.ultima_comprobacion) detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + String(x.ultima_comprobacion).slice(0, 16).replace("T", " ") + " UTC" }));
-        if (al) detalleCadena.appendChild(enlace(al.componente === "revision_ia" ? "Abrir Auditoría IA" : al.componente === "revision_humana" ? "Abrir errores" : "Abrir ofertas", al.componente === "revision_ia" ? "ia" : al.componente === "revision_humana" ? "errores" : "ofertas"));
+        if (al) { var dd = destinoAlerta(al); detalleCadena.appendChild(enlace(dd[1], dd[0])); }
       } else detalleCadena.appendChild(el("div", { clase: "detalle", texto: "Toca un paso para ver qué significa." }));
       cadena.appendChild(detalleCadena);
     }
     pintarCadena();
     c.appendChild(cadena);
 
-    // 3 · Por revisar (máximo 3 a la vista, urgente primero)
-    var GR = { alta: 0, media: 1, baja: 2 };
-    var atn = d.atencion.slice().sort(function (x, y) { return (GR[x.gravedad] === undefined ? 3 : GR[x.gravedad]) - (GR[y.gravedad] === undefined ? 3 : GR[y.gravedad]); });
-    function tarjetaAlerta(a) {
-      var aclara = aclaracion(a);
-      return el("div", { clase: "alerta " + a.gravedad }, [
-        el("div", { clase: "fila" }, [el("span", { clase: "tag " + a.gravedad, texto: GRAVEDAD[a.gravedad] || a.gravedad.toUpperCase() }), el("strong", { texto: a.titulo })]),
-        aclara ? el("div", { clase: "aclara", texto: aclara }) : null,
-        el("details", {}, [el("summary", { texto: "Más detalle" }),
-          el("div", { clase: "detalle", texto: a.descripcion + " · parte: " + a.componente }),
-          el("div", { clase: "detalle", texto: "Evidencia: " + a.evidencia + " · " + a.estado })]),
-        enlace("Abrir", a.componente === "revision_ia" ? "ia" : a.componente === "revision_humana" ? "errores" : "ofertas")]);
+    // F · Actividad reciente: las últimas comprobaciones reales de cada parte (con su hora y resultado).
+    var evs = d.componentes.filter(function (x) { return x.ultima_comprobacion; }).sort(function (a, b) { return String(b.ultima_comprobacion).localeCompare(String(a.ultima_comprobacion)); });
+    function evento(x) {
+      var pq = PREGUNTA[x.clave] || [x.nombre, x.nombre];
+      return el("div", { clase: "sl-evento" }, [punto(x.estado), el("span", { clase: "sl-ev-t", texto: "Comprobación: " + x.nombre }),
+        el("span", { clase: "sl-ev-h", texto: (hace(x.ultima_comprobacion) || "—") + " · " + (TEXTO[x.estado] || x.estado), title: pq[0] })]);
     }
-    c.appendChild(el("h2", { texto: "Por revisar" + (atn.length ? " (" + atn.length + ")" : "") }));
-    c.appendChild(el("div", { id: "alertas", clase: "atencion" }, atn.length ? atn.slice(0, 3).map(tarjetaAlerta).concat(atn.length > 3 ?
-      [el("details", { clase: "mas-alertas" }, [el("summary", { texto: "Ver las " + (atn.length - 3) + " restantes" }), el("div", { clase: "atencion" }, atn.slice(3).map(tarjetaAlerta))])] : [])
-      : [el("div", { clase: "vacio", texto: "Nada por revisar con los datos de este periodo." })]));
+    c.appendChild(el("h2", { texto: "Actividad reciente" }));
+    c.appendChild(el("div", { clase: "sl-actividad", id: "actividad" }, evs.length ? evs.slice(0, 3).map(evento).concat(evs.length > 3 ?
+      [el("details", { clase: "sub" }, [el("summary", { texto: "Ver todo (" + evs.length + ")" }), el("div", {}, evs.slice(3).map(evento))])] : [])
+      : [el("div", { clase: "vacio", texto: "Sin actividad registrada: no hay comprobaciones disponibles." })]));
 
-    // 4 · Tres cifras
-    var porClave = {}; d.indicadores.forEach(function (i) { porClave[i.clave] = i; });
-    var tres = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean);
-    if (tres.length) { c.appendChild(el("h2", { texto: "Lo esencial" })); c.appendChild(el("div", { clase: "tarjetas tres", id: "esencial" }, tres.map(function (i) { return tarjeta(i, []); }))); }
-
-    // 5 · Tendencia
-    var h0 = d.historia || [];
-    c.appendChild(el("div", { clase: "graficas una", id: "tendencia" }, [grafica("Lecturas y errores por día", [{ nombre: "Lecturas", clase: "a0", puntos: h0.map(function (x) { return { x: x.dia, y: x.lecturas }; }) },
-      { nombre: "Errores", clase: "a1", puntos: h0.map(function (x) { return { x: x.dia, y: x.errores }; }) }])]));
-
-    // Todo lo demás, a un toque
+    // G · Todo lo demás, a un toque (se conserva completo)
     var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todo el detalle: partes del sistema, números, tiempos y gráficas" })]);
     var cuerpo = el("div", { clase: "completo-cuerpo" }); completo.appendChild(cuerpo); c.appendChild(completo); c = cuerpo;
     c.appendChild(el("h2", { texto: "Cada parte, en una pregunta" }));
