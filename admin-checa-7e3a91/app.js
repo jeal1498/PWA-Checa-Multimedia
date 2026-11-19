@@ -1159,7 +1159,7 @@
         var estado = !Sx ? null : (!vig || (m[3] !== null && m[3] !== undefined && m[2] !== null && Math.abs(m[3] - m[2]) > m[4])) ? "dif" : "ok";
         return { nom: m[0], k: m[1], estado: estado, v: [fmtV(m[1], m[2]), vig ? fmtV(m[1], m[3]) : "no es oferta"] };
       });
-      var tablaV = valoresCard(campos, Sx ? ["App", "IA"] : ["App"], "Lo que mostró el pop-up");
+      var tablaV = valoresCard(campos, Sx ? ["Lector", "IA"] : ["Lector"], "Lo que mostró el pop-up");
       var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" });
       var vigS = S && S.estado === "vigente", recAcc = !S ? null : !vigS ? "falso" : (CAMPOS.every(function (m) { return m[3] !== null && m[3] !== undefined && m[2] !== null && m[2] !== undefined && Math.abs(m[3] - m[2]) <= m[4]; }) ? "ok" : "corregir");
       if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Check IA", onclick: pedirIA }));
