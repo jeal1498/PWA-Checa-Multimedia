@@ -890,6 +890,14 @@
     c.appendChild(el("div", { clase: "ficha-meta" }, [el("div", { clase: "ficha-id" }, [el("h1", { id: "exp-titulo", texto: "#" + e.id }), etiquetaVeredicto(hu.estado || "sin_veredicto")]),
       el("div", { clase: "ficha-sub", texto: (TIPO_TXT[e.tipo] || txt(e.tipo)) + " · " + appTxt(e.app) + " " + txt(e.version) + " · " + fechaHora(e.creado) })]));
     var sha = e.enlace && e.enlace.captura_sha256, esRev = !!(yo && yo.rol === "revisor");
+    // Sin huella guardada pero con la imagen en el bucket: se calcula aquí, de la imagen que Eduardo está viendo.
+    if (!sha && esRev && e.evidencia && e.evidencia.captura) {
+      try {
+        var rh = await cli.storage.from("capturas").download(e.id + ".webp");
+        var hh = rh && rh.data ? await huella(rh.data) : null;
+        if (hh) { sha = hh; e.enlace = e.enlace || {}; e.enlace.captura_sha256 = hh; }
+      } catch (er) { /* sigue sin huella: queda el aviso */ }
+    }
     var METR = [["Tarifa", "tarifa"], ["Distancia", "km"], ["Tiempo", "min"]];
     var campos = METR.map(function (m) {
       var k = m[1], L = lec[k], I = iaNo ? undefined : ia[k], H = refE ? refE[k] : undefined, estado = null;
