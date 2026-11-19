@@ -487,3 +487,47 @@ details.def-ayuda > summary { display:flex; align-items:center; min-height:44px;
 /* Deshacer tras dar un veredicto */
 #toast { display:flex; align-items:center; gap:12px; }
 #toast button { min-height:44px; padding:0 14px; background:transparent; color:var(--fondo); border:1px solid var(--fondo); font-weight:800; }
+
+/* ---------- Estructura de 4 pestañas (Hoy · Revisar · Calidad · Ajustes) ---------- */
+.herr { display:flex; align-items:center; gap:6px; flex:none; }
+.herr .periodo { width:auto; gap:2px; background:var(--panel); border-radius:10px; padding:2px; }
+.herr .periodo button { flex:none; min-width:0; min-height:36px; padding:0 10px; border:0; background:transparent; font-size:13px; color:var(--tenue); border-radius:8px; }
+.herr .periodo button[aria-pressed="true"] { background:var(--tablero); color:var(--texto); font-weight:800; box-shadow:0 1px 3px #0002; }
+.btn-buscar { display:flex; align-items:center; gap:6px; min-height:40px; padding:0 12px; border-radius:999px; }
+.btn-buscar .ico { width:18px; height:18px; }
+.titulo-tab { margin:0 0 10px; }
+.subtabs { display:flex; gap:18px; border-bottom:1px solid var(--borde); margin:0 0 14px; overflow-x:auto; scrollbar-width:none; }
+.subtabs::-webkit-scrollbar { display:none; }
+.subtabs button { flex:none; border:0; background:transparent; border-radius:0; padding:0 2px; min-height:44px; color:var(--tenue); font-weight:600; border-bottom:2px solid transparent; margin-bottom:-1px; }
+.subtabs button[aria-pressed="true"] { color:var(--texto); font-weight:800; border-bottom-color:var(--texto); }
+nav button { position:relative; }
+.insignia-nav { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:var(--rojo); color:#fff; font:700 11px/20px "DM Sans", system-ui, sans-serif; text-align:center; }
+.urgente { display:flex; align-items:center; gap:14px; padding:16px; border-radius:16px; background:var(--texto); color:var(--fondo); text-decoration:none; }
+.urgente-n { font:800 44px/1 "Bricolage Grotesque", system-ui, sans-serif; min-width:52px; }
+.urgente-t { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; } .urgente-t small { opacity:.8; font-size:13px; }
+.urgente-ir { flex:none; background:var(--fondo); color:var(--texto); border-radius:999px; padding:8px 14px; font-weight:800; font-size:14px; }
+.urgente.al-dia { background:var(--tablero); color:var(--texto); border:1px solid var(--borde); } .urgente.al-dia .urgente-ir { background:var(--panel); }
+.acciones-alerta { flex-wrap:wrap; gap:10px; margin-top:6px; }
+.accion-alerta { background:var(--texto); color:var(--fondo); border-color:var(--texto); font-weight:800; min-height:44px; }
+.tarjetas.cuatro { grid-template-columns:repeat(2, minmax(0,1fr)); }
+@media (min-width:1000px) { .tarjetas.cuatro { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+.filtro-busqueda { justify-content:space-between; flex-wrap:wrap; background:var(--panel); border-radius:10px; padding:6px 6px 6px 12px; margin-bottom:10px; font-size:14px; }
+.cuenta { display:flex; flex-direction:column; gap:10px; background:var(--tablero); border:1px solid var(--borde); border-radius:12px; padding:12px; }
+.cuenta .fila { gap:8px; flex-wrap:wrap; } .cuenta button { flex:1; min-height:44px; }
+button.peligro { color:var(--rojo); font-weight:800; }
+#hoja-buscar { position:fixed; inset:0; z-index:30; }
+#hoja-buscar .velo { position:absolute; inset:0; background:rgba(12,12,16,.5); }
+#hoja-buscar .panel-hoja { position:absolute; left:0; right:0; bottom:0; max-width:560px; margin:0 auto; background:var(--tablero); border-radius:22px 22px 0 0; padding:10px 16px calc(16px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:10px; box-shadow:0 -8px 30px #0004; }
+#hoja-buscar .asa { width:40px; height:4px; border-radius:2px; background:var(--borde); align-self:center; }
+#hoja-buscar h2 { margin:0; font-size:18px; text-transform:none; letter-spacing:0; color:var(--texto); }
+.buscar-form { display:flex; flex-direction:column; gap:10px; } .buscar-form input { width:100%; font-size:16px; min-height:48px; }
+@media (min-width:761px) { #hoja-buscar .panel-hoja { bottom:auto; top:12vh; border-radius:18px; } }
+@media (max-width:760px) {
+  header { gap:8px; }
+  header strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .btn-buscar { width:40px; padding:0; justify-content:center; } .btn-buscar .largo { display:none; }
+  .herr .periodo button { padding:0 8px; font-size:12px; }
+  .insignia-nav { position:absolute; top:4px; left:calc(50% + 4px); margin:0; }
+  .tarjetas.cuatro { gap:8px; }
+}
+@media (max-width:400px) { header strong { display:none; } .herr { flex:1; justify-content:flex-end; } }
