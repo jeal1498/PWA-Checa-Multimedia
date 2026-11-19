@@ -755,3 +755,130 @@ details.completo[open] > summary::after { transform:rotate(90deg); }
 .barras-dia { max-width:560px; margin:0 auto; }
 .paso-detalle:empty { display:none; }
 @media (min-width:761px) { .alerta-acc { max-width:440px; } }
+
+/* ===== Diseño v3 · Revisar, Calidad y Ajustes ===== */
+.buscador { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:0 12px; margin:0 0 12px; border:0; border-radius:14px; background:var(--panel); color:var(--suave); font-size:15px; text-align:left; }
+.buscador .ico { width:18px; height:18px; }
+
+/* Detalle de un error */
+.exp-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:4px 0 6px; }
+.exp-tx { min-width:0; }
+.exp-id { font:700 30px/1.1 "JetBrains Mono", ui-monospace, monospace; letter-spacing:-.02em; margin:2px 0 0; }
+.exp-nav { display:flex; align-items:center; gap:4px; font:500 13px "JetBrains Mono", ui-monospace, monospace; color:var(--suave); flex:none; }
+.exp-nav button { width:40px; min-height:40px; padding:0; border-radius:50%; font-size:20px; background:var(--tablero); border:0; }
+.exp-meta { display:flex; align-items:center; gap:10px; margin:0 0 12px; flex-wrap:wrap; }
+.exp-captura .marco-captura { min-height:0; aspect-ratio:4 / 3.4; max-height:60vh; width:100%; }
+.comp-v3 { width:100%; border-collapse:separate; border-spacing:0; font-size:14px; }
+.comp-v3 th { font:700 12px "DM Sans", system-ui, sans-serif; color:var(--suave); text-align:right; padding:0 0 8px; position:static; background:none; border:0; }
+.comp-v3 th:first-child { text-align:left; }
+.comp-v3 td { padding:10px 0; border-top:1px solid var(--borde); border-bottom:0; text-align:right; font-family:"JetBrains Mono", ui-monospace, monospace; white-space:nowrap; }
+.comp-v3 td:first-child { text-align:left; font-family:"DM Sans", system-ui, sans-serif; color:var(--tenue); }
+.comp-v3 td.x { color:var(--rojo); font-weight:700; } .comp-v3 td.x span { background:var(--mal-f); border-radius:6px; padding:2px 6px; }
+.comp-v3 tr:hover td { background:transparent; }
+@media (max-width:760px) {
+  .comp-v3, .comp-v3 thead, .comp-v3 tbody, .comp-v3 tr, .comp-v3 td { display:revert; width:auto; }
+  .comp-v3 thead { position:static; left:auto; }
+  .comp-v3 tr { background:none; border:0; margin:0; padding:0; border-radius:0; }
+  .comp-v3 td::before { content:none; }
+  .comp-v3 td { display:table-cell; padding:10px 0; }
+}
+#aviso-diferencia { margin-top:10px; }
+.barra-acc.v3 { display:grid; grid-template-columns:1fr 1fr 1.4fr; gap:8px; background:linear-gradient(to top, var(--fondo) 75%, transparent); border:0; border-radius:0; padding:12px 0 8px; margin-top:16px; box-shadow:none; }
+.barra-acc.v3 button { min-height:54px; border-radius:16px; font-weight:700; font-size:14px; background:var(--tablero); border:1px solid var(--borde); padding:0 6px; }
+.barra-acc.v3 button.si { background:var(--texto); color:var(--fondo); border-color:var(--texto); }
+@media (max-width:760px) { .barra-acc.v3 { margin-inline:-16px; padding:12px 16px 8px; } }
+.solo-lectura { margin-top:16px; padding:14px; border-radius:16px; background:var(--tablero); color:var(--tenue); text-align:center; font-size:14px; }
+
+/* Historial: filas */
+#eventos { gap:0; background:var(--tablero); border-radius:var(--r); overflow:hidden; }
+#eventos .evento { border-radius:0; background:transparent; }
+#eventos .evento + .evento { border-top:1px solid var(--borde); }
+.evento-cab { flex-direction:row; align-items:center; gap:12px; padding:14px 16px; border-radius:0; text-align:left; }
+.evento-cab .ev-val { font:700 14px "JetBrains Mono", ui-monospace, monospace; }
+.evento.abierto, .evento.sel { box-shadow:inset 3px 0 0 var(--texto); }
+.evento-detalle { padding:10px 16px 14px; }
+
+/* Calidad · Resumen */
+.aro-caja { display:flex; align-items:center; gap:16px; }
+.aro { flex:none; } .aro-f { stroke:var(--panel); } .aro-v { stroke:var(--verde); }
+.aro-t { fill:var(--texto); font:800 21px "Bricolage Grotesque", system-ui, sans-serif; }
+.aro-tx { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.aro-tx b { font:800 18px/1.2 "Bricolage Grotesque", system-ui, sans-serif; } .aro-tx small { color:var(--tenue); font-size:13px; }
+.trio { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid var(--borde); }
+.trio small { display:block; font-size:12px; color:var(--suave); } .trio b { font:700 17px "JetBrains Mono", ui-monospace, monospace; }
+.sec-v3 { align-items:baseline; } .sec-v3 h2 { margin-bottom:10px; } .sec-v3 .enlace { font-size:13px; font-weight:700; text-decoration:none; }
+.vbar { display:grid; grid-template-columns:56px minmax(0,1fr) 64px; gap:10px; align-items:center; padding:8px 0; }
+.vbar.ancha { grid-template-columns:minmax(0,120px) minmax(0,1fr) 64px; }
+.vbar span { font:700 14px "JetBrains Mono", ui-monospace, monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vbar.ancha span { font:600 13px "DM Sans", system-ui, sans-serif; }
+.vbar .p { height:10px; border-radius:5px; background:var(--panel); overflow:hidden; }
+.vbar .p i { display:block; height:100%; border-radius:5px; background:var(--texto); }
+.vbar.ok .p i { background:var(--verde); } .vbar.aviso .p i { background:var(--amarillo); } .vbar.poca .p i { background:var(--gris); }
+.vbar b { font:700 14px "JetBrains Mono", ui-monospace, monospace; text-align:right; }
+.nota-v { margin-top:6px; font-size:12px; color:var(--suave); }
+
+/* Calidad · Versiones */
+#versiones-lista { gap:0; background:var(--tablero); border-radius:var(--r); overflow:hidden; }
+.version-fila { display:flex; align-items:center; gap:12px; width:100%; min-height:60px; padding:12px 16px; border:0; border-radius:0; background:transparent; text-align:left; font-weight:400; }
+.version-fila + .version-fila { border-top:1px solid var(--borde); }
+.version-fila .cb { width:22px; height:22px; border-radius:7px; border:2px solid var(--borde); display:grid; place-items:center; flex:none; font-size:13px; font-weight:800; }
+.version-fila[aria-pressed="true"] .cb { background:var(--texto); border-color:var(--texto); color:var(--fondo); }
+.version-fila .caso-tx b { font-size:15px; } .version-fila small { color:var(--tenue); font-size:13px; }
+.version-fila .der { font-weight:700; } .version-fila .der.gris { color:var(--suave); }
+.panel-cmp { padding:16px; }
+
+/* Calidad · Conductores y dispositivos */
+.equipo-lista { gap:0; background:var(--tablero); border-radius:var(--r); overflow:hidden; }
+.eq-fila { display:flex; align-items:center; gap:12px; padding:14px 16px; --c:var(--verde); }
+.eq-fila + .eq-fila { border-top:1px solid var(--borde); }
+.eq-fila.aviso { --c:var(--amarillo); } .eq-fila.mal { --c:var(--rojo); } .eq-fila.nd { --c:var(--suave); }
+.eq-fila.chica { opacity:.65; }
+.eq-fila .caso-tx b { font-size:15px; } .eq-fila small { color:var(--tenue); font-size:13px; }
+.mini-b { display:block; height:6px; border-radius:3px; background:var(--panel); margin-top:8px; overflow:hidden; }
+.mini-b i { display:block; height:100%; background:var(--c); }
+.eq-tasa { font:700 16px "JetBrains Mono", ui-monospace, monospace; color:var(--c); text-align:right; flex:none; }
+.eq-tasa small { display:block; font:500 11px "DM Sans", system-ui, sans-serif; color:var(--suave); }
+.equipos-cuerpo > .chips { margin-top:4px; }
+.panel-eq h2 { margin-top:18px; }
+
+/* Calidad · IA */
+.ia-cols .tarjetas.dos { gap:10px; }
+.quien { gap:12px; }
+.fila-quien { grid-template-columns:minmax(0,110px) minmax(0,1fr) auto; }
+.tr { height:10px; border-radius:5px; } .tr i { border-radius:5px; }
+#ia-acuerdo .etiqueta { background:var(--av-f); color:var(--amarillo); border:0; }
+
+/* Ajustes */
+.grupo-cfg { margin-bottom:6px; }
+.grupo-t { font:700 12px "DM Sans", system-ui, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--suave); margin:22px 4px 8px; }
+.config-col > .grupo-cfg:first-child .grupo-t { margin-top:6px; }
+.lista-acc { background:var(--tablero); border-radius:var(--r); overflow:hidden; }
+.lista-acc > * + * { border-top:1px solid var(--borde); }
+.lista-acc details.acc { border-radius:0; }
+details.acc > summary { gap:12px; justify-content:flex-start; }
+details.acc > summary .acc-t { flex:1; min-width:0; }
+details.acc > summary .acc-t b { font-size:15px; } details.acc > summary .acc-t small { font-size:13px; }
+details.acc > summary .acc-cifra { color:var(--tenue); font:500 14px "DM Sans", system-ui, sans-serif; }
+.acc-cifra::after { content:"  ›"; color:var(--suave); font-size:18px; }
+details.acc[open] .acc-cifra::after { content:"  ⌄"; }
+.ic-aj { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; flex:none; background:var(--panel); color:var(--texto); }
+.ic-aj .ico { width:18px; height:18px; }
+.gasto-v3 { display:flex; flex-direction:column; gap:2px; padding:16px; }
+.gasto-v3 small { color:var(--tenue); font-size:13px; } .gasto-v3 small:last-child { color:var(--suave); font-size:12px; margin-top:4px; }
+.gasto-v3 b { font:700 30px "JetBrains Mono", ui-monospace, monospace; letter-spacing:-.02em; }
+.fila-cfg { display:flex; align-items:center; gap:12px; width:100%; min-height:60px; padding:12px 16px; border:0; border-radius:0; background:transparent; text-align:left; font-weight:400; }
+.fila-cfg .acc-t { flex:1; min-width:0; display:flex; flex-direction:column; } .fila-cfg .acc-t b { font-size:15px; } .fila-cfg .acc-t small { color:var(--tenue); font-size:13px; }
+.fila-cfg .der { color:var(--tenue); font-size:14px; }
+.fila-cfg.salir { justify-content:center; color:var(--rojo); font-weight:700; }
+.avatar { width:36px; height:36px; border-radius:50%; background:var(--panel); display:grid; place-items:center; font-weight:700; flex:none; }
+.ia-fila { padding:12px 0; }
+.ia-sw { border-radius:999px; }
+@media (max-width:760px) {
+  table.comp-v3 { display:table; width:100%; } .comp-v3 thead { display:table-header-group; position:static; } .comp-v3 tbody { display:table-row-group; }
+  .comp-v3 tr { display:table-row; } .comp-v3 th, .comp-v3 td { display:table-cell; width:auto; }
+}
+.comp-v3 th, .comp-v3 td { padding-left:8px; } .comp-v3 th:first-child, .comp-v3 td:first-child { padding-left:0; }
+.volver { background:none; border:0; padding:0 4px 0 0; min-height:44px; font-weight:700; margin:0; }
+.ver-layout { flex-direction:column; }
+.paginas button { background:var(--tablero); border:0; border-radius:999px; min-height:40px; }
+.paginas #p-info { flex:1; text-align:center; font-size:13px; color:var(--suave); }
