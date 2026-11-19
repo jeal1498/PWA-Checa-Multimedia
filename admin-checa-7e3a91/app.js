@@ -223,14 +223,15 @@
     var vals = h.map(function (x) { return Number(x.lecturas) || 0; });
     if (!vals.length) return el("div", { clase: "vacio", texto: "Sin datos en este periodo." });
     var W = 340, H = 150, L = 34, B = 22, T = 8, max = Math.max.apply(null, vals) || 1;
-    var paso = Math.pow(10, Math.floor(Math.log10(max))), tope = Math.ceil(max / paso) * paso, pw = (W - L) / vals.length;
+    var paso = Math.pow(10, Math.floor(Math.log10(max))), tope = Math.ceil(max / paso) * paso, total = Math.max(vals.length, dias || 0), pw = (W - L) / total, off = total - vals.length;
     var g = [];
     [0, tope / 2, tope].forEach(function (y) { var py = T + (H - T - B) * (1 - y / tope); g.push(sv("line", { x1: L, x2: W, y1: py, y2: py, stroke: "currentColor", "stroke-opacity": ".15" }));
       var t = sv("text", { x: L - 6, y: py + 4, "text-anchor": "end", class: "eje" }); t.textContent = y >= 1000 ? (y / 1000).toLocaleString("es-MX") + "k" : String(Math.round(y)); g.push(t); });
-    vals.forEach(function (v, i) { var bh = (H - T - B) * v / tope, x = L + i * pw + pw * .2;
+    for (var gi = 0; gi < off; gi++) g.push(sv("rect", { x: (L + gi * pw + pw * .2).toFixed(1), y: (H - B - 3).toFixed(1), width: Math.max(1, pw * .6).toFixed(1), height: "3", rx: "1.5", class: "bar fant" }));
+    vals.forEach(function (v, i) { var bh = (H - T - B) * v / tope, x = L + (i + off) * pw + pw * .2;
       var r = sv("rect", { x: x.toFixed(1), y: (H - B - bh).toFixed(1), width: Math.max(1, pw * .6).toFixed(1), height: bh.toFixed(1), rx: "3", class: i === vals.length - 1 ? "bar ult" : "bar" });
       var tt = sv("title"); tt.textContent = h[i].dia + ": " + v + " lecturas"; r.appendChild(tt); g.push(r); });
-    var a = sv("text", { x: L, y: H - 5, class: "eje" }); a.textContent = corto(h[0].dia);
+    var a = sv("text", { x: L, y: H - 5, class: "eje" }); a.textContent = corto(new Date(new Date(h[h.length - 1].dia + "T12:00:00Z").getTime() - (total - 1) * 864e5).toISOString().slice(0, 10));
     var z = sv("text", { x: W, y: H - 5, "text-anchor": "end", class: "eje" }); z.textContent = corto(h[h.length - 1].dia) + " · " + vals[vals.length - 1].toLocaleString("en-US");
     g.push(a, z);
     return sv("svg", { viewBox: "0 0 " + W + " " + H, class: "barras-dia", role: "img", "aria-label": "Lecturas por día del " + h[0].dia + " al " + h[h.length - 1].dia + "; último día " + vals[vals.length - 1] }, g);
@@ -243,7 +244,6 @@
     var tit = t.querySelector(".detalle"); if (tit) tit.appendChild(el("span", { clase: "chev", "aria-hidden": "true", texto: " ›" }));
     return t;
   }
-  function fechaLarga() { var x = new Intl.DateTimeFormat("es-MX", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(new Date()).replace(",", ""); return x.charAt(0).toUpperCase() + x.slice(1); }
   function skeleton(c) { c.appendChild(el("div", { clase: "skeleton", "aria-busy": "true" })); }
 
   // ---------- 01 Inicio (Salud) ----------
@@ -309,9 +309,12 @@
     var pasos = PASOS.map(function (p) { return pasoEstado(p, d.componentes); });
     var rotos = pasos.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
     var fraseCadena = rotos ? "Falla " + rotos + (rotos === 1 ? " paso" : " pasos") + " de " + PASOS.length + "." : "Ningún paso de la cadena falla.";
+    var medidos = pasos.filter(function (x) { return ["operativo", "degradado", "fuera_de_servicio"].indexOf(x.estado) >= 0; }).length;
     var heroEl;
     c.appendChild(heroEl = el("section", { clase: "hero estado-v3", id: "estado-general" }, [
-      el("div", { clase: "estado-cab" }, [el("span", { clase: "latido " + (ESTADO[d.estado_general] || "nd"), "aria-hidden": "true" }), el("h2", { clase: "estado-t", texto: v[0] })]),
+      el("div", { clase: "estado-cab" }, [
+        el("div", { clase: "estado-izq" }, [el("span", { clase: "latido " + (ESTADO[d.estado_general] || "nd"), "aria-hidden": "true" }), el("h2", { clase: "estado-t", texto: v[0] })]),
+        el("div", { clase: "estado-cont", "aria-label": medidos + " de " + PASOS.length + " partes medidas" }, [el("b", { texto: medidos + "/" + PASOS.length }), el("small", { texto: "medidas" })])]),
       el("p", { clase: "estado-p", texto: rotos ? (rotos === 1 ? "Un paso tiene problemas." : rotos + " pasos tienen problemas.") + " Tócalo para ver el detalle." : v[1] })]));
 
     // 2 · Pasos de la lectura: un punto por paso; el que falla se abre solo.
@@ -367,13 +370,17 @@
     var at = el("div", { id: "alertas", clase: "atencion" });
     var nUrg = await contarUrgentes();
     var desde = VERSIONES.filter(function (x) { return versionNum(x) >= 10082; }).sort(function (a, b) { return versionNum(a) - versionNum(b); })[0] || "10.82";
-    at.appendChild(el("a", { href: "#revisar", id: "urgentes", clase: "urgente" + (nUrg ? "" : " al-dia"), onclick: function (ev) {
+    var metaN = el("b", { clase: "mono", texto: "—" }), metaB = el("i");
+    var urgenteEl = el("a", { href: "#revisar", id: "urgentes", clase: "urgente", onclick: function (ev) {
         ev.preventDefault(); F["f-estado"] = "sin_veredicto"; pag.errores = 1;
         var con = Object.keys(urgPorVersion).filter(function (k) { return urgPorVersion[k] > 0; }); if (con.length === 1) F["f-version"] = con[0];
         ir("revisar"); } }, [
       el("b", { clase: "urgente-n", texto: nUrg === null ? "—" : String(nUrg) }),
       el("span", { clase: "urgente-t" }, [el("strong", { texto: nUrg === 1 ? "Error sin veredicto" : "Errores sin veredicto" }), el("small", { texto: nUrg ? "De la " + desde + " en adelante" : nUrg === 0 ? "Todo al día" : "No se pudo contar" })]),
-      el("span", { clase: "urgente-ir", texto: "Revisar" })]));
+      el("span", { clase: "urgente-ir", texto: "Revisar" })]);
+    var metaEl = el("a", { href: "#revisar/capturas", id: "pend-revisar", clase: "meta-pie", onclick: function (ev) { ev.preventDefault(); ir("revisar", "capturas"); } }, [
+      el("span", { texto: "Meta de etiquetado" }), el("span", { clase: "medidor" }, [metaB]), metaN]);
+    at.appendChild(el("div", { clase: "atn-bloque" + (nUrg ? "" : " al-dia") }, [urgenteEl, metaEl]));
     // «Errores sin referencia humana» ya lo dice la tarjeta de arriba.
     atn = atn.filter(function (a) { return a.componente !== "revision_humana"; });
     atn.slice(0, 3).forEach(function (a) { at.appendChild(tarjetaAlerta(a)); });
@@ -392,7 +399,7 @@
     }
     var cuatro = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean).map(function (i) {
       var sub = i.n ? (i.clave === "lecturas" ? "en el periodo" : i.k + " de " + i.n) : i.clave === "lecturas" ? "en el periodo" : "aún sin casos";
-      var extra = SPARK[i.clave] ? spark(SPARK[i.clave]) : i.clave === "calidad_interpretacion" && i.n ? el("span", { clase: "medidor" }, [(function () { var b = el("i"); b.style.width = Math.round(i.k / i.n * 100) + "%"; b.style.background = "var(--verde)"; return b; })()]) : null;
+      var extra = SPARK[i.clave] ? spark(SPARK[i.clave]) : i.clave === "calidad_interpretacion" && i.n ? el("span", { clase: "medidor" }, [(function () { var b = el("i"); b.style.width = Math.round(i.k / i.n * 100) + "%"; b.style.background = "var(--verde)"; return b; })()]) : i.clave === "calidad_interpretacion" ? el("span", { clase: "sp-vacio", "aria-hidden": "true" }) : null;
       return kpi(CORTO[i.clave], valorInd(i), sub, extra, DEST[i.clave][0], DEST[i.clave][1]); });
     var kc = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta });
     if (kc) {
@@ -400,23 +407,16 @@
       cuatro.push(kpi("Gasto en IA", (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—", "USD en el periodo", null, "ajustes"));
     }
     if (cuatro.length) { c.appendChild(el("h2", { texto: dias === 7 ? "Últimos 7 días" : "Últimos " + dias + " días" })); c.appendChild(el("div", { clase: "kpis", id: "esencial" }, cuatro)); }
-    // Meta de etiquetado: capturas confirmadas por una persona.
-    var metaN = el("b", { clase: "mono", texto: "—" }), metaS = el("small", { texto: "Capturas de ofertas confirmadas por una persona" }), metaB = el("i");
-    c.appendChild(el("h2", { texto: "Meta de etiquetado" }));
-    c.appendChild(el("a", { href: "#revisar/capturas", id: "pend-revisar", clase: "meta-et", onclick: function (ev) { ev.preventDefault(); ir("revisar", "capturas"); } }, [
-      el("span", { clase: "meta-tx" }, [metaN, metaS, el("span", { clase: "medidor" }, [metaB])]), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })]));
     pendientesRev().then(function (x) {
       if (!x || !metaN.isConnected) return;
-      metaN.textContent = x.rev + " de " + (x.rev + x.pend);
-      metaS.textContent = x.pend ? x.pend + " esperando revisión" : "Todo al día";
+      metaN.textContent = x.rev + " de " + (x.rev + x.pend) + " · " + (x.pend ? x.pend + " esperando" : "al día");
       metaB.style.width = (x.rev + x.pend ? Math.round(x.rev / (x.rev + x.pend) * 100) : 0) + "%";
     });
-
 
     // 5 · Tendencia
     var h0 = d.historia || [];
     c.appendChild(el("h2", { texto: "Lecturas por día" }));
-    c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [barrasDia(h0)]));
+    c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [barrasDia(h0), h0.length && h0.length < dias ? el("div", { clase: "detalle nota-graf", texto: "Solo hay datos de los últimos " + h0.length + (h0.length === 1 ? " día." : " días.") }) : null]));
 
     // Cada parte del sistema, a un toque (los números y gráficas de calidad viven en Calidad › Resumen).
     var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todas las partes del sistema" })]);
@@ -1576,6 +1576,8 @@
     var off = navigator.onLine === false, m = Math.floor((Date.now() - ultima) / 60000);
     t.textContent = off ? "Sin conexión. Lo que ves puede no estar al día." : "Actualizado " + (m < 1 ? "hace un momento" : "hace " + m + " min");
     p.className = "punto " + (off ? "mal" : m >= 10 ? "aviso" : "ok");
+    var fr = document.getElementById("frescura"), frt = document.getElementById("frescura-t");
+    if (fr && frt) { frt.textContent = off ? "sin conexión" : m < 1 ? "ahora" : "hace " + m + " min"; fr.className = off ? "mal" : m >= 10 ? "aviso" : "ok"; }
     var bar = t.closest(".estado-barra"); if (bar) bar.setAttribute("data-alerta", String(off || m >= 10));
   }
   setInterval(textoEstado, 30000);
@@ -1599,7 +1601,7 @@
     marco.appendChild(barraEstado());
     // Título de la pestaña y sus subpestañas (no en Hoy ni dentro del detalle de un error).
     if (!enDetalle()) {
-      marco.appendChild(el("div", { clase: "titulo-wrap" }, [el("div", { clase: "fecha-hoy", texto: fechaLarga() }), el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] })]));
+      if (vista !== "hoy") marco.appendChild(el("div", { clase: "titulo-wrap" }, [el("h1", { clase: "titulo-tab", texto: MODULOS.filter(function (m) { return m[0] === vista; })[0][1] })]));
       if (vista === "revisar") marco.appendChild(el("button", { type: "button", clase: "buscador", id: "buscador", onclick: abrirBusqueda }, [icono("buscar"), "Buscar # de caso o conductor"]));
       if (SUBS[vista]) {
         var sa = subActual();
