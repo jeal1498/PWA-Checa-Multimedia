@@ -483,3 +483,7 @@ details.def-ayuda > summary { display:flex; align-items:center; min-height:44px;
 /* Fase 4: confirmaciones con consecuencia */
 #hoja-conf h2 { margin:0; font-size:18px; text-transform:none; letter-spacing:0; color:var(--texto); } #hoja-conf p { margin:0; line-height:1.5; font-size:15px; }
 #hoja-conf button { min-height:48px; }
+
+/* Deshacer tras dar un veredicto */
+#toast { display:flex; align-items:center; gap:12px; }
+#toast button { min-height:44px; padding:0 14px; background:transparent; color:var(--fondo); border:1px solid var(--fondo); font-weight:800; }

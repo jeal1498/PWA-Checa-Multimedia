@@ -67,9 +67,15 @@
     a.appendChild(el("button", { type: "button", clase: "cerrar-aviso", texto: "Cerrar", "aria-label": "Cerrar aviso", onclick: function () { aviso(""); } }));
     a.hidden = false;
   }
-  function toast(t) {
-    var x = el("div", { id: "toast", role: "status", texto: t }); var v = document.getElementById("toast"); if (v) v.remove();
-    document.body.appendChild(x); setTimeout(function () { if (x.isConnected) x.remove(); }, 3000);
+  function toast(t, accion, ms) {
+    var x = el("div", { id: "toast", role: "status" }, [el("span", { texto: t })].concat(accion ? [el("button", { type: "button", id: "toast-accion", texto: accion.texto, onclick: accion.onclick })] : []));
+    if (accion) x.setAttribute("data-v", "1");
+    var v = document.getElementById("toast"); if (v) v.remove();
+    document.body.appendChild(x); setTimeout(function () { if (x.isConnected) x.remove(); }, ms || 3000);
+  }
+  function casos(k, n) {
+    var nulo = function (v) { return v === undefined || v === null; };
+    return nulo(n) ? (nulo(k) ? "" : String(k)) : nulo(k) ? n + " casos" : k + " de " + n + " casos";
   }
   function txt(v) { return v === null || v === undefined || v === "" ? "—" : String(v); }
   function pct(v) { return v === null || v === undefined ? "—" : (Number(v) * 100).toFixed(1) + " %"; }
@@ -110,7 +116,7 @@
     return el("div", { clase: "tarjeta", "data-clave": t.clave }, [
       el("div", { clase: "detalle", texto: t.nombre }),
       el("div", { clase: "valor", texto: texto }),
-      el("div", { clase: "detalle", texto: (t.k !== undefined && t.k !== null ? t.k + " / " : "") + (t.n !== undefined && t.n !== null ? "n = " + t.n : "") + (t.unidad && t.unidad.indexOf("proporci") !== 0 ? " · " + t.unidad : "") }),
+      el("div", { clase: "detalle", texto: casos(t.k, t.n) + (t.unidad && t.unidad.indexOf("proporci") !== 0 ? " · " + t.unidad : "") }),
       est ? el("span", { clase: "etiqueta " + (est === "suficiente" ? "ok" : "aviso"), texto: est === "suficiente" ? "casos suficientes" : "pocos casos para opinar" }) : null,
       t.definicion ? el("div", { clase: "def", texto: t.definicion }) : null].concat(extra || []));
   }
@@ -300,7 +306,7 @@
           el("details", {}, [el("summary", { texto: "¿Qué significa?" }), el("p", { texto: pq[1] }),
             el("div", { clase: "detalle", texto: x.nombre + " · cómo se comprueba: " + txt(x.comprobacion) }),
             el("div", { clase: "detalle", texto: "Última vez que se comprobó: " + (x.ultima_comprobacion ? String(x.ultima_comprobacion).slice(0, 19).replace("T", " ") : "—") }),
-            x.k !== undefined ? el("div", { clase: "detalle", texto: x.k + " / n = " + x.n }) : null,
+            x.k !== undefined ? el("div", { clase: "detalle", texto: casos(x.k, x.n) }) : null,
             x.ms ? el("div", { clase: "detalle", texto: "Tiempo típico: " + x.ms + " ms" }) : null,
             el("div", { clase: "detalle", texto: "Depende de: " + ((x.depende_de || []).join(", ") || "—") })])]),
         insignia(x.estado)]);
@@ -510,15 +516,31 @@
   var CONFIANZAS_V = [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]];
   // Tras guardar un veredicto: pasa solo al siguiente error de la lista (en el panel de escritorio solo se refresca).
   function vecinoError(id, d) { var i = colaErrores.indexOf(Number(id)); return i < 0 ? null : (colaErrores[i + d] || null); }
+  // El veredicto se envía 7 segundos después de dar «Guardar», para poder deshacerlo. Se envía antes si cambias de pantalla,
+  // si das otro veredicto o si sales de la pestaña.
+  var pendienteV = null;
+  async function commitirPendiente() {
+    var p = pendienteV; if (!p) return; pendienteV = null; clearTimeout(p.timer);
+    var t = document.getElementById("toast"); if (t && t.getAttribute("data-v") === "1") t.remove();
+    var ok = await p.enviar();
+    if (!ok) { aviso("No se pudo guardar el veredicto del error #" + p.id + ". Ábrelo y vuelve a intentarlo.", false); return; }
+    toast("Veredicto guardado");
+    if (vista === "errores" && String(param) === String(p.id)) pintar();
+  }
+  function programarVeredicto(id, enviar) { pendienteV = { id: id, enviar: enviar, timer: setTimeout(commitirPendiente, 7000) }; }
+  function deshacerVeredicto() {
+    var p = pendienteV; if (!p) return; pendienteV = null; clearTimeout(p.timer);
+    toast("Veredicto cancelado. No se guardó nada."); ir("errores", String(p.id));
+  }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") commitirPendiente(); });
   function avanzarError(id) {
-    var lado = document.getElementById("lado"), sig = vecinoError(id, 1);
-    if (lado && !lado.hidden) { toast("Veredicto guardado"); pintar(); return; }
-    if (sig) { toast("Veredicto guardado. Aquí va el siguiente."); ir("errores", String(sig)); }
-    else { toast("Veredicto guardado. Era el último de la lista."); pintar(); }
+    var sig = vecinoError(id, 1);
+    toast(sig ? "Veredicto listo. Aquí va el siguiente." : "Veredicto listo. Era el último de la lista.", { texto: "Deshacer", onclick: deshacerVeredicto }, 7000);
+    if (sig) ir("errores", String(sig)); else pintar();
   }
   function hojaVeredicto(e, lec, ia, sug, guardarSug) {
     var viejo = document.getElementById("hoja-ver"); if (viejo) viejo.remove();
-    var conf = "alta", err = el("div", { clase: "aviso-cmp", id: "ver-error", hidden: "" });
+    var conf = "", err = el("div", { clase: "aviso-cmp", id: "ver-error", hidden: "" });
     function cerrar() { h.remove(); }
     function campo(id, etiqueta, unidad, modo) { return el("label", { clase: "campo-v" }, [el("span", { texto: etiqueta + " (" + unidad + ")" }), el("input", { id: id, inputmode: modo || "decimal", autocomplete: "off", enterkeyhint: "next" })]); }
     var inT = campo("v-tarifa", "Tarifa", "$"), inK = campo("v-km", "Distancia", "km"), inM = campo("v-min", "Tiempo", "min");
@@ -537,14 +559,23 @@
       err.hidden = true;
       var of = selClase.value === "oferta", t = parseFloat(document.getElementById("v-tarifa").value.replace(",", ".")), k = parseFloat(document.getElementById("v-km").value.replace(",", ".")), m = parseFloat(document.getElementById("v-min").value.replace(",", "."));
       if (of && !(t > 0 && k > 0 && m > 0)) { err.textContent = "Escribe la tarifa, la distancia y el tiempo correctos (mayores que cero)."; err.hidden = false; return; }
-      guardar.disabled = true; guardar.textContent = "Guardando…";
+      if (!conf) { err.textContent = "Elige qué tan seguro estás de tu respuesta."; err.hidden = false; return; }
       var args = { objetivo: "error_lector", objetivo_id: String(e.id), clase: selClase.value, tarifa: of ? t : null, km: of ? k : null, min: of ? m : null,
         confianza: conf, evidencia_sha256: e.enlace.captura_sha256, nota: nota.value || null };
-      var r = null;
-      // La sugerencia de la IA viaja solo si existe. Si la base aún no la acepta (falta el SQL 010), se guarda el veredicto sin ella.
-      if (guardarSug) { try { var r1 = await cli.rpc("admin_veredicto", Object.assign({ ia_sugerencia: guardarSug }, args)); if (r1 && r1.data && r1.data.id) r = r1.data; } catch (x) { r = null; } }
-      if (!r) r = await llamar("admin_veredicto", args);
-      if (r && r.id) { h.remove(); avanzarError(e.id); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
+      var enviar = async function () {
+        var r = null;
+        // La sugerencia de la IA viaja solo si existe. Si la base aún no la acepta (falta el SQL 010), se guarda el veredicto sin ella.
+        if (guardarSug) { try { var r1 = await cli.rpc("admin_veredicto", Object.assign({ ia_sugerencia: guardarSug }, args)); if (r1 && r1.data && r1.data.id) r = r1.data; } catch (x) { r = null; } }
+        if (!r) r = await llamar("admin_veredicto", args);
+        return !!(r && r.id);
+      };
+      var lado = document.getElementById("lado");
+      if (lado && !lado.hidden) {   // panel de escritorio: se guarda al momento
+        guardar.disabled = true; guardar.textContent = "Guardando…";
+        if (await enviar()) { h.remove(); toast("Veredicto guardado"); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
+        return;
+      }
+      await commitirPendiente(); h.remove(); programarVeredicto(e.id, enviar); avanzarError(e.id);
     } });
     var h = el("div", { id: "hoja-ver", role: "dialog", "aria-modal": "true", "aria-label": "Dar veredicto", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
       el("div", { clase: "velo", onclick: cerrar }),
@@ -553,7 +584,7 @@
         el("div", { clase: "etq", texto: "Atajos" }), atajos,
         el("div", { clase: "etq", texto: "Qué es" }), el("label", { clase: "campo-v" }, [selClase]),
         el("div", { clase: "campos-v" }, [inT, inK, inM]),
-        el("div", { clase: "etq", texto: "Qué tan seguro estás" }), segConf,
+        el("div", { clase: "etq", texto: "Qué tan seguro estás (obligatorio)" }), segConf,
         el("label", { clase: "campo-v" }, [el("span", { texto: "Nota (opcional)" }), nota]), err, guardar])]);
     document.body.appendChild(h);
     if (sug) { if (sug.estado === "vigente") poner({ tarifa: sug.tarifa, km: sug.km, min: sug.min }); else { poner({ tarifa: null, km: null, min: null }); selClase.value = "no_oferta"; visibilidad(); } }
@@ -681,7 +712,7 @@
     var v = x.valor === null || x.valor === undefined ? "—" : (PROP.indexOf(x.clave) >= 0 ? pct(x.valor) : String(x.valor));
     return el("div", { clase: "tarjeta", "data-clave": x.clave }, [
       el("div", { clase: "detalle", texto: x.nombre }), el("div", { clase: "valor", texto: v }),
-      el("div", { clase: "detalle", texto: (x.k !== null && x.k !== undefined ? x.k + " / " : "") + "n = " + txt(x.n) }),
+      el("div", { clase: "detalle", texto: casos(x.k, x.n) || "sin casos" }),
       el("span", { clase: "etiqueta " + (x.estado === "suficiente" ? "ok" : x.estado === "no_medible" ? "mal" : "aviso"), texto: x.estado.replace("_", " ") }),
       x.motivo ? el("div", { clase: "detalle", texto: x.motivo }) : null,
       el("details", { clase: "def-ayuda" }, [el("summary", { texto: "Cómo se calcula" }), el("div", { clase: "detalle", texto: "Cálculo: " + txt(x.formula) + ". Casos que cuenta: " + txt(x.poblacion) + ". De dónde sale: " + txt(x.fuente) + "." })])]);
@@ -858,6 +889,8 @@
   }
   function textoRevisar(n) { return n === null ? "Revisar capturas de ofertas" : n > 0 ? "Revisar capturas · " + n + " esperando" : "Revisar capturas · todo al día"; }
   async function ofertas(c) {
+    c.appendChild(el("h1", { texto: "Ofertas" }));
+    c.appendChild(el("p", { clase: "detalle", texto: "Lo que leyó la app y cuántas capturas faltan por revisar." }));
     c.appendChild(el("a", { href: "#revisar", id: "ir-revisar", clase: "boton-enlace revisar-entrada", texto: textoRevisar(null), onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
     pendientesRev().then(function (n) { var a = document.getElementById("ir-revisar"); if (a && n !== null) a.textContent = textoRevisar(n); });
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
@@ -873,9 +906,11 @@
     if (m) {
       var ms = m.metricas || [];
       var clave = ["precision_humana", "captura_exacta"], destac = clave.map(function (k) { return ms.filter(function (x) { return x.clave === k; })[0]; }).filter(Boolean);
-      if (destac.length) { c.appendChild(el("h2", { texto: "Qué tanto acierta contra una persona" })); c.appendChild(el("div", { clase: "tarjetas dos", id: "calidad" }, destac.map(metricaTarjeta))); }
+      var calNodos = destac.length ? [el("h2", { texto: "Qué tanto acierta contra una persona" }), el("div", { clase: "tarjetas dos", id: "calidad" }, destac.map(metricaTarjeta))] : [];
       var grupos = { operacion: "Cómo está funcionando", calidad_humana: "Qué tanto acierta contra una persona", acuerdo_ia: "Cuántas veces la IA y el lector coinciden (no significa que acierten)", banco_historico: "Casos viejos (revisados antes)" };
-      var mas = el("details", { clase: "mas-metricas", id: "mas-metricas" }, [el("summary", { texto: "Más métricas" })]);
+      var mas = el("details", { clase: "mas-metricas", id: "mas-metricas" }, [el("summary", { texto: "Calidad y métricas" })]);
+      mas.open = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
+      calNodos.forEach(function (n) { mas.appendChild(n); });
       Object.keys(grupos).forEach(function (g) {
         var gs = ms.filter(function (x) { return x.grupo === g; });
         if (!gs.length) return;
@@ -1142,6 +1177,7 @@
     var ie = null; try { var rr = await cli.rpc("admin_ia_estado"); ie = rr && rr.data && !rr.data.error ? rr.data : null; } catch (x) { ie = null; }
     var ancho = !!(window.matchMedia && matchMedia("(min-width:761px)").matches);
     var cont = el("div", { clase: "config-cols" }), izq = el("div", { clase: "config-col" }), der = el("div", { clase: "config-col" });
+    izq.appendChild(el("h2", { texto: "IA y dinero" })); der.appendChild(el("h2", { texto: "Avisos y accesos" }));
     // 0 · IA con imagen: interruptores remotos y cuánto tarda en contestar
     if (ie) {
       var seg = function (ms) { return ms === null || ms === undefined ? "—" : (ms / 1000).toFixed(1) + " s"; };
@@ -1199,6 +1235,7 @@
     if (g) {
       var al = g.almacenamiento || {}, rt = g.retencion || {};
       // 2 · Almacenamiento y retención
+      izq.appendChild(el("h2", { texto: "Datos guardados" }));
       izq.appendChild(acordeon("cfg-almacenamiento", "Almacenamiento", "capturas y lecturas", bytesLeg(al.capturas_bytes), [
         filaKV("Capturas guardadas", txt(al.capturas_objetos) + " · " + bytesLeg(al.capturas_bytes)), filaKV("Lecturas guardadas", al.lecturas_filas),
         filaKV("Lecturas vencidas", rt.lecturas_vencidas, rt.lecturas_vencidas > 0 ? "aviso-t" : ""),
@@ -1221,6 +1258,7 @@
       var fs = b.filas || [];
       var fila = function (f) { return el("div", { clase: "regla" }, [el("div", {}, [el("span", { texto: fechaHora(f.creado) + " · " + txt(f.admin) }), el("small", { texto: txt(f.accion) })]), el("span", { clase: "sev nd", texto: txt(f.resultado) + (f.filas !== null && f.filas !== undefined ? " · " + f.filas : "") })]); };
       var resto = fs.slice(10);
+      der.appendChild(el("h2", { texto: "Registro" }));
       der.appendChild(acordeon("cfg-historial", "Qué se ha hecho en el Admin", "acciones registradas", String(fs.length), [
         fs.length ? el("div", {}, fs.slice(0, 10).map(fila)) : el("div", { clase: "vacio", texto: "Sin acciones registradas." }),
         resto.length ? el("details", { clase: "sub" }, [el("summary", { texto: "Ver " + resto.length + " más" }), el("div", {}, resto.map(fila))]) : null], false));
@@ -1288,6 +1326,7 @@
 
   async function pintar() {
     hoja(false);
+    if (pendienteV && !(vista === "errores" && param)) await commitirPendiente();
     var claveVista = vista + "/" + (param || ""), yAntes = claveVista === ultimaClave ? window.scrollY : null; ultimaClave = claveVista;
     try { sessionStorage.setItem("checa-vista", JSON.stringify({ F: F, dias: dias, pag: pag })); } catch (x) { /* sin almacenamiento */ }
     var raiz = document.getElementById("raiz");
