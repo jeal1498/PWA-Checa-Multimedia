@@ -910,17 +910,17 @@
     var sugErr = null;
     var tieneCaptura = !!(e.evidencia && e.evidencia.captura);
     var colNota = esRev && (!sha || !tieneCaptura) ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: !sha ? "No se puede decidir: captura no verificable." : "Sin captura: no se puede comprobar. Solo puedes descartarlo." })]) : null;
-    var checkBtn = tieneCaptura ? el("button", { type: "button", id: "check-ia", clase: "ia-btn", texto: "Check IA", onclick: pedirCheck }) : null;
+    var checkBtn = tieneCaptura ? el("button", { type: "button", id: "check-ia", clase: "ia-btn", texto: "Verificar", onclick: pedirCheck }) : null;
     var TOL = { tarifa: 0.01, km: 0.15, min: 1 };
     function marcarSugerido(idBtn) {
       ["ver-lector", "ver-ia", "ver-corregir", "ver-no"].forEach(function (i) { var b = document.getElementById(i); if (!b) return; b.classList.remove("rec"); var q = b.querySelector("small"); if (q) q.remove(); });
       var b = idBtn && document.getElementById(idBtn); if (b) { b.classList.add("rec"); b.appendChild(el("small", { texto: "Sugerido" })); }
     }
     function aplicarCheck(sug) {
-      if (checkBtn) { checkBtn.disabled = true; checkBtn.classList.add("ok"); checkBtn.textContent = ""; checkBtn.appendChild(icoOkV()); checkBtn.appendChild(document.createTextNode("Check IA listo")); }
+      if (checkBtn) { checkBtn.disabled = true; checkBtn.classList.add("ok"); checkBtn.textContent = ""; checkBtn.appendChild(icoOkV()); checkBtn.appendChild(document.createTextNode("Verificado")); }
       var vig = sug.estado === "vigente";
-      if (vig) METR.forEach(function (m) { var b = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (b) b.appendChild(el("div", { clase: "chk", texto: "Check IA " + fmtV(m[1], sug[m[1]]) })); });
-      else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "Check IA: " + (sug.estado === "vencida" ? "oferta vencida" : sug.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
+      if (vig) METR.forEach(function (m) { var b = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (b) b.appendChild(el("div", { clase: "chk", texto: "IA " + fmtV(m[1], sug[m[1]]) })); });
+      else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "IA: " + (sug.estado === "vencida" ? "oferta vencida" : sug.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
       var reco;
       if (!vig) reco = "ver-no";
       else {
@@ -935,8 +935,8 @@
       var r = null; try { r = await cli.functions.invoke("admin-leer-captura", { body: { nombre: e.id + ".webp" } }); } catch (x) { r = { error: x }; }
       if (r && r.data && r.data.ok) { sugErr = Object.assign({ modelo: r.data.modelo, ms: r.data.ms, tokens: r.data.tokens }, r.data.lectura); aplicarCheck(sugErr); return; }
       var st = r && r.error && r.error.context && r.error.context.status;
-      aviso(st === 403 ? "No autorizado para leer capturas." : st === 404 ? "La captura ya no existe." : st === 503 ? "La lectura con IA no está activa (falta la clave de DeepSeek)." : st === 502 ? "La IA no pudo leer esta captura (revisa el saldo de DeepSeek)." : "No se pudo hacer el Check IA.");
-      checkBtn.disabled = false; checkBtn.textContent = "Check IA";
+      aviso(st === 403 ? "No autorizado para leer capturas." : st === 404 ? "La captura ya no existe." : st === 503 ? "La lectura con IA no está activa (falta la clave de DeepSeek)." : st === 502 ? "La IA no pudo leer esta captura (revisa el saldo de DeepSeek)." : "No se pudo verificar con la IA.");
+      checkBtn.disabled = false; checkBtn.textContent = "Verificar";
     }
     if (colNota) tablaV.appendChild(colNota);
     if (checkBtn) tablaV.appendChild(checkBtn);
@@ -1162,8 +1162,8 @@
       var tablaV = valoresCard(campos, Sx ? ["Lector", "IA"] : ["Lector"], "Lo que mostró el pop-up");
       var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" });
       var vigS = S && S.estado === "vigente", recAcc = !S ? null : !vigS ? "falso" : (CAMPOS.every(function (m) { return m[3] !== null && m[3] !== undefined && m[2] !== null && m[2] !== undefined && Math.abs(m[3] - m[2]) <= m[4]; }) ? "ok" : "corregir");
-      if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Check IA", onclick: pedirIA }));
-      else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn ok", disabled: "" }, [icoOkV(), "Check IA listo"]));
+      if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Verificar", onclick: pedirIA }));
+      else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn ok", disabled: "" }, [icoOkV(), "Verificado"]));
       tablaV.appendChild(colSug);
       cuerpo.appendChild(fichaFila(marco, [tablaV], "rev-actual"));
       cuerpo.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre esta revisión" }));
