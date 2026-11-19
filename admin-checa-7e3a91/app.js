@@ -1223,6 +1223,10 @@
     texto: el("b", { texto: x.nombre ? textoValores(p.tarifa, p.km, p.min) : "Captura ya borrada" }),
     meta: appTxt(x.app) + " " + txt(x.version) + " · pop-up " + ((REV_COLORES.filter(function (k) { return k[0] === x.nivel; })[0] || [0, x.nivel])[1]).toLowerCase(),
     abrir: x.nombre ? function () { capturaObjetivo = x.id; capturaObjItem = rv ? x : null; revNivel = x.nivel; ir("revisar", "capturas"); } : function () { toast("La captura ya no existe."); } }; }
+  var MOTIVO_DUP = { popup_activo: "pop-up ya abierto", misma_oferta_60s: "misma oferta en 60 s", otra_app: "de otra app" };
+  function itemLectura(f) { return { tipo: "lectura", id: f.id, ok: false, estado: "DUPLICADA", creado: f.ts_evento, etiqueta: "Lectura",
+    texto: el("b", { texto: [f.tarifa, f.km, f.min].every(function (x) { return x === null || x === undefined; }) ? "sin valores" : textoValores(f.tarifa, f.km, f.min) }),
+    meta: appTxt(f.app) + " " + txt(f.version_app) + " · " + (MOTIVO_DUP[f.motivo] || ((RES[f.resultado] || [f.resultado || "—"])[0]).toLowerCase()), detalle: f }; }
   function etiquetaDia(f) {
     var d = new Date(f); if (!f || isNaN(d)) return "Sin fecha";
     var dia = iso(d), hoyS = iso(new Date()), ayer = iso(new Date(Date.now() - 864e5));
@@ -1252,14 +1256,18 @@
     if (selEx) selEx.value = F[extra[0]] || "";
     var dd = el("input", { id: "fh-desde", type: "date", value: rg.desde.slice(0, 10) }), dh = el("input", { id: "fh-hasta", type: "date", value: rg.hasta.slice(0, 10) });
     function lab(t, x) { return el("label", { clase: "campo-v" }, [el("span", { texto: t }), x]); }
+    var dup = el("input", { id: "fh-dup", type: "checkbox", role: "switch" }); dup.checked = F["f-dup"] === "1";
+    var filaDup = el("label", { clase: "campo-sw" }, [el("span", {}, [el("b", { texto: "Mostrar duplicadas" }), el("small", { texto: "La misma oferta vista otra vez. Salen en Revisables." })]), dup]);
     var h = el("div", { id: "hoja-filtros", role: "dialog", "aria-modal": "true", "aria-label": "Filtros", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
       el("div", { clase: "velo", onclick: cerrar }),
       el("div", { clase: "panel-hoja" }, [el("div", { clase: "asa", "aria-hidden": "true" }), el("h2", { texto: "Filtros" }),
         el("div", { clase: "dos-col" }, [lab("App", selApp), lab("Versión", selVer)]), selEx ? lab(extra[1], selEx) : null,
-        el("div", { clase: "dos-col" }, [lab("Desde", dd), lab("Hasta", dh)]),
+        el("div", { clase: "dos-col" }, [lab("Desde", dd), lab("Hasta", dh)]), filaDup,
         el("button", { type: "button", id: "fh-aplicar", clase: "primario", texto: "Aplicar", onclick: function () {
           F["f-app"] = selApp.value; F["f-version"] = selVer.value; if (selEx) F[extra[0]] = selEx.value;
           F["f-desde"] = dd.value; F["f-hasta"] = dh.value; F.desde = dd.value || null; F.hasta = dh.value || null;
+          if (dup.checked && F["f-dup"] !== "1") { F["f-kpi"] = "todo"; F["f-lin"] = ""; F["f-sub"] = ""; F["f-abierto"] = "0"; }
+          F["f-dup"] = dup.checked ? "1" : "";
           if (dd.value === rg.desde.slice(0, 10) && dh.value === rg.hasta.slice(0, 10)) { F.desde = F.hasta = null; F["f-desde"] = F["f-hasta"] = ""; }
           pag.errores = pag.ofertas = 1; scrollErrores = 0; cerrar(); pintar(); } }),
         el("button", { type: "button", id: "fh-limpiar", texto: "Limpiar todo", onclick: function () { var v = F["f-ver"]; F = {}; if (v) F["f-ver"] = v; pag.errores = pag.ofertas = 1; cerrar(); pintar(); } })])]);
@@ -1269,6 +1277,7 @@
     var a = [];
     if (F["f-version"]) a.push(["f-version", "v" + F["f-version"]]);
     if (F["f-app"]) a.push(["f-app", F["f-app"] === "didi" ? "DiDi" : "Uber"]);
+    if (F["f-dup"]) a.push(["f-dup", "Con duplicadas"]);
     if (F["f-tipo"]) a.push(["f-tipo", TIPO_TXT[F["f-tipo"]] || F["f-tipo"]]);
     if (F["f-resultado"]) a.push(["f-resultado", RES_TXT[F["f-resultado"]] || F["f-resultado"]]);
     if (F.desde || F.hasta) a.push(["desde", corto(F.desde) + " – " + corto(F.hasta)]);
@@ -1370,8 +1379,11 @@
     if (!lin || lin === "error") pedir.push(llamar("admin_errores_lista", { p_estado: estadoE, p_quien: quien, p_limite: 100 })); else pedir.push(Promise.resolve(null));
     if (kpi !== "rev" && (!lin || lin !== "error")) pedir.push(llamar("admin_capturas_pendientes", { p_nivel: lin || null, p_limite: 50 })); else pedir.push(Promise.resolve(null));
     if (kpi !== "pend" && (!lin || lin !== "error")) pedir.push(llamar("admin_capturas_revisadas", { p_nivel: lin || null, p_resultado: kpi === "rev" && lin && sub ? sub : null, p_limite: 100 })); else pedir.push(Promise.resolve(null));
+    var verDup = F["f-dup"] === "1" && kpi === "todo" && !lin, rg = rango();
+    pedir.push(verDup ? llamar("admin_ofertas", { desde: rg.desde, hasta: rg.hasta, app: af, version: vf, resultado: "duplicada", estado_veredicto: null, pagina: 1, por_pagina: 50 }) : Promise.resolve(null));
     var got = await Promise.all(pedir);
     if (got[0]) (got[0].filas || []).forEach(function (f) { items.push(itemError(f)); });
+    if (got[3]) (got[3].filas || []).forEach(function (f) { items.push(itemLectura(f)); });
     var filtroApp = function (x) { return (!vf || x.version === vf) && (!af || String(x.app).toLowerCase() === af); };
     if (got[1]) (got[1].items || []).filter(filtroApp).forEach(function (x) { items.push(itemCaptura(x)); });
     if (got[2]) (got[2].items || []).filter(filtroApp).forEach(function (x) { items.push(itemCaptura(x)); });
