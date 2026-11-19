@@ -236,6 +236,26 @@
     g.push(a, z);
     return sv("svg", { viewBox: "0 0 " + W + " " + H, class: "barras-dia", role: "img", "aria-label": "Lecturas por día del " + h[0].dia + " al " + h[h.length - 1].dia + "; último día " + vals[vals.length - 1] }, g);
   }
+  // Gráfica de Hoy: los días sin datos son puntos tenues y los días con datos, barras anchas a la derecha.
+  function graficaHoy(h) {
+    var n = h.length; if (!n) return el("div", { clase: "vacio", texto: "Sin datos en este periodo." });
+    if (n > 10) return barrasDia(h);
+    var vals = h.map(function (x) { return Number(x.lecturas) || 0; }), max = Math.max.apply(null, vals) || 1, imax = vals.indexOf(Math.max.apply(null, vals));
+    var W = 330, base = 96, alto = 88, g = [], xs = [], x = W - 4;
+    for (var i = n - 1; i >= 0; i--) { var w = i === n - 1 ? 18 : 14; x -= w; xs[i] = [x, w]; x -= 6; }
+    for (var gx = 4; gx + 6 <= xs[0][0] - 6; gx += 11.2) g.push(sv("rect", { x: gx.toFixed(1), y: base - 4, width: 6, height: 4, rx: 2, class: "bar fant" }));
+    g.push(sv("line", { x1: 0, y1: base + 4, x2: W, y2: base + 4, class: "base-h" }));
+    vals.forEach(function (v, i) { var bh = Math.max(6, alto * v / max);
+      var r = sv("rect", { x: xs[i][0].toFixed(1), y: (base - bh).toFixed(1), width: xs[i][1], height: bh.toFixed(1), rx: i === n - 1 ? 4 : 3, class: i === n - 1 ? "bar ult" : "bar" });
+      var tt = sv("title"); tt.textContent = h[i].dia + ": " + v.toLocaleString("en-US") + " lecturas"; r.appendChild(tt); g.push(r); });
+    var svg = sv("svg", { viewBox: "0 0 " + W + " 112", class: "barras-hoy", role: "img", "aria-label": "Lecturas por día: " + h.map(function (q, k) { return corto(q.dia) + " " + vals[k].toLocaleString("en-US"); }).join(", ") }, g);
+    var total = Math.max(dias || 0, n), ini = new Date(new Date(h[n - 1].dia + "T12:00:00Z").getTime() - (total - 1) * 864e5).toISOString().slice(0, 10);
+    var der = n === 1 ? corto(h[0].dia) : n === 2 ? String(Number(h[0].dia.slice(8, 10))) + " y " + corto(h[1].dia) : corto(h[0].dia) + " – " + corto(h[n - 1].dia);
+    return el("div", { clase: "graf-hoy" }, [
+      el("div", { clase: "gh-h" }, [el("b", { texto: vals[imax].toLocaleString("en-US") + " el " + corto(h[imax].dia) }), el("span", { texto: "pico del periodo" })]), svg,
+      el("div", { clase: "gh-ax" }, [el("span", { texto: corto(ini) }), el("span", { texto: der })]),
+      n < dias ? el("div", { clase: "nota-graf", texto: "Solo hay datos de los últimos " + n + (n === 1 ? " día." : " días.") }) : null]);
+  }
   // Toda la tarjeta lleva a su detalle (los «¿Qué significa?» de dentro siguen funcionando).
   function envolver(t, v, p) {
     t.classList.add("tocable"); t.setAttribute("role", "link"); t.tabIndex = 0;
@@ -400,11 +420,12 @@
     var cuatro = ["lecturas", "tasa_errores", "calidad_interpretacion"].map(function (k) { return porClave[k]; }).filter(Boolean).map(function (i) {
       var sub = i.n ? (i.clave === "lecturas" ? "en el periodo" : i.k + " de " + i.n) : i.clave === "lecturas" ? "en el periodo" : "aún sin casos";
       var extra = SPARK[i.clave] ? spark(SPARK[i.clave]) : i.clave === "calidad_interpretacion" && i.n ? el("span", { clase: "medidor" }, [(function () { var b = el("i"); b.style.width = Math.round(i.k / i.n * 100) + "%"; b.style.background = "var(--verde)"; return b; })()]) : i.clave === "calidad_interpretacion" ? el("span", { clase: "sp-vacio", "aria-hidden": "true" }) : null;
+      if (extra && i.clave === "tasa_errores" && Number(i.valor) === 0) extra.setAttribute("class", "spark bueno");
       return kpi(CORTO[i.clave], valorInd(i), sub, extra, DEST[i.clave][0], DEST[i.clave][1]); });
     var kc = await llamar("admin_costos", { desde: r.desde, hasta: r.hasta });
     if (kc) {
       var gasto = (kc.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0);
-      cuatro.push(kpi("Gasto en IA", (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—", "USD en el periodo", null, "ajustes"));
+      cuatro.push(kpi("Gasto en IA", (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—", "USD en el periodo", sv("svg", { viewBox: "0 0 120 30", preserveAspectRatio: "none", class: "spark sp-gasto", "aria-hidden": "true" }, Array.apply(null, Array(9)).map(function (_, k) { return sv("rect", { x: k * 12, y: 22, width: 6, height: 5, rx: 2, class: "fant" }); }).concat([sv("rect", { x: 108, y: 6, width: 12, height: 21, rx: 3, class: "ult" })])), "ajustes"));
     }
     if (cuatro.length) { c.appendChild(el("h2", { texto: dias === 7 ? "Últimos 7 días" : "Últimos " + dias + " días" })); c.appendChild(el("div", { clase: "kpis", id: "esencial" }, cuatro)); }
     pendientesRev().then(function (x) {
@@ -416,7 +437,7 @@
     // 5 · Tendencia
     var h0 = d.historia || [];
     c.appendChild(el("h2", { texto: "Lecturas por día" }));
-    c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [barrasDia(h0), h0.length && h0.length < dias ? el("div", { clase: "detalle nota-graf", texto: "Solo hay datos de los últimos " + h0.length + (h0.length === 1 ? " día." : " días.") }) : null]));
+    c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [graficaHoy(h0)]));
 
     // Cada parte del sistema, a un toque (los números y gráficas de calidad viven en Calidad › Resumen).
     var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todas las partes del sistema" })]);
