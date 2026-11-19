@@ -1,9 +1,9 @@
 // Checa Admin: centro de control, salud y calidad (E6/E7). Sin dependencias propias; habla solo con las funciones
 // public.admin_* (comprueban el rol en el servidor y registran cada consulta). Todo dato se pinta con textContent
-// (nada de innerHTML con datos). No guarda nada en el navegador. Ningún dato inventado: sin datos → gris «sin datos».
+// (nada de innerHTML con datos). Solo recuerda, mientras la pestaña esté abierta, filtros y página (sessionStorage), y el tema. Ningún dato inventado: sin datos → gris «sin datos».
 (function () {
   "use strict";
-  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, vista = "inicio", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
+  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, colaErrores = [], scrollErrores = 0, restaurarScroll = null, ultimaClave = "", vista = "inicio", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
   var SVG = "http://www.w3.org/2000/svg";
   // [id, nombre completo, nombre corto para la barra inferior del teléfono]
   var MODULOS = [["inicio", "Inicio · Salud", "Salud"], ["errores", "Errores", "Errores"], ["ofertas", "Ofertas", "Ofertas"], ["versiones", "Versiones", "Versiones"],
@@ -67,6 +67,10 @@
     a.appendChild(el("button", { type: "button", clase: "cerrar-aviso", texto: "Cerrar", "aria-label": "Cerrar aviso", onclick: function () { aviso(""); } }));
     a.hidden = false;
   }
+  function toast(t) {
+    var x = el("div", { id: "toast", role: "status", texto: t }); var v = document.getElementById("toast"); if (v) v.remove();
+    document.body.appendChild(x); setTimeout(function () { if (x.isConnected) x.remove(); }, 3000);
+  }
   function txt(v) { return v === null || v === undefined || v === "" ? "—" : String(v); }
   function pct(v) { return v === null || v === undefined ? "—" : (Number(v) * 100).toFixed(1) + " %"; }
   var TZ = "America/Mexico_City";
@@ -95,7 +99,7 @@
     if (d && d.error) { aviso(d.error === "no_autorizado" ? "No autorizado: tu cuenta no es administradora." : d.error === "no_existe" ? "No existe ese registro." : d.error === "veredicto_invalido" ? "El veredicto no es válido: revisa los valores (la oferta necesita tarifa, distancia y tiempo mayores que cero)." : d.error === "revision_invalida" ? "La revisión no es válida: revisa los valores o el motivo." : d.error === "objetivo_o_evidencia" ? "No se puede comprobar la captura de este caso: no admite veredicto." : "Filtro inválido: " + d.error); return null; }
     return d;
   }
-  function ir(v, p) { vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } window.scrollTo(0, 0); pintar(); }
+  function ir(v, p) { if (vista === "errores" && !param) scrollErrores = window.scrollY; vista = v; param = p || null; if (location.hash !== "#" + v + (p ? "/" + p : "")) { try { history.pushState(null, "", "#" + v + (p ? "/" + p : "")); } catch (e) { /* sin historial */ } } restaurarScroll = v === "errores" && !p ? scrollErrores : null; if (restaurarScroll === null) window.scrollTo(0, 0); pintar(); }
   function enlace(texto, v, p) { return el("a", { href: "#" + v + (p ? "/" + p : ""), clase: "enlace", texto: texto, onclick: function (ev) { ev.preventDefault(); ir(v, p); } }); }
 
   // ---------- componentes visuales ----------
@@ -209,11 +213,15 @@
     var pasos = PASOS.map(function (p) { return pasoEstado(p, d.componentes); });
     var rotos = pasos.filter(function (x) { return x.estado === "fuera_de_servicio" || x.estado === "degradado"; }).length;
     var fraseCadena = rotos ? "Falla " + rotos + (rotos === 1 ? " paso" : " pasos") + " de " + PASOS.length + "." : "Ningún paso de la cadena falla.";
-    c.appendChild(el("section", { clase: "hero", id: "estado-general" }, [
+    var heroEl;
+    c.appendChild(heroEl = el("section", { clase: "hero", id: "estado-general" }, [
       el("div", { clase: "semaforo", "aria-hidden": "true" }, luces),
       el("div", { clase: "hero-texto" }, [el("h1", { texto: v[0] }), el("p", { texto: v[1] }), el("p", { texto: fraseCadena }),
         el("div", { clase: "fila" }, [insignia(d.estado_general), el("span", { clase: "detalle", texto: comprobados + " de " + n + " cosas medidas" })])])]));
 
+    if (yo && yo.rol === "revisor") pendientesRev().then(function (n) {
+      if (n > 0 && heroEl.isConnected) heroEl.after(el("a", { href: "#revisar", id: "pend-revisar", clase: "boton-enlace revisar-entrada", texto: textoRevisar(n), onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
+    });
     // 2 · Pasos de la lectura: un punto por paso; el que falla se abre solo.
     var peor = -1;
     pasos.forEach(function (x, k) { if (GRAVE[x.estado] <= 1 && (peor < 0 || GRAVE[x.estado] < GRAVE[pasos[peor].estado])) peor = k; });
@@ -337,12 +345,12 @@
       el("label", {}, ["Hasta", el("input", { id: "f-hasta", type: "date", value: r.hasta.slice(0, 10) })]),
       el("label", {}, ["App", el("select", { id: "f-app" }, [el("option", { value: "", texto: "Todas" }), el("option", { value: "uber", texto: "Uber" }), el("option", { value: "didi", texto: "DiDi" })])]),
       el("label", {}, ["Versión", el("select", { id: "f-version" }, versionesOpc())])].concat(extra || []).concat([
-      el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; dias = 7; pag.errores = pag.ofertas = 1; pintar(); } })]));
+      el("button", { id: "f-limpiar", type: "button", texto: "Limpiar", onclick: function () { F = {}; dias = 7; pag.errores = pag.ofertas = 1; scrollErrores = 0; pintar(); } })]));
     ["f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = nodo.querySelector("#" + id); if (x && F[id] !== undefined) x.value = F[id]; });
     // 10.84 (propuesta B): los filtros se aplican solos al cambiar y el activo se resalta.
     function aplicar() {
       ["f-desde", "f-hasta", "f-app", "f-version", "f-tipo", "f-estado", "f-resultado"].forEach(function (id) { var x = document.getElementById(id); if (x) F[id] = x.value; });
-      F.desde = F["f-desde"] || null; F.hasta = F["f-hasta"] || null; pag.errores = pag.ofertas = 1; pintar();
+      F.desde = F["f-desde"] || null; F.hasta = F["f-hasta"] || null; pag.errores = pag.ofertas = 1; scrollErrores = 0; pintar();
     }
     nodo.querySelectorAll("input, select").forEach(function (x) {
       x.addEventListener("change", aplicar);
@@ -409,13 +417,14 @@
   async function errores(c) {
     if (param) return expediente(c, Number(param));
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Veredicto" }, CHIPS.map(function (ch) {
-      return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-estado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-estado"] = ch[0]; pag.errores = 1; pintar(); } }); })));
+      return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-estado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-estado"] = ch[0]; pag.errores = 1; scrollErrores = 0; pintar(); } }); })));
     c.appendChild(filtrosBase([opciones("f-tipo", "Tipo", ["", "diferencia", "rescate", "desacuerdo", "reporte"], TIPO_TXT), opciones("f-estado", "Estado de revisión", VEREDICTOS, VER_TXT)]));
     skeleton(c);
     var r = rango(), d = await llamar("admin_errores", { desde: r.desde, hasta: r.hasta, app: valor("f-app"), version: valor("f-version"),
       tipo: valor("f-tipo"), estado_veredicto: valor("f-estado"), pagina: pag.errores, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
+    colaErrores = (d.filas || []).map(function (f) { return Number(f.id); });
     var chipAct = c.querySelector('.chip[aria-pressed="true"]'); if (chipAct) chipAct.textContent += " · " + d.total;
     var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle del error", hidden: "" });
     var dividido = el("div", { clase: "dividido" }, [lista, lado]); c.appendChild(dividido); var cpad = c; c = lista;
@@ -454,7 +463,7 @@
       marco.appendChild(centro);
     }
     async function cargar(ev) {
-      var b = ev.currentTarget; b.disabled = true; b.textContent = "Cargando…";
+      var b = ev && ev.currentTarget; if (b) { b.disabled = true; b.textContent = "Cargando…"; }
       marco.classList.add("cargando");
       var url = await cargarCaptura(e.id);
       marco.classList.remove("cargando");
@@ -466,7 +475,7 @@
       marco.appendChild(el("button", { type: "button", clase: "marco-ampliar", "aria-label": "Ampliar captura", texto: "⤢", onclick: function () { abrirVisor(url, e.id); } }));
       if (e.creado) marco.appendChild(el("span", { clase: "marco-hora", texto: hora(e.creado) }));
     }
-    if (e.evidencia && e.evidencia.captura) vacio("Se carga aquí", true); else vacio("Sin captura (se borra sola a los 7 días).", false);
+    if (e.evidencia && e.evidencia.captura) { vacio("Cargando captura…", false); setTimeout(cargar, 0); } else vacio("Sin captura (se borra sola a los 7 días).", false);
     return marco;
   }
   function hojaSeguimiento(id, estadoActual) {
@@ -491,6 +500,14 @@
   // ---------- Veredicto humano: la referencia que usan Auditoría IA, Versiones y Ofertas ----------
   var CLASES_V = [["oferta", "Oferta"], ["no_oferta", "No es oferta"], ["varias", "Varias ofertas"], ["ilegible", "Ilegible"], ["cambio_pantalla", "Cambió la pantalla"]];
   var CONFIANZAS_V = [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]];
+  // Tras guardar un veredicto: pasa solo al siguiente error de la lista (en el panel de escritorio solo se refresca).
+  function vecinoError(id, d) { var i = colaErrores.indexOf(Number(id)); return i < 0 ? null : (colaErrores[i + d] || null); }
+  function avanzarError(id) {
+    var lado = document.getElementById("lado"), sig = vecinoError(id, 1);
+    if (lado && !lado.hidden) { toast("Veredicto guardado"); pintar(); return; }
+    if (sig) { toast("Veredicto guardado. Aquí va el siguiente."); ir("errores", String(sig)); }
+    else { toast("Veredicto guardado. Era el último de la lista."); pintar(); }
+  }
   function hojaVeredicto(e, lec, ia, sug, guardarSug) {
     var viejo = document.getElementById("hoja-ver"); if (viejo) viejo.remove();
     var conf = "alta", err = el("div", { clase: "aviso-cmp", id: "ver-error", hidden: "" });
@@ -519,7 +536,7 @@
       // La sugerencia de la IA viaja solo si existe. Si la base aún no la acepta (falta el SQL 010), se guarda el veredicto sin ella.
       if (guardarSug) { try { var r1 = await cli.rpc("admin_veredicto", Object.assign({ ia_sugerencia: guardarSug }, args)); if (r1 && r1.data && r1.data.id) r = r1.data; } catch (x) { r = null; } }
       if (!r) r = await llamar("admin_veredicto", args);
-      if (r && r.id) { h.remove(); pintar(); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
+      if (r && r.id) { h.remove(); avanzarError(e.id); } else { guardar.disabled = false; guardar.textContent = "Guardar veredicto"; }
     } });
     var h = el("div", { id: "hoja-ver", role: "dialog", "aria-modal": "true", "aria-label": "Dar veredicto", onkeydown: function (ev) { if (ev.key === "Escape") cerrar(); } }, [
       el("div", { clase: "velo", onclick: cerrar }),
@@ -540,6 +557,8 @@
     c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a Errores", texto: "‹ Errores", onclick: function () { ir("errores"); } }));
     var e = await llamar("admin_error", { id: id });
     if (!e) return;
+    var iCola = colaErrores.indexOf(Number(e.id));
+    if (!enLado && iCola >= 0) c.appendChild(el("div", { clase: "detalle", id: "exp-pos", texto: "Error " + (iCola + 1) + " de " + colaErrores.length + " en la lista" }));
     c.appendChild(el("div", { clase: "exp-cab" }, [el("h1", { id: "exp-titulo", texto: "Error #" + e.id }), (e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : null]));
     c.appendChild(el("div", { clase: "detalle", texto: txt(e.app) + " " + txt(e.version) + " · " + txt(e.tipo) + " · conductor " + txt(e.conductor) + " · " + fechaHora(e.creado) }));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
@@ -590,9 +609,11 @@
       var pr = null; try { var prr = await cli.rpc("admin_ia_precision_errores"); pr = prr && prr.data; } catch (x) { pr = null; } precErr = pr && !pr.error ? pr : null;
       pintarIA(null, false); c.appendChild(cajaIA);
     }
+    var btnVer = null;
     if (yo && yo.rol === "revisor") {
       var sha = e.enlace && e.enlace.captura_sha256;
-      c.appendChild(el("button", { type: "button", id: "dar-veredicto", clase: "dar-veredicto", texto: "Dar veredicto", disabled: sha ? null : "", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } }));
+      btnVer = el("button", { type: "button", id: "dar-veredicto", clase: "dar-veredicto", texto: "Dar veredicto", disabled: sha ? null : "", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } });
+      if (enLado) c.appendChild(btnVer);
       if (!sha) c.appendChild(el("div", { clase: "detalle", id: "sin-huella", texto: "No se puede dar veredicto: no se puede comprobar que la captura sea la de este caso (es anterior a la 10.82 o no tiene lectura guardada)." }));
     }
     c.appendChild(el("div", { clase: "detalle", texto: "Veredicto anterior: " + txt(e.veredicto_heredado) + " (no lo dio una persona)" }));
@@ -620,6 +641,13 @@
           el("button", { type: "button", id: "abrir-registro", clase: "primario", texto: "Registrar", onclick: function () { hojaSeguimiento(id, e.estado_seguimiento); } })]));
       }
     } else { c.appendChild(el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })); }
+    if (!enLado && (btnVer || iCola >= 0)) {
+      var ant = vecinoError(e.id, -1), sig = vecinoError(e.id, 1);
+      c.appendChild(el("div", { clase: "barra-acc", id: "barra-acc" }, [
+        el("button", { type: "button", id: "err-anterior", texto: "‹ Anterior", disabled: ant ? null : "", onclick: function () { ir("errores", String(ant)); } }),
+        btnVer,
+        el("button", { type: "button", id: "err-siguiente", texto: sig ? "Siguiente ›" : "Fin de la lista", disabled: sig ? null : "", onclick: function () { ir("errores", String(sig)); } })]));
+    }
   }
 
   // ---------- 03 Ofertas ----------
@@ -776,7 +804,7 @@
       var P = estado.prec;
       if (P && P.n > 0) cuerpo.appendChild(el("div", { clase: "rev-ia-prec", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · pocos casos para opinar (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }));
       var it = estado.actual;
-      if (!it) { cuerpo.appendChild(el("div", { clase: "vacio", id: "rev-vacio", texto: "No hay capturas pendientes de este color. Cuando la app suba más, aparecerán aquí." })); return; }
+      if (!it) { cuerpo.appendChild(el("div", { clase: "vacio", id: "rev-vacio", texto: tot - hechas === 0 ? (hechas ? "Todo al día: revisaste " + hechas + " capturas. Vuelve cuando la app suba más." : "No hay capturas por revisar. Cuando la app suba más, aparecerán aquí.") : "Terminaste las de este color. Quedan " + (tot - hechas) + " en los otros colores: elige otro arriba." })); return; }
       var rotulo = REV_COLORES.filter(function (k) { return k[0] === it.nivel; })[0], pop = popDeNombre(it.nombre);
       var marco = el("div", { clase: "marco-captura" + (estado.url ? "" : " vacio"), id: "marco-captura" });
       if (estado.url) { var img = el("img", { src: estado.url, alt: "Captura de la oferta " + it.id, clase: "captura-img" }); img.addEventListener("click", function () { abrirVisor(estado.url, it.id); }); marco.appendChild(img);
@@ -815,8 +843,15 @@
     if (await cargarCola()) await siguiente();
   }
 
+  // Cuántas capturas esperan revisión (solo lectura; si falla, simplemente no se muestra).
+  async function pendientesRev() {
+    try { var r = await cli.rpc("admin_capturas_pendientes", { p_nivel: "rojo", p_limite: 1 }), d = r && r.data; if (!d || d.error) return null;
+      var p = d.pendientes || {}; return Object.keys(p).reduce(function (t, k) { return t + (Number(p[k]) || 0); }, 0); } catch (x) { return null; }
+  }
+  function textoRevisar(n) { return n === null ? "Revisar capturas de ofertas" : n > 0 ? "Revisar capturas · " + n + " esperando" : "Revisar capturas · todo al día"; }
   async function ofertas(c) {
-    c.appendChild(el("a", { href: "#revisar", id: "ir-revisar", clase: "boton-enlace revisar-entrada", texto: "Revisar capturas de ofertas (aceptar, considerar, rechazar)", onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
+    c.appendChild(el("a", { href: "#revisar", id: "ir-revisar", clase: "boton-enlace revisar-entrada", texto: textoRevisar(null), onclick: function (ev) { ev.preventDefault(); ir("revisar"); } }));
+    pendientesRev().then(function (n) { var a = document.getElementById("ir-revisar"); if (a && n !== null) a.textContent = textoRevisar(n); });
     c.appendChild(el("div", { clase: "chips", role: "group", "aria-label": "Resultado" }, RES_CHIPS.map(function (ch) {
       return el("button", { type: "button", clase: "chip", "aria-pressed": String((F["f-resultado"] || "") === ch[0]), texto: ch[1], onclick: function () { F["f-resultado"] = ch[0]; pag.ofertas = 1; pintar(); } }); })));
     c.appendChild(filtrosBase([opciones("f-resultado", "Resultado", ["", "oferta", "duplicada", "varias", "abstencion", "no_oferta", "descartada", "timeout", "error"], RES_TXT), opciones("f-estado", "Estado de revisión", VEREDICTOS, VER_TXT)]));
@@ -1211,6 +1246,8 @@
 
   async function pintar() {
     hoja(false);
+    var claveVista = vista + "/" + (param || ""), yAntes = claveVista === ultimaClave ? window.scrollY : null; ultimaClave = claveVista;
+    try { sessionStorage.setItem("checa-vista", JSON.stringify({ F: F, dias: dias, pag: pag })); } catch (x) { /* sin almacenamiento */ }
     var raiz = document.getElementById("raiz");
     raiz.textContent = "";
     var PRINCIPALES = ["inicio", "errores", "ofertas"], vSel = vista === "revisar" ? "ofertas" : vista;
@@ -1230,6 +1267,7 @@
     function fallo(msg) { return el("div", { clase: "vacio fallo", role: "status" }, [el("p", { texto: msg }), el("button", { type: "button", texto: "Reintentar", onclick: function () { pintar(); } })]); }
     try { await VISTAS[vista](c); } catch (e) { if (window.console) console.error(e); c.textContent = ""; c.appendChild(fallo("Algo salió mal al mostrar esta pantalla.")); falloCarga = false; }
     if (falloCarga && c.isConnected) c.appendChild(fallo("Algunos datos no se pudieron cargar."));
+    if (restaurarScroll !== null) { window.scrollTo(0, restaurarScroll); restaurarScroll = null; } else if (yAntes !== null) window.scrollTo(0, yAntes);
     if (!document.querySelector(".estado-barra") && c.isConnected) c.insertBefore(barraEstado(), c.firstChild);
     ultima = Date.now(); textoEstado();
   }
@@ -1244,6 +1282,7 @@
       if (btn) btn.onclick = function () { cli.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.href.split("#")[0] } }); };
       return;
     }
+    try { var gv = JSON.parse(sessionStorage.getItem("checa-vista") || "null"); if (gv && gv.F && typeof gv.F === "object") { F = gv.F; if ([7, 30, 90].indexOf(gv.dias) >= 0) dias = gv.dias; if (gv.pag && gv.pag.errores > 0 && gv.pag.ofertas > 0) pag = gv.pag; } } catch (x) { /* sin almacenamiento */ }
     var h = (location.hash || "").replace(/^#/, "").split("/");
     if (VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; }
     correo = (s.user && s.user.email) || ""; document.getElementById("quien").textContent = correo || "Sesión iniciada";
@@ -1262,7 +1301,7 @@
 
   window.addEventListener("popstate", function () {
     var h = (location.hash || "").replace(/^#/, "").split("/");
-    if (cli && VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; pintar(); }
+    if (cli && VISTAS[h[0]]) { vista = h[0]; param = h[1] || null; restaurarScroll = vista === "errores" && !param ? scrollErrores : null; pintar(); }
   });
   window.Admin = { iniciar: iniciar, aviso: aviso, pintar: pintar };
 

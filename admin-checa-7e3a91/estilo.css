@@ -470,3 +470,12 @@ details.tecnico > summary { display:flex; align-items:center; min-height:48px; f
 }
 details.def-ayuda { margin-top:6px; }
 details.def-ayuda > summary { display:flex; align-items:center; min-height:44px; color:var(--tenue); font-size:12px; font-weight:600; cursor:pointer; }
+
+/* Fase 3: cola de errores (barra pegajosa Anterior / Dar veredicto / Siguiente) y avisos breves */
+.barra-acc { position:sticky; bottom:0; z-index:4; display:flex; align-items:center; gap:8px; background:var(--tablero); border:1px solid var(--borde); border-radius:12px 12px 0 0; padding:8px 12px; margin-top:16px; }
+.barra-acc .dar-veredicto { flex:1; width:auto; margin:0; }
+.barra-acc button { min-height:48px; }
+@media (max-width:760px) { .barra-acc { bottom:calc(64px + env(safe-area-inset-bottom)); margin-inline:-14px; border-radius:0; border-width:1px 0 0; box-shadow:0 -6px 20px #0002; } }
+#seguimiento.barra-seg { position:static; margin:16px 0 0; border-radius:12px; border-width:1px; box-shadow:none; }
+#exp-pos { margin-bottom:4px; }
+#toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(140px + env(safe-area-inset-bottom)); z-index:40; max-width:min(92vw,420px); padding:10px 16px; border-radius:10px; background:var(--texto); color:var(--fondo); font-weight:600; box-shadow:0 6px 20px #0004; }
