@@ -838,53 +838,57 @@
     else if (preset === "no") { poner({ tarifa: null, km: null, min: null }); selClase.value = "no_oferta"; visibilidad(); }
     selClase.focus();
   }
+  // Valores redondeados: 18.8 km, no 18.799999999999997.
+  function fmtV(k, v) { if (v === null || v === undefined || isNaN(Number(v))) return "—"; if (k === "tarifa") return "$" + Number(v).toFixed(2); var x = +Number(v).toFixed(1); return k === "km" ? x + " km" : x + " min"; }
+  // Un toque: guarda el veredicto con los valores del Lector o de la IA. Se puede deshacer 7 segundos.
+  async function veredictoRapido(e, lec, ia, quien, sug) {
+    var src = quien === "lector" ? lec : ia, no = quien === "ia" && ia.oferta === false;
+    var t = Number(src.tarifa), k = Number(src.km), m = Number(src.min);
+    if (!no && !(t > 0 && k > 0 && m > 0)) { hojaVeredicto(e, lec, ia, null, sug, quien === "lector" ? "lector" : undefined); return; }
+    var args = { objetivo: "error_lector", objetivo_id: String(e.id), clase: no ? "no_oferta" : "oferta", tarifa: no ? null : t, km: no ? null : k, min: no ? null : m, confianza: "alta", evidencia_sha256: e.enlace.captura_sha256, nota: null };
+    var enviar = async function () {
+      var r = null;
+      if (sug) { try { var r1 = await cli.rpc("admin_veredicto", Object.assign({ ia_sugerencia: sug }, args)); if (r1 && r1.data && r1.data.id) r = r1.data; } catch (x) { r = null; } }
+      if (!r) r = await llamar("admin_veredicto", args);
+      return !!(r && r.id);
+    };
+    await commitirPendiente(); programarVeredicto(e.id, enviar); avanzarError(e.id);
+  }
   async function expediente(c, id) {
     var enLado = c.id === "lado";
-    c.appendChild(el("button", { id: "volver", clase: "volver", "aria-label": "Volver a la cola", texto: "‹ Revisar", onclick: function () { ir("revisar"); } }));
+    var iCola = colaErrores.indexOf(Number(id));
+    var antE = vecinoError(id, -1), sigE = vecinoError(id, 1);
+    c.appendChild(el("div", { clase: "ficha-top" }, [
+      el("button", { id: "volver", type: "button", clase: "ficha-volver", "aria-label": "Volver a la lista", onclick: function () { ir("revisar"); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" }), "Revisar"]),
+      iCola >= 0 ? el("span", { clase: "ficha-pos", id: "exp-pos", texto: (iCola + 1) + " de " + colaErrores.length }) : null,
+      iCola >= 0 ? el("button", { type: "button", id: "err-anterior", clase: "ficha-nv", "aria-label": "Error anterior", disabled: antE ? null : "", onclick: function () { ir("errores", String(antE)); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]) : null,
+      iCola >= 0 ? el("button", { type: "button", id: "err-siguiente", clase: "ficha-nv sig", "aria-label": "Error siguiente", disabled: sigE ? null : "", onclick: function () { ir("errores", String(sigE)); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]) : null]));
     var e = await llamar("admin_error", { id: id });
     if (!e) return;
-    var iCola = colaErrores.indexOf(Number(e.id));
-    var antE = vecinoError(e.id, -1), sigE = vecinoError(e.id, 1);
-    c.appendChild(el("div", { clase: "exp-top" }, [
-      el("div", { clase: "exp-tx" }, [el("div", { clase: "fecha-hoy", texto: (TIPO_TXT[e.tipo] || txt(e.tipo)) + " · " + txt(e.app) + " · versión " + txt(e.version) + " · " + fechaHora(e.creado) }),
-        el("h1", { id: "exp-titulo", clase: "exp-id", texto: "#" + e.id })]),
-      !enLado && iCola >= 0 ? el("div", { clase: "exp-nav", id: "exp-pos" }, [
-        el("button", { type: "button", id: "err-anterior", "aria-label": "Error anterior", texto: "‹", disabled: antE ? null : "", onclick: function () { ir("errores", String(antE)); } }),
-        el("span", { texto: (iCola + 1) + " de " + colaErrores.length }),
-        el("button", { type: "button", id: "err-siguiente", "aria-label": "Error siguiente", texto: "›", disabled: sigE ? null : "", onclick: function () { ir("errores", String(sigE)); } })]) : null]));
-    c.appendChild(el("div", { clase: "exp-meta" }, [(e.veredicto_humano || {}).estado ? etiquetaVeredicto(e.veredicto_humano.estado) : etiquetaVeredicto("sin_veredicto"), el("span", { clase: "detalle", texto: "Conductor " + txt(e.conductor) })]));
     var lec = e.lector || {}, ia = e.ia || {}, hu = e.veredicto_humano || {};
-    var refE = hu && hu.clase ? hu : null, mE = marcas(lec, ia, refE);
-    var iaNo = ia.oferta === false;
-    var METR = [["Tarifa", "tarifa", function (v) { return "$" + v; }], ["Distancia", "km", function (v) { return v + " km"; }], ["Tiempo", "min", function (v) { return v + " min"; }]];
-    function nulo(v) { return v === null || v === undefined; }
-    function bloque(m) {
-      var k = m[1], f = m[2], L = lec[k], I = iaNo ? undefined : ia[k], H = refE ? refE[k] : undefined;
-      var tieneH = refE && !nulo(H), difL, difI, estado = null;
-      if (tieneH) { difL = !nulo(L) && String(L) !== String(H); difI = !iaNo && !nulo(I) && String(I) !== String(H); estado = (difL || difI || iaNo) ? "dif" : "ok"; }
-      else if (!iaNo && !nulo(L) && !nulo(I)) { difL = difI = String(L) !== String(I); estado = difL ? "dif" : "ok"; }
-      else if (iaNo) { difL = false; difI = true; estado = "dif"; }
-      var fila = function (nom, v, dif, texto) { return el("div", { clase: "mt-fila" + (dif ? " x" : "") }, [el("span", { texto: nom }), el("b", { texto: texto !== undefined ? texto : nulo(v) ? "—" : f(v) })]); };
-      var celda = function (v, dif, texto) { var t = texto !== undefined ? texto : nulo(v) ? "—" : f(v); return el("td", { clase: dif ? "x" : "" }, [dif ? el("span", { texto: t }) : t]); };
-      var tr = el("tr", { "data-metrica": k }, [el("td", { texto: m[0] }), celda(L, difL), celda(I, difI, iaNo ? "no oferta" : undefined), el("td", { texto: refE ? (nulo(H) ? (refE.clase || "—") : f(H)) : "—" })]);
-      return { m: m[0], estado: estado, tr: tr, nodo: el("div", { clase: "mt" + (estado === "dif" ? " dif" : ""), "data-metrica": k }, [
-        el("div", { clase: "mt-nom" }, [el("span", { texto: m[0] }), estado ? el("em", { clase: estado === "ok" ? "ok" : "no", texto: estado === "ok" ? "✓ iguales" : "✕ difieren" }) : null]),
-        fila("Lector", L, difL), fila("IA", I, difI, iaNo ? "no era oferta" : undefined), el("div", { clase: "mt-fila nada" }, [el("span", { texto: "Humano" }), el("b", { texto: refE ? (nulo(H) ? (refE.clase || "—") : f(H)) : "—" })])]) };
-    }
-    var bl = METR.map(bloque);
-    c.appendChild(el("div", { clase: "exp-captura" }, [marcoCaptura(e)]));
-    c.appendChild(el("h2", { texto: "¿Quién leyó qué?" }));
-    c.appendChild(el("div", { clase: "caja-v3", id: "comparar" }, [el("table", { clase: "comp-v3" }, [el("thead", {}, [el("tr", {}, ["", "Lector", "IA", "Humano"].map(function (t) { return el("th", { texto: t }); }))]), el("tbody", {}, bl.map(function (x) { return x.tr; }))])]));
-    var iguales = bl.filter(function (x) { return x.estado === "ok"; }).map(function (x) { return x.m.toLowerCase(); }), difieren = bl.filter(function (x) { return x.estado === "dif"; }).map(function (x) { return x.m.toLowerCase(); });
-    function lista(xs) { return xs.length > 1 ? xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1] : xs[0]; }
-    if (difieren.length) c.appendChild(el("div", { clase: "aviso-cmp", id: "aviso-diferencia", texto: (iguales.length ? legibleCap(lista(iguales)) + (iguales.length > 1 ? " iguales; " : " igual; ") : "") + lista(difieren) + (difieren.length > 1 ? " distintos." : " distinto.") + (refE ? "" : " Falta un veredicto humano para saber cuál acierta.") }));
-    // Sugerencia de la IA que lee la imagen (DeepSeek): una captura a la vez, solo si la captura existe. La decisión es de la persona.
-    var sugErr = null;
+    var refE = hu && hu.clase ? hu : null, iaNo = ia.oferta === false;
+    var nulo = function (v) { return v === null || v === undefined; };
+    c.appendChild(el("div", { clase: "ficha-meta" }, [el("div", { clase: "ficha-id" }, [el("h1", { id: "exp-titulo", texto: "#" + e.id }), etiquetaVeredicto(hu.estado || "sin_veredicto")]),
+      el("div", { clase: "ficha-sub", texto: (TIPO_TXT[e.tipo] || txt(e.tipo)) + " · " + appTxt(e.app) + " " + txt(e.version) + " · " + fechaHora(e.creado) + (e.conductor ? " · " + e.conductor : "") })]));
+    var METR = [["Tarifa", "tarifa"], ["Distancia", "km"], ["Tiempo", "min"]];
+    var cartas = METR.map(function (m) {
+      var k = m[1], L = lec[k], I = iaNo ? undefined : ia[k], H = refE ? refE[k] : undefined, difL, estado = null;
+      if (refE && !nulo(H)) estado = (String(L) !== String(H) || iaNo || (!nulo(I) && String(I) !== String(H))) ? "dif" : "ok";
+      else if (!iaNo && !nulo(L) && !nulo(I)) estado = String(L) !== String(I) ? "dif" : "ok";
+      else if (iaNo) estado = "dif";
+      var fila = function (nom, txtv) { return el("div", { clase: "fv-p" }, [el("span", { texto: nom }), el("b", { texto: txtv })]); };
+      return el("div", { clase: "fv-c" + (estado === "dif" ? " dif" : ""), "data-metrica": k }, [
+        el("small", {}, [m[0], estado === "ok" ? el("span", { clase: "fv-eq", texto: "igual" }) : null]),
+        fila("Lector", fmtV(k, L)), fila("IA", iaNo ? "no era oferta" : fmtV(k, I)), refE ? fila("Humano", nulo(H) ? (refE.clase || "—") : fmtV(k, H)) : null]);
+    });
+    var cajaSug = null, sugErr = null;
+    var capEl = marcoCaptura(e);
+    c.appendChild(el("div", { clase: "ficha-fila" }, [el("div", { clase: "ficha-cap" }, [capEl]), el("div", { clase: "ficha-vals", id: "comparar" }, cartas)]));
+    c.appendChild(el("div", { clase: "ficha-hint", texto: "Toca la captura para verla a pantalla completa" }));
     if (e.evidencia && e.evidencia.captura) {
-      var cajaIA = el("div", { id: "ia-vision" }), precErr = null;
+      var cajaIA = el("div", { id: "ia-vision" });
       var pintarIA = function (sug, pidiendo) {
         sugErr = sug; cajaIA.textContent = "";
-        if (precErr && precErr.n > 0) cajaIA.appendChild(el("div", { clase: "rev-ia-prec", id: "ia-precision-errores", texto: "Errores revisados con la IA de imagen: " + precErr.n + " (de ellos " + precErr.ofertas + " eran ofertas). La IA de imagen acertó " + precErr.vision + " de " + precErr.n + "; en las ofertas: IA de imagen " + precErr.vision_ofertas + ", Lector " + precErr.lector_ofertas + ", IA de texto " + precErr.texto_ofertas + " de " + precErr.ofertas + (precErr.n < (precErr.minimo || 30) ? " · pocos casos para opinar (menos de " + (precErr.minimo || 30) + ")" : "") }));
         if (!sug) { cajaIA.appendChild(el("button", { type: "button", id: "ver-ia", clase: "rev-ia-pedir", disabled: pidiendo ? "" : null, texto: pidiendo ? "Leyendo con la IA…" : "Pedir sugerencia a la IA", onclick: async function () {
           pintarIA(null, true); aviso("");
           var r = null; try { r = await cli.functions.invoke("admin-leer-captura", { body: { nombre: e.id + ".webp" } }); } catch (x) { r = { error: x }; }
@@ -903,48 +907,37 @@
           .concat([sug.nota ? el("div", { clase: "detalle", texto: sug.nota }) : null, el("div", { clase: "detalle", texto: "Es una sugerencia: tú decides." }),
             yo && yo.rol === "revisor" && e.enlace && e.enlace.captura_sha256 ? el("button", { type: "button", id: "ia-usar", texto: vigente ? "Dar veredicto con sus valores" : "Dar veredicto: no es oferta", onclick: function () { hojaVeredicto(e, lec, ia, sug, sug); } }) : null])));
       };
-      var pr = null; try { var prr = await cli.rpc("admin_ia_precision_errores"); pr = prr && prr.data; } catch (x) { pr = null; } precErr = pr && !pr.error ? pr : null;
-      pintarIA(null, false); c.appendChild(cajaIA);
+      pintarIA(null, false); cajaSug = cajaIA;
     }
-    var btnVer = null;
-    if (yo && yo.rol === "revisor") {
-      var sha = e.enlace && e.enlace.captura_sha256;
-      btnVer = el("button", { type: "button", id: "dar-veredicto", clase: "dar-veredicto", texto: "Dar veredicto", disabled: sha ? null : "", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } });
-      if (enLado) c.appendChild(btnVer);
-      if (!sha) c.appendChild(el("div", { clase: "detalle", id: "sin-huella", texto: "No se puede dar veredicto: no se puede comprobar que la captura sea la de este caso (es anterior a la 10.82 o no tiene lectura guardada)." }));
+    var sha = e.enlace && e.enlace.captura_sha256, esRev = !!(yo && yo.rol === "revisor");
+    if (esRev && !sha) c.appendChild(el("div", { clase: "ficha-aviso", id: "sin-huella", texto: "Este caso no se puede decidir: no se puede comprobar que la captura sea la suya (es anterior a la 10.82 o no tiene lectura guardada)." }));
+    // Más sobre este caso: plegado, para quien quiera investigar.
+    function acc(titulo, meta, cuerpo, abierto, idA) {
+      var d = el("details", { clase: "ficha-acc", id: idA || null }, [el("summary", {}, [el("span", { texto: titulo }), meta ? el("span", { clase: "ficha-m", texto: meta }) : null, el("span", { clase: "ficha-ch", "aria-hidden": "true" })]), el("div", { clase: "ficha-ab" }, cuerpo)]);
+      if (abierto) d.open = true; return d;
     }
-    c.appendChild(el("div", { clase: "detalle", texto: "Veredicto anterior: " + txt(e.veredicto_heredado) + " (no lo dio una persona)" }));
-    c.appendChild(el("div", { clase: "h-fila" }, [el("h2", { texto: "Seguimiento" }), el("span", { clase: "detalle", texto: String(e.estado_seguimiento).replace(/_/g, " ") })]));
-    c.appendChild(pasosSeg(e.estado_seguimiento));
-    c.appendChild(el("div", { clase: "enlaces" }, [enlace("Versión " + e.version + " (" + e.relacionados.misma_version + ")", "versiones"), enlace("Conductor " + e.conductor + " (" + e.relacionados.mismo_conductor + ")", "dispositivos"), enlace("Auditoría IA", "ia")]));
+    c.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre este caso" }));
+    if (cajaSug) c.appendChild(acc("Sugerencia de la IA", "opcional", [cajaSug], true, "ia-vision-acc"));
     var en = e.enlace;
-    c.appendChild(el("details", { clase: "tecnico", id: "tecnico" }, [el("summary", { texto: "Más detalle" }), el("div", { clase: "tecnico-cuerpo" }, [
+    c.appendChild(acc("Seguimiento", String(e.estado_seguimiento).replace(/_/g, " "), [pasosSeg(e.estado_seguimiento),
+      esRev ? el("button", { type: "button", id: "abrir-registro", clase: "primario", texto: "Registrar seguimiento", onclick: function () { hojaSeguimiento(id, e.estado_seguimiento); } }) : el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })], false, "seguimiento"));
+    c.appendChild(acc("Historial", String((e.historial || []).length), [tabla([["Fecha", function (h) { return fechaHora(h.creado); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
+      ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía.")], false, "historial"));
+    c.appendChild(acc("Versión y conductor", null, [el("div", { clase: "enlaces" }, [enlace("Versión " + e.version + " (" + e.relacionados.misma_version + ")", "versiones"), enlace("Conductor " + e.conductor + " (" + e.relacionados.mismo_conductor + ")", "dispositivos")])], false));
+    c.appendChild(acc("Datos técnicos", null, [
       el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe (se borra sola a los 7 días)") + " · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }),
       el("div", { clase: "detalle", texto: "Tipo: " + txt(e.clasificacion) }),
-      el("div", { clase: "detalle", id: "enlace", texto: en
-        ? "Datos internos: imagen " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · código de la captura " + txt(en.captura_sha256)
-        : "Este caso es anterior a la 10.82 o no tiene lectura guardada: no se puede comprobar que la captura sea la correcta." })])]));
-    c.appendChild(el("details", { clase: "tecnico", id: "historial" }, [el("summary", { texto: "Historial (" + (e.historial || []).length + ")" }), el("div", { clase: "tecnico-cuerpo" }, [
-      tabla([["Fecha", function (h) { return fechaHora(h.creado); }], ["Estado", function (h) { return h.estado; }], ["Causa", function (h) { return h.causa; }],
-        ["Nota", function (h) { return h.nota; }], ["Quién", function (h) { return h.admin; }]], e.historial, "Sin cambios registrados todavía.")])]));
-    // Registro de seguimiento: inline en el panel lateral; barra corta + hoja en teléfono y tableta vertical.
-    if (yo && yo.rol === "revisor") {
-      if (enLado) {
-        c.appendChild(el("div", { clase: "filtros", id: "seguimiento" }, [opciones("s-estado", "Estado", ESTADOS_SEG.slice(1)), opciones("s-causa", "Causa", CAUSAS),
-          el("label", {}, ["Nota", el("input", { id: "s-nota", maxlength: "300", size: "30" })]),
-          el("button", { id: "s-guardar", texto: "Registrar", onclick: function () { guardarSeguimiento(id); } })]));
-      } else {
-        c.appendChild(el("div", { clase: "barra-seg", id: "seguimiento" }, [el("div", { clase: "barra-seg-t" }, [el("span", { texto: "Seguimiento" }), el("b", { texto: String(e.estado_seguimiento).replace(/_/g, " ") })]),
-          el("button", { type: "button", id: "abrir-registro", clase: "primario", texto: "Registrar", onclick: function () { hojaSeguimiento(id, e.estado_seguimiento); } })]));
-      }
-    } else { c.appendChild(el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })); }
-    if (!enLado && btnVer) {
-      var shaE = e.enlace && e.enlace.captura_sha256, off = shaE ? null : "";
-      c.appendChild(el("div", { clase: "barra-acc v3", id: "barra-acc" }, [
-        el("button", { type: "button", id: "ver-no", disabled: off, texto: "✕ No es oferta", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr, "no"); } }),
-        el("button", { type: "button", id: "ver-corregir", disabled: off, texto: "✎ Corregir", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } }),
-        el("button", { type: "button", id: "dar-veredicto", clase: "si", disabled: off, texto: "✓ El lector acertó", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr, "lector"); } })]));
-    } else if (!enLado && !btnVer) c.appendChild(el("div", { clase: "solo-lectura" , texto: "Tu rol es de solo lectura: puedes ver el caso, pero no decidir." }));
+      el("div", { clase: "detalle", id: "enlace", texto: en ? "Datos internos: imagen " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · código de la captura " + txt(en.captura_sha256) : "Este caso es anterior a la 10.82 o no tiene lectura guardada." })], false, "tecnico"));
+    // Decisión: siempre a la vista.
+    if (esRev) {
+      var iaOk = iaNo || ["tarifa", "km", "min"].every(function (k) { return Number(ia[k]) > 0; }), off = sha ? null : "";
+      c.appendChild(el("div", { clase: "ficha-bar", id: "barra-acc" }, sha ? [
+        el("button", { type: "button", id: "ver-lector", clase: "p", texto: "Acertó el Lector", onclick: function () { veredictoRapido(e, lec, ia, "lector", sugErr); } }),
+        el("button", { type: "button", id: "ver-ia", clase: "p", disabled: iaOk ? null : "", texto: iaNo ? "Acertó la IA: no era oferta" : "Acertó la IA", onclick: function () { veredictoRapido(e, lec, ia, "ia", sugErr); } }),
+        el("button", { type: "button", id: "ver-corregir", texto: "Otro valor", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr); } }),
+        el("button", { type: "button", id: "ver-no", texto: "No era oferta", onclick: function () { hojaVeredicto(e, lec, ia, null, sugErr, "no"); } })]
+        : [sigE ? el("button", { type: "button", id: "pasar", clase: "p", texto: "Pasar al siguiente", onclick: function () { ir("errores", String(sigE)); } }) : el("button", { type: "button", id: "pasar", texto: "Volver a la lista", onclick: function () { ir("revisar"); } })]));
+    } else c.appendChild(el("div", { clase: "solo-lectura", texto: "Tu rol es de solo lectura: puedes ver el caso, pero no decidir." }));
   }
 
   // ---------- 03 Ofertas ----------
@@ -1769,6 +1762,7 @@
     if (pendienteV && !enDetalle()) await commitirPendiente();
     var claveVista = vista + "/" + (param || ""), yAntes = claveVista === ultimaClave ? window.scrollY : null; ultimaClave = claveVista;
     try { sessionStorage.setItem("checa-vista", JSON.stringify({ F: F, dias: dias, pag: pag })); } catch (x) { /* sin almacenamiento */ }
+    document.body.classList.toggle("modo-ficha", enDetalle());
     var raiz = document.getElementById("raiz");
     raiz.textContent = "";
     herramientas();
