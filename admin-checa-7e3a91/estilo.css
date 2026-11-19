@@ -1106,3 +1106,28 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 .fv-n { margin-top:4px; font-size:11.5px; color:var(--gm); line-height:1.3; }
 .ficha-bar button.ancho { grid-column:1 / -1; }
 #rev-cuerpo .rev-colores { margin-top:6px; }
+
+/* ===== Ficha optimizada: una tarjeta de valores, la sugerencia al lado y "más" en una sola tarjeta ===== */
+.ficha-hint { display:none; }
+.ficha-cap { width:168px; height:363px; }
+.ficha-col { flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
+.vt { flex:1; display:flex; flex-direction:column; background:var(--tablero); border:1px solid var(--hb); border-radius:22px; padding:0 14px; overflow:hidden; }
+.vt-h, .vt-r { display:grid; grid-template-columns:1fr 1fr; gap:6px; } .vt.c3 .vt-h, .vt.c3 .vt-r { grid-template-columns:repeat(3, minmax(0, 1fr)); } .vt.c1 .vt-h, .vt.c1 .vt-r { grid-template-columns:1fr; }
+.vt-h { flex:none; padding:10px 0 2px; font:700 10px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--gm); }
+.vt-r { flex:1; align-content:center; padding:6px 0 8px; border-top:1px solid var(--hb); }
+.vt-r small { grid-column:1 / -1; font:700 10px "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--gm); }
+.vt-r b { font:700 16px "JetBrains Mono", ui-monospace, monospace; letter-spacing:-.05em; white-space:nowrap; color:var(--texto); }
+.vt-r .fv-n { grid-column:1 / -1; }
+.vt-r.dif { margin:0 -14px; padding:6px 14px 8px; background:color-mix(in srgb, var(--luz-r) 13%, var(--tablero)); } .vt-r.dif b { color:var(--rojo); }
+.ficha-nota { display:flex; gap:8px; padding:10px 12px; border-radius:18px; background:var(--av-f); font:600 12.5px/1.35 "DM Sans", system-ui, sans-serif; } .ficha-nota b { font-weight:800; }
+.ia-btn { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:999px; background:var(--texto); color:var(--fondo); border:0; font:700 14px "DM Sans", system-ui, sans-serif; width:100%; }
+.ia-btn:disabled { opacity:.5; }
+.ficha-colsug:empty { display:none; } #ia-vision:empty { display:none; } #ia-vision { margin-top:12px; }
+#rev-actual + .rev-ia-caja { margin-top:12px; }
+.ficha-lista { background:var(--tablero); border:1px solid var(--hb); border-radius:24px; overflow:hidden; margin-bottom:16px; }
+.ficha-lista .ficha-acc { border:0; border-radius:0; background:transparent; } .ficha-lista .ficha-acc + .ficha-acc { margin-top:0; border-top:1px solid var(--hb); }
+.ficha-lista .ficha-acc > summary { min-height:46px; font-size:14.5px; }
+.ficha-h { margin:14px 4px 8px; }
+.modo-ficha .contenido { min-height:100dvh; display:flex; flex-direction:column; }
+.modo-ficha .vista-cuerpo, .modo-ficha #rev-cuerpo { flex:1; display:flex; flex-direction:column; }
+.ficha-bar { margin:auto -16px 0; }
