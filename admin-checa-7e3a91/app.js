@@ -921,12 +921,17 @@
     }
     var METR = [["Tarifa", "tarifa"], ["Distancia", "km"], ["Tiempo", "min"]];
     var cTxtE = refE && refE.clase && refE.clase !== "oferta" ? (refE.clase === "no_oferta" ? "no era oferta" : refE.clase === "ilegible" ? "ilegible" : refE.clase.replace(/_/g, " ")) : null;
-    var campos = METR.map(function (m) {
-      var k = m[1];
-      return { nom: m[0], k: k, o: lec[k], i: ia[k], c: refE && !cTxtE ? refE[k] : undefined, iaNo: iaNo, cTxt: cTxtE };
-    });
-    var tablaV = valoresCard(campos);
     var sugErr = null;
+    // CHECK: lo que decidió la persona; mientras nadie califique, lo que leyó la IA sobre la imagen (Verificar).
+    function construirTabla() {
+      var ch = !refE && sugErr ? sugErr : null, chVig = ch && ch.estado === "vigente";
+      var chTxt = refE ? cTxtE : ch && !chVig ? (ch.estado === "vencida" ? "oferta vencida" : ch.estado === "aceptada" ? "ya tomada" : "no era oferta") : null;
+      return valoresCard(METR.map(function (m) {
+        var k = m[1];
+        return { nom: m[0], k: k, o: lec[k], i: ia[k], c: refE && !cTxtE ? refE[k] : chVig ? ch[k] : undefined, iaNo: iaNo, cTxt: chTxt };
+      }));
+    }
+    var tablaV = construirTabla();
     var tieneCaptura = !!(e.evidencia && e.evidencia.captura);
     var colNota = esRev && (!sha || !tieneCaptura) ? el("div", { clase: "ficha-nota", id: "sin-huella" }, [el("b", { "aria-hidden": "true", texto: "!" }), el("span", { texto: !sha ? "No se puede decidir: captura no verificable." : "Sin captura: no se puede comprobar. Solo puedes descartarlo." })]) : null;
     var checkBtn = tieneCaptura ? el("button", { type: "button", id: "check-ia", clase: "ia-btn", texto: "Verificar", onclick: pedirCheck }) : null;
@@ -938,13 +943,11 @@
     function aplicarCheck(sug) {
       if (checkBtn) { checkBtn.disabled = true; checkBtn.classList.add("ok"); checkBtn.textContent = ""; checkBtn.appendChild(icoOkV()); checkBtn.appendChild(document.createTextNode("Verificado")); }
       var vig = sug.estado === "vigente";
-      if (vig) METR.forEach(function (m) { var b = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (b) b.appendChild(el("div", { clase: "chk", texto: "Imagen " + fmtV(m[1], sug[m[1]]) })); });
-      else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "Imagen: " + (sug.estado === "vencida" ? "oferta vencida" : sug.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
+      var nuevaT = construirTabla(); if (colNota) nuevaT.appendChild(colNota); if (checkBtn) nuevaT.appendChild(checkBtn); tablaV.replaceWith(nuevaT); tablaV = nuevaT;
       var reco;
       if (!vig) reco = "ver-no";
       else {
-        var dif = campos.filter(function (q) { return q.estado === "dif"; });
-        var coincide = function (src) { return dif.length > 0 && dif.every(function (q) { return !nulo(sug[q.k]) && !nulo(src[q.k]) && Math.abs(Number(sug[q.k]) - Number(src[q.k])) <= TOL[q.k]; }); };
+        var coincide = function (src) { return ["tarifa", "km", "min"].every(function (k) { return !nulo(sug[k]) && !nulo(src[k]) && Math.abs(Number(sug[k]) - Number(src[k])) <= TOL[k]; }); };
         reco = coincide(iaNo ? {} : ia) ? "ver-ia" : coincide(lec) ? "ver-lector" : "ver-corregir";
       }
       marcarSugerido(reco);
@@ -1179,19 +1182,18 @@
       var CAMPOS = [["Tarifa", "tarifa", pop.tarifa, I.tarifa, 0.01], ["Distancia", "km", pop.km, I.km, 0.15], ["Tiempo", "min", pop.min, I.min, 1]];
       // CHECK: lo que decidió la persona, si este pop-up ya se revisó.
       var rs = it.resultado || null;
+      // Si nadie ha calificado, CHECK muestra lo que leyó la IA sobre la imagen (Verificar).
+      var SC = !rs ? estado.sug : null, scVig = SC && SC.estado === "vigente";
+      var scTxt = SC && !scVig ? (SC.estado === "vencida" ? "oferta vencida" : SC.estado === "aceptada" ? "ya tomada" : "no era oferta") : null;
       var campos = CAMPOS.map(function (m) {
-        var chk = rs === "correcta" ? m[2] : rs === "valores_mal" ? it[m[1]] : undefined;
-        return { nom: m[0], k: m[1], o: m[2], i: hayI ? m[3] : undefined, c: chk, iaNo: iaNoOf, cTxt: rs === "falso_positivo" ? "no era oferta" : null };
+        var chk = rs === "correcta" ? m[2] : rs === "valores_mal" ? it[m[1]] : scVig ? SC[m[1]] : undefined;
+        return { nom: m[0], k: m[1], o: m[2], i: hayI ? m[3] : undefined, c: chk, iaNo: iaNoOf, cTxt: rs === "falso_positivo" ? "no era oferta" : scTxt };
       });
       var tablaV = valoresCard(campos);
       var off = !esRevisor || estado.ocupado, S = estado.sug, colSug = el("div", { clase: "ficha-colsug" });
       // Lo sugerido sale de la lectura sobre la imagen si ya se verificó; si no, de la lectura guardada de la IA.
       var vigS = S ? S.estado === "vigente" : hayI && !iaNoOf, SV = S || (hayI ? I : null);
       var recAcc = !SV ? null : !vigS ? "falso" : (["tarifa", "km", "min"].every(function (k, ix) { var tol = [0.01, 0.15, 1][ix], pv = pop[k]; return SV[k] !== null && SV[k] !== undefined && pv !== null && pv !== undefined && Math.abs(SV[k] - pv) <= tol; }) ? "ok" : "corregir");
-      if (S) {
-        if (vigS) CAMPOS.forEach(function (m) { var bq = tablaV.querySelector('.vq-b[data-metrica="' + m[1] + '"]'); if (bq) bq.appendChild(el("div", { clase: "chk", texto: "Imagen " + fmtV(m[1], S[m[1]]) })); });
-        else tablaV.querySelector(".vbox").appendChild(el("div", { clase: "vq-b" }, [el("div", { clase: "chk", texto: "Imagen: " + (S.estado === "vencida" ? "oferta vencida" : S.estado === "aceptada" ? "ya aceptada o tomada" : "no es una oferta") })]));
-      }
       if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Verificar", onclick: pedirIA }));
       else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn ok", disabled: "" }, [icoOkV(), "Verificado"]));
       tablaV.appendChild(colSug);
