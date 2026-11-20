@@ -3,7 +3,7 @@
 // (nada de innerHTML con datos). Solo recuerda, mientras la pestaña esté abierta, filtros y página (sessionStorage), y el tema. Ningún dato inventado: sin datos → gris «sin datos».
 (function () {
   "use strict";
-  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, colaErrores = [], scrollErrores = 0, restaurarScroll = null, ultimaClave = "", vista = "hoy", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
+  var cli = null, yo = null, correo = "", falloCarga = false, filtrosAbiertos = false, colaErrores = [], dirCola = 1, scrollErrores = 0, restaurarScroll = null, ultimaClave = "", vista = "hoy", param = null, pag = { errores: 1, ofertas: 1 }, F = {}, dias = 7;
   var urgentes = null, capPend = 0, buscarEq = "";
   function totalPend() { return (urgentes || 0) + (capPend || 0); }
   var SVG = "http://www.w3.org/2000/svg";
@@ -684,7 +684,7 @@
       tipo: valor("f-tipo"), estado_veredicto: valor("f-estado"), pagina: pag.errores, por_pagina: 50 });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    colaErrores = (d.filas || []).map(function (f) { return Number(f.id); });
+    dirCola = 1; colaErrores = (d.filas || []).map(function (f) { return Number(f.id); });
     var chipAct = c.querySelector('.chip[aria-pressed="true"]'); if (chipAct) chipAct.textContent += " · " + d.total;
     var lista = el("div", { clase: "lista" }), lado = el("aside", { id: "lado", clase: "lado", "aria-label": "Detalle del error", hidden: "" });
     var dividido = el("div", { clase: "dividido" }, [lista, lado]); c.appendChild(dividido); var cpad = c; c = lista;
@@ -762,15 +762,15 @@
   var CONFIANZAS_V = [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]];
   // Tras guardar un veredicto: pasa solo al siguiente error de la lista (en el panel de escritorio solo se refresca).
   // La cola de casos sobrevive a recargar y a abrir un caso por enlace: se guarda y, si falta, se reconstruye con los pendientes.
-  function guardarCola() { try { sessionStorage.setItem("checa-cola", JSON.stringify(colaErrores)); } catch (x) { /* sin almacenamiento */ } }
+  function guardarCola() { try { sessionStorage.setItem("checa-cola", JSON.stringify(colaErrores)); sessionStorage.setItem("checa-cola-dir", String(dirCola)); } catch (x) { /* sin almacenamiento */ } }
   async function asegurarCola(id) {
     var n = Number(id);
-    if (colaErrores.indexOf(n) < 0) { try { var g = JSON.parse(sessionStorage.getItem("checa-cola") || "null"); if (Array.isArray(g) && g.indexOf(n) >= 0) colaErrores = g; } catch (x) { /* ignorar */ } }
+    if (colaErrores.indexOf(n) < 0) { try { var g = JSON.parse(sessionStorage.getItem("checa-cola") || "null"); if (Array.isArray(g) && g.indexOf(n) >= 0) { colaErrores = g; dirCola = sessionStorage.getItem("checa-cola-dir") === "-1" ? -1 : 1; } } catch (x) { /* ignorar */ } }
     if (colaErrores.indexOf(n) < 0) {
       var d = await llamar("admin_errores_lista", { p_estado: "pend", p_quien: null, p_limite: 100 });
       var ids = d && d.filas ? d.filas.map(function (f) { return Number(f.id); }) : [];
       if (ids.indexOf(n) < 0) ids.unshift(n);
-      colaErrores = ids;
+      colaErrores = ids; dirCola = 1;
     }
     guardarCola();
   }
@@ -784,7 +784,8 @@
       if (dx < 0) { if (adelante) adelante(); } else if (atras) atras();
     }, { passive: true });
   }
-  function vecinoError(id, d) { var i = colaErrores.indexOf(Number(id)); return i < 0 ? null : (colaErrores[i + d] || null); }
+  // dirCola: 1 = la lista va del más nuevo al más viejo; -1 = «Empezar por el más viejo»: «siguiente» sube hacia los más nuevos.
+  function vecinoError(id, d) { var i = colaErrores.indexOf(Number(id)); return i < 0 ? null : (colaErrores[i + d * dirCola] || null); }
   // El veredicto se envía 7 segundos después de dar «Guardar», para poder deshacerlo. Se envía antes si cambias de pantalla,
   // si das otro veredicto o si sales de la pestaña.
   var pendienteV = null;
@@ -941,7 +942,7 @@
     var antE = vecinoError(id, -1), sigE = vecinoError(id, 1);
     c.appendChild(el("div", { clase: "ficha-top" }, [
       el("button", { id: "volver", type: "button", clase: "ficha-volver", "aria-label": "Volver a la lista", onclick: function () { ir("revisar"); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" }), "Revisar"]),
-      iCola >= 0 ? el("span", { clase: "ficha-pos", id: "exp-pos", texto: (iCola + 1) + " de " + colaErrores.length }) : null,
+      iCola >= 0 ? el("span", { clase: "ficha-pos", id: "exp-pos", texto: (dirCola === 1 ? iCola + 1 : colaErrores.length - iCola) + " de " + colaErrores.length }) : null,
       iCola >= 0 ? el("button", { type: "button", id: "err-anterior", clase: "ficha-nv", "aria-label": "Error anterior", disabled: antE ? null : "", onclick: function () { ir("errores", String(antE)); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]) : null,
       iCola >= 0 ? el("button", { type: "button", id: "err-siguiente", clase: "ficha-nv sig", "aria-label": "Error siguiente", disabled: sigE ? null : "", onclick: function () { ir("errores", String(sigE)); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]) : null]));
     var e = await llamar("admin_error", { id: id });
@@ -1511,8 +1512,12 @@
     items.sort(function (x, y) { return String(y.creado).localeCompare(String(x.creado)); });
     var desdeF = F.desde ? new Date(F.desde).getTime() : null, hastaF = F.hasta ? new Date(F.hasta).getTime() + 864e5 : null;
     if (desdeF || hastaF) items = items.filter(function (it) { var t = new Date(it.creado).getTime(); return (!desdeF || t >= desdeF) && (!hastaF || t < hastaF); });
-    colaErrores = items.filter(function (x) { return x.tipo === "error"; }).map(function (x) { return Number(x.id); }); guardarCola();
-    empezarAbrir = items.length ? function () { var v = items.filter(function (x) { return !x.ok; }); (v[v.length - 1] || items[items.length - 1]).abrir(); } : null;
+    dirCola = 1; colaErrores = items.filter(function (x) { return x.tipo === "error"; }).map(function (x) { return Number(x.id); }); guardarCola();
+    // «Empezar por el más viejo»: abre el más viejo sin revisar y, al decidir, sigue hacia los más nuevos (solo errores sin revisar).
+    empezarAbrir = items.length ? function () {
+      var v = items.filter(function (x) { return !x.ok; }), viejo = v[v.length - 1] || items[items.length - 1];
+      if (viejo.tipo === "error") { dirCola = -1; colaErrores = v.filter(function (x) { return x.tipo === "error"; }).map(function (x) { return Number(x.id); }); guardarCola(); }
+      viejo.abrir(); } : null;
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     var corteRev = el("h2", { clase: "grupo-h" }, [el("span", { texto: migas }), el("span", { texto: items.length + (items.length === 1 ? " caso" : " casos") })]); c.appendChild(corteRev);
     var lista = el("div", { clase: "lista-v", id: "lista-v" }), dia = null;
