@@ -859,7 +859,7 @@
       var todos = hayIA && eqOI && (!hayC || (numC && oOk && iOk));
       return { c: c, hayIA: hayIA, hayC: hayC, numC: numC, eqOI: eqOI, oOk: oOk, iOk: iOk, todos: todos, dif: !todos && (c.iaNo || (hayIA && !eqOI) || (hayC && !(oOk && (iOk || !hayIA)))) };
     });
-    var orden = filas.filter(function (f) { return f.dif; }).concat(filas.filter(function (f) { return f.todos; }), filas.filter(function (f) { return !f.dif && !f.todos; }));
+    var orden = filas;   // orden fijo: Tarifa · Distancia · Tiempo
     var cab = el("div", { clase: "vq-cab qg3" }, ["OCR", "IA", "CHECK"].map(function (r, i) { return el("span", { clase: "vq-h" + (i === 1 ? " m" : i === 2 ? " r" : ""), texto: r }); }));
     var bloques = orden.map(function (f) {
       var c = f.c, cuerpo;
