@@ -903,6 +903,13 @@
   function fichaFila(capEl, hijosCol, id) {
     return el("div", { clase: "ficha-fila", id: id || null }, [el("div", { clase: "ficha-cap" }, [capEl]), el("div", { clase: "ficha-col" }, hijosCol)]);
   }
+  // «Más sobre…» va dentro de la fila: debajo en vertical; en tablet horizontal es la tercera columna, ya abierta.
+  var HORIZONTAL = "(orientation:landscape) and (min-width:900px) and (min-height:560px)";
+  function fichaLado(fila, hijos) {
+    var lado = el("div", { clase: "ficha-lado" }, hijos); fila.appendChild(lado);
+    if (window.matchMedia && matchMedia(HORIZONTAL).matches) lado.querySelectorAll("details").forEach(function (d) { d.open = true; });
+    return lado;
+  }
   // Un toque: guarda el veredicto con los valores del Lector o de la IA. Se puede deshacer 7 segundos.
   async function veredictoRapido(e, lec, ia, quien, sug) {
     var src = quien === "lector" ? lec : ia, no = quien === "ia" && ia.oferta === false;
@@ -993,8 +1000,7 @@
       var d = el("details", { clase: "ficha-acc", id: idA || null }, [el("summary", {}, [el("span", { texto: titulo }), meta ? el("span", { clase: "ficha-m", texto: meta }) : null, el("span", { clase: "ficha-ch", "aria-hidden": "true" })]), el("div", { clase: "ficha-ab" }, cuerpo)]);
       if (abierto) d.open = true; return d;
     }
-    c.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre este caso" }));
-    var lista = el("div", { clase: "ficha-lista" }); c.appendChild(lista);
+    var lista = el("div", { clase: "ficha-lista" });
     var en = e.enlace;
     lista.appendChild(acc("Seguimiento", String(e.estado_seguimiento).replace(/_/g, " "), [pasosSeg(e.estado_seguimiento),
       esRev ? el("button", { type: "button", id: "abrir-registro", clase: "primario", texto: "Registrar seguimiento", onclick: function () { hojaSeguimiento(id, e.estado_seguimiento); } }) : el("div", { clase: "detalle", texto: "Tu rol es de solo lectura: no puedes cambiar el seguimiento." })], false, "seguimiento"));
@@ -1005,6 +1011,7 @@
       el("div", { clase: "detalle", id: "evidencia", texto: "Captura: " + (e.evidencia.captura ? "existe" : "no existe (se borra sola a los 7 días)") + " · líneas guardadas: " + e.evidencia.lineas_guardadas + " (no se muestran: traen direcciones)" }),
       el("div", { clase: "detalle", texto: "Tipo: " + txt(e.clasificacion) }),
       el("div", { clase: "detalle", id: "enlace", texto: en ? "Datos internos: imagen " + en.fotograma_id + " → lectura " + en.lectura_id + " · captura " + en.captura_vinculo + " · código de la captura " + txt(en.captura_sha256) : "Este caso es anterior a la 10.82 o no tiene lectura guardada." })], false, "tecnico"));
+    fichaLado(filaE, [el("h2", { clase: "ficha-h", texto: "Más sobre este caso" }), lista]);
     // Decisión: siempre a la vista.
     if (esRev) {
       var iaOk = iaNo || ["tarifa", "km", "min"].every(function (k) { return Number(ia[k]) > 0; }), off = sha ? null : "";
@@ -1193,9 +1200,10 @@
       slot.appendChild(el("button", { type: "button", id: "rev-deshacer", clase: "ficha-nv deshacer", "aria-label": "Deshacer la última", disabled: estado.ultima && !estado.ocupado ? null : "", onclick: deshacer }, [sv("svg", { viewBox: "0 0 24 24", width: "18", height: "18", fill: "none", stroke: "currentColor", "stroke-width": "2.4", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" }, [sv("path", { d: "M9 14L4 9l5-5" }), sv("path", { d: "M4 9h10a6 6 0 0 1 0 12h-3" })])]));
       slot.appendChild(el("button", { type: "button", id: "rev-anterior", clase: "ficha-nv", "aria-label": "Pop-up anterior", disabled: estado.hist.length && !estado.ocupado ? null : "", onclick: function () { saltar(-1); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]));
       slot.appendChild(el("button", { type: "button", id: "rev-siguiente", clase: "ficha-nv sig", "aria-label": "Pop-up siguiente", disabled: estado.items.length && !estado.ocupado ? null : "", onclick: function () { saltar(1); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]));
-      cuerpo.appendChild(el("div", { clase: "rev-colores", role: "group", "aria-label": "Color del pop-up" }, REV_COLORES.map(function (k) {
+      var viejo = slot.parentNode && slot.parentNode.querySelector(".rev-colores"); if (viejo) viejo.remove();
+      slot.parentNode.insertBefore(el("div", { clase: "rev-colores", role: "group", "aria-label": "Color del pop-up" }, REV_COLORES.map(function (k) {
         return el("button", { type: "button", clase: "rev-color", "aria-pressed": String(revNivel === k[0]), onclick: async function () { revNivel = k[0]; soltar(); estado.items = []; estado.hist = []; estado.ultima = null; await cargarCola(); await siguiente(); } },
-          [(function () { var p = el("i", { "aria-hidden": "true" }); p.style.background = k[2]; return p; })(), el("span", { texto: k[1] }), el("b", { texto: String(estado.pend[k[0]] || 0) })]); })));
+          [(function () { var p = el("i", { "aria-hidden": "true" }); p.style.background = k[2]; return p; })(), el("span", { texto: k[1] }), el("b", { texto: String(estado.pend[k[0]] || 0) })]); })), slot);
       var it = estado.actual;
       if (!it) {
         cuerpo.appendChild(el("div", { clase: "vacio", id: "rev-vacio", texto: tot - hechas === 0 ? (hechas ? "Todo al día: revisaste " + hechas + " capturas. Vuelve cuando la app suba más." : "No hay capturas por revisar. Cuando la app suba más, aparecerán aquí.") : "Terminaste las de este color. Quedan " + (tot - hechas) + " en los otros colores: elige otro arriba." }));
@@ -1235,13 +1243,13 @@
       tablaV.appendChild(colSug);
       var filaP = fichaFila(marco, [tablaV], "rev-actual"); cuerpo.appendChild(filaP);
       deslizar(filaP.querySelector(".ficha-col"), estado.hist.length ? function () { saltar(-1); } : null, estado.items.length ? function () { saltar(1); } : null);
-      cuerpo.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre esta revisión" }));
+      var hMas = el("h2", { clase: "ficha-h", texto: "Más sobre esta revisión" });
       var barra = el("i"); barra.style.width = (tot ? Math.round(hechas / tot * 100) : 0) + "%";
       var P = estado.prec;
       var recTxt = [rec("recKm", "km"), rec("recMin", "min")].filter(Boolean);
-      cuerpo.appendChild(el("div", { clase: "ficha-lista" }, [recTxt.length ? fichaAcc("Recogida", null, recTxt.map(function (t) { return el("div", { clase: "detalle", texto: t }); }), false, "rev-recogida") : null, fichaAcc("Cómo va la revisión", hechas + " de " + tot, [el("div", { clase: "progreso-v3" }, [el("span", { clase: "medidor" }, [barra]), el("span", { texto: hechas + " de " + tot + " · 10.82" })]),
+      fichaLado(filaP, [hMas, el("div", { clase: "ficha-lista" }, [recTxt.length ? fichaAcc("Recogida", null, recTxt.map(function (t) { return el("div", { clase: "detalle", texto: t }); }), false, "rev-recogida") : null, fichaAcc("Cómo va la revisión", hechas + " de " + tot, [el("div", { clase: "progreso-v3" }, [el("span", { clase: "medidor" }, [barra]), el("span", { texto: hechas + " de " + tot + " · 10.82" })]),
         el("div", { clase: "detalle meta-color", texto: rotulo[1] + ": " + (estado.rev[revNivel] || 0) + " de " + REV_META + " para la meta de este color" }),
-        P && P.n > 0 ? el("div", { clase: "detalle", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · pocos casos para opinar (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }) : null], false, "rev-progreso")]));
+        P && P.n > 0 ? el("div", { clase: "detalle", id: "rev-ia-prec", texto: "IA (DeepSeek) acertó " + P.aciertos + " de " + P.n + (P.n < (P.minimo || 30) ? " · pocos casos para opinar (menos de " + (P.minimo || 30) + ")" : " · " + Math.round(P.aciertos / P.n * 100) + " %") }) : null], false, "rev-progreso")])]);
       if (esRevisor) cuerpo.appendChild(el("div", { clase: "ficha-bar", id: "rev-botones" }, [
         el("button", { type: "button", id: "rev-correcta", clase: "p ancho" + (recAcc === "ok" ? " rec" : ""), disabled: off ? "" : null, onclick: function () { guardar({ resultado: "correcta" }); } }, ["Está bien", recAcc === "ok" ? el("small", { texto: "Sugerido" }) : null]),
         el("button", { type: "button", id: "rev-valores", clase: recAcc === "corregir" ? "rec" : "", disabled: off ? "" : null, onclick: function () { hojaValores(it, vigS && SV && SV.tarifa !== null && SV.km !== null && SV.min !== null && SV.tarifa !== undefined && SV.km !== undefined && SV.min !== undefined ? { tarifa: SV.tarifa, km: SV.km, min: SV.min } : undefined); } }, ["Corregir", recAcc === "corregir" ? el("small", { texto: "Sugerido" }) : null]),
