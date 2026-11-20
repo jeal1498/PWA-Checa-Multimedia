@@ -1,0 +1,61 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Ficha horizontal</title>
+<style>
+:root{--f:#0C0C10;--t:#16161C;--p:#1d1d25;--b:#2a2a33;--x:#F4F4EF;--g:#8C8C96;--v:#22C55E;--r:#EF4444;--a:#FACC15}
+*{box-sizing:border-box;margin:0}body{background:var(--f);color:var(--x);font:15px "DM Sans",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;padding:0 16px}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.top{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;height:60px}
+.top b{font-size:16px}.tabs{display:flex;background:var(--t);border-radius:12px;padding:3px;justify-self:center;width:min(560px,100%)}
+.tabs span{flex:1;text-align:center;padding:8px;border-radius:9px;font-size:14px;color:var(--g)}.tabs .on{background:var(--p);color:var(--x);font-weight:700}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.nav{display:flex;gap:6px;align-items:center}.nav i{width:38px;height:38px;border:1.5px solid var(--b);border-radius:50%;display:grid;place-items:center;font-style:normal}
+.cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr) 250px;gap:14px;padding:6px 0 12px}
+.cap{height:100%;aspect-ratio:9/20;border-radius:20px;overflow:hidden;border:1px solid var(--b);position:relative;background:#000}
+.cap img{width:100%;height:100%;object-fit:cover}.cap .zoom{position:absolute;right:8px;bottom:8px;background:#000a;border:1px solid #fff4;border-radius:10px;padding:4px 8px;font-size:12px}
+.medio{display:flex;flex-direction:column;gap:12px;min-height:0}
+.id{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.id h1{font:800 34px "Bricolage Grotesque",system-ui;letter-spacing:-.04em}
+.pill{border:1.5px solid var(--b);border-radius:999px;padding:3px 10px;font-size:12px}.sub{color:var(--g);font-size:13px}
+.vals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.v{background:var(--t);border:1px solid var(--b);border-radius:18px;padding:14px 12px;text-align:center}
+.v small{font-size:11px;letter-spacing:.08em;color:var(--g)}.v .n{font:800 30px "Bricolage Grotesque",system-ui;letter-spacing:-.04em;margin:6px 0 2px}
+.ok{color:var(--v)}.v .q{display:grid;grid-template-columns:repeat(3,1fr);column-gap:8px;margin-top:10px;border-top:1px solid var(--b);padding-top:8px;font-size:12px}
+.v .q span{color:var(--g)}.v .q b{display:block;color:var(--x);font-size:12px}
+.dif{border-color:color-mix(in srgb,var(--r) 60%,var(--b));background:color-mix(in srgb,var(--r) 10%,var(--t))}
+.ia{display:flex;gap:10px;align-items:center;background:var(--t);border:1px solid var(--b);border-radius:18px;padding:12px 14px}
+.ia p{flex:1;font-size:13px;color:var(--g)}.ia button{background:var(--x);color:var(--f);border:0;border-radius:999px;padding:12px 22px;font-weight:700;font-size:15px}
+.lineas{flex:1;min-height:0;background:var(--t);border:1px solid var(--b);border-radius:18px;padding:12px 14px;overflow:hidden}
+.lineas h3,.lado h3{font:600 11px "JetBrains Mono",monospace;letter-spacing:.08em;color:var(--g);margin-bottom:8px}
+.lineas p{font:13px/1.7 "JetBrains Mono",monospace;color:#cfcfd6}.lineas mark{background:color-mix(in srgb,var(--v) 25%,transparent);color:var(--x);border-radius:4px;padding:0 3px}
+.lado{display:flex;flex-direction:column;gap:12px;min-height:0}
+.box{background:var(--t);border:1px solid var(--b);border-radius:18px;padding:14px}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--b)}.kv:last-child{border:0}.kv span{color:var(--g)}
+.barra{height:8px;background:var(--p);border-radius:9px;overflow:hidden;margin:10px 0 6px}.barra i{display:block;height:100%;width:40%;background:var(--v)}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center;font-size:12px}.mini b{display:block;font-size:18px}
+.acc{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:10px 0 14px;border-top:1px solid var(--b)}
+.acc button{min-height:56px;border-radius:999px;border:2px solid var(--b);background:transparent;color:var(--x);font:700 16px "DM Sans",system-ui}
+.acc .p{background:var(--x);color:var(--f);border-color:var(--v);box-shadow:0 0 0 2px var(--v)}.acc small{display:block;font-weight:500;font-size:11px;opacity:.7}
+.tag{position:absolute;background:var(--a);color:#000;font:700 11px system-ui;padding:3px 7px;border-radius:6px}
+</style></head><body>
+<div class="top"><b>‹ Revisar</b>
+ <div class="tabs"><span class="on"><i class="dot" style="background:var(--r)"></i>Rechazar <span class="mono">97</span></span><span><i class="dot" style="background:var(--a)"></i>Considerar <span class="mono">5</span></span><span><i class="dot" style="background:var(--v)"></i>Aceptar <span class="mono">2</span></span></div>
+ <div class="nav"><span class="mono" style="color:var(--g);font-size:13px">104 por revisar</span><i>↶</i><i>‹</i><i>›</i></div></div>
+<div class="cuerpo">
+ <div class="cap"><img src="cap826.png" alt=""><span class="zoom">⤢ Ampliar</span></div>
+ <div class="medio">
+  <div><div class="id"><h1>#826</h1><span class="pill"><i class="dot" style="background:var(--r)"></i>POP-UP RECHAZAR</span></div><div class="sub mono">Captura · DiDi 10.85 · hoy 20:47</div></div>
+  <div class="vals">
+   <div class="v"><small>TARIFA</small><div class="n">$44.66</div><div class="ok" style="font-size:12px">✓ coinciden</div><div class="q"><span>OCR<b>44.66</b></span><span>IA<b>44.66</b></span><span>CHECK<b>—</b></span></div></div>
+   <div class="v"><small>DISTANCIA</small><div class="n">7.2 km</div><div class="ok" style="font-size:12px">✓ coinciden</div><div class="q"><span>OCR<b>7.2</b></span><span>IA<b>7.2</b></span><span>CHECK<b>—</b></span></div></div>
+   <div class="v"><small>TIEMPO</small><div class="n">23 min</div><div class="ok" style="font-size:12px">✓ coinciden</div><div class="q"><span>OCR<b>23</b></span><span>IA<b>23</b></span><span>CHECK<b>—</b></span></div></div>
+  </div>
+  <div class="ia"><p>¿Dudas? La IA vuelve a leer la imagen y llena CHECK.</p><button>Verificar</button></div>
+  <div class="lineas"><h3>LO QUE LEYÓ EL TELÉFONO</h3><p><mark>$44.66</mark><br>4.77 · 391 viajes · Tarjeta bancaria verificada<br><mark>(9 min 2.7 km)</mark> Gumersindo Esquer 109…<br><mark>(14 min 4.5 km)</mark> Calle Manuel Márquez Sterling 15…<br>Aceptar $44.66 · $48.66 · $49.66 · $51.66</p></div>
+ </div>
+ <div class="lado">
+  <div class="box"><h3>RECOGIDA</h3><div class="kv"><span>Distancia</span><b>2.7 km</b></div><div class="kv"><span>Tiempo</span><b>9 min</b></div><div class="kv"><span>Viaje</span><b>4.5 km · 14 min</b></div></div>
+  <div class="box"><h3>EL POP-UP DIJO</h3><div class="kv"><span>Neta</span><b>$31.20</b></div><div class="kv"><span>Por hora</span><b style="color:var(--r)">$81</b></div><div class="kv"><span>Por km</span><b style="color:var(--r)">$4.33</b></div></div>
+  <div class="box"><h3>CÓMO VA LA REVISIÓN</h3><div class="barra"><i></i></div><div class="sub mono">70 de 174 · 40 %</div>
+   <div class="mini" style="margin-top:10px"><span><b style="color:var(--r)">97</b>rojos</span><span><b style="color:var(--a)">5</b>amar.</span><span><b style="color:var(--v)">2</b>verdes</span></div></div>
+ </div>
+</div>
+<div class="acc"><button class="p">Está bien<small>Sugerido</small></button><button>Corregir</button><button>No es oferta</button></div>
+</body></html>
