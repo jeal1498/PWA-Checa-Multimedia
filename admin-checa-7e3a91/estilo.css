@@ -1298,3 +1298,18 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
   .modo-ficha .ficha-bar button.ancho { grid-column:span 2; }
   .modo-ficha .ficha-bar button, .modo-ficha .ficha-bar button.p, .modo-ficha .ficha-bar button:not(.p) { min-height:54px; }
 }
+
+/* Dos columnas en tablet horizontal (Hoy, Revisar, Calidad › Resumen e IA). En vertical no existen: display contents. */
+.dos-cols, .col-a, .col-b { display:contents; }
+@media (min-width:761px) { .btn-buscar { width:auto; padding:0 16px; border-radius:999px; } .btn-buscar .largo { display:inline; } }
+@media (orientation:landscape) and (min-width:900px) and (min-height:560px) {
+  .dos-cols { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:20px; align-items:start; }
+  .col-a, .col-b { display:block; min-width:0; }
+  .col-a > :first-child, .col-b > :first-child { margin-top:0; }
+  /* Revisar: cuadros y filtros fijos a la izquierda; la lista corre a la derecha. */
+  .dos-cols.rev-cols { grid-template-columns:minmax(300px, 0.85fr) minmax(0, 1.15fr); }
+  .rev-cols > .col-a { position:sticky; top:12px; }
+  .rev-cols .kp3 { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+  .rev-cols > .col-b > .grupo-h:first-child { margin-top:4px; }
+  .col-b .kpis, .col-a .kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}

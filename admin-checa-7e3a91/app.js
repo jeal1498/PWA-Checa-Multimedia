@@ -427,7 +427,8 @@
       var gasto = (kc.por_modelo || []).reduce(function (s, x) { return s + Number(x.usd || 0); }, 0);
       cuatro.push(kpi("Gasto en IA", (kc.por_modelo || []).length ? "$" + gasto.toFixed(2) : "—", "USD en el periodo", sv("svg", { viewBox: "0 0 120 30", preserveAspectRatio: "none", class: "spark sp-gasto", "aria-hidden": "true" }, Array.apply(null, Array(9)).map(function (_, k) { return sv("rect", { x: k * 12, y: 22, width: 6, height: 5, rx: 2, class: "fant" }); }).concat([sv("rect", { x: 108, y: 6, width: 12, height: 21, rx: 3, class: "ult" })])), "ajustes"));
     }
-    if (cuatro.length) { c.appendChild(el("h2", { texto: dias === 7 ? "Últimos 7 días" : "Últimos " + dias + " días" })); c.appendChild(el("div", { clase: "kpis", id: "esencial" }, cuatro)); }
+    var corteHoy = null;
+    if (cuatro.length) { c.appendChild(corteHoy = el("h2", { texto: dias === 7 ? "Últimos 7 días" : "Últimos " + dias + " días" })); c.appendChild(el("div", { clase: "kpis", id: "esencial" }, cuatro)); }
     pendientesRev().then(function (x) {
       if (!x || !metaN.isConnected) return;
       metaN.textContent = x.rev + " de " + (x.rev + x.pend) + " · " + (x.pend ? x.pend + " esperando" : "al día");
@@ -436,12 +437,12 @@
 
     // 5 · Tendencia
     var h0 = d.historia || [];
-    c.appendChild(el("h2", { texto: "Lecturas por día" }));
+    var hLect = el("h2", { texto: "Lecturas por día" }); c.appendChild(hLect);
     c.appendChild(el("div", { clase: "caja-v3", id: "tendencia" }, [graficaHoy(h0)]));
 
     // Cada parte del sistema, a un toque (los números y gráficas de calidad viven en Calidad › Resumen).
     var completo = el("details", { clase: "completo", id: "completo" }, [el("summary", { texto: "Todas las partes del sistema" })]);
-    var cuerpo = el("div", { clase: "completo-cuerpo" }); completo.appendChild(cuerpo); c.appendChild(completo); c = cuerpo;
+    var cuerpo = el("div", { clase: "completo-cuerpo" }); completo.appendChild(cuerpo); c.appendChild(completo); dosCols(c, corteHoy || hLect); c = cuerpo;
     // Resumen en una barra y las partes agrupadas por estado: primero lo que falla, luego lo que funciona, luego lo que aún no se sabe.
     function pasoDe(x) { var p = PASOS.filter(function (q) { return q.claves.indexOf(x.clave) >= 0; })[0]; return p ? p.nombre : ""; }
     function posPaso(x) { for (var k = 0; k < PASOS.length; k++) if (PASOS[k].claves.indexOf(x.clave) >= 0) return k; return 99; }
@@ -514,11 +515,12 @@
         var q = x.n ? x.coinciden / x.n : null, i = el("i"); i.style.width = (q === null ? 0 : q * 100) + "%";
         return el("div", { clase: "vbar ancha" + (x.n < 30 ? " poca" : " ok") }, [el("span", { texto: ({ lector: "Lector", revision_ia: "IA de revisión", vision: "IA con imagen", texto: "IA de texto" })[x.componente] || legible(x.componente) }), el("div", { clase: "p" }, [i]), el("b", { texto: q === null ? "—" : pct(q) })]); })));
     }
-    if (d) { c.appendChild(el("h2", { texto: "Lecturas por día" })); c.appendChild(el("div", { clase: "caja-v3" }, [barrasDia(d.historia || [])])); }
+    var corteRes = null;
+    if (d) { c.appendChild(corteRes = el("h2", { texto: "Lecturas por día" })); c.appendChild(el("div", { clase: "caja-v3" }, [barrasDia(d.historia || [])])); }
     if (!d) return;
     // Todo lo demás, plegado
     var masN = el("details", { clase: "completo", id: "mas-numeros" }, [el("summary", { texto: "Más números y gráficas" })]);
-    var cuerpoN = el("div", { clase: "completo-cuerpo" }); masN.appendChild(cuerpoN); c.appendChild(masN); c = cuerpoN;
+    var cuerpoN = el("div", { clase: "completo-cuerpo" }); masN.appendChild(cuerpoN); c.appendChild(masN); dosCols(c, corteRes); c = cuerpoN;
     c.appendChild(el("h2", { texto: "Los números" }));
     c.appendChild(el("div", { clase: "tarjetas", id: "inicio" }, d.indicadores.map(function (i) {
       return tarjeta(i, [i.clave === "calidad_interpretacion" ? enlace("Ver detalle", "ia") : i.clave === "veredictos_pendientes" ? enlace("Ver errores", "errores") :
@@ -900,6 +902,14 @@
     return el("div", { clase: "vtc2", id: "comparar" }, [cab, el("div", { clase: "vbox" }, bloques)]);
   }
   // La captura toma la altura de la columna de valores y conserva su proporción.
+  // Tablet en horizontal: reparte una pantalla en dos columnas (lo de antes de «corte» a la izquierda).
+  // En vertical y en el teléfono los contenedores no cuentan (display: contents) y todo queda como siempre.
+  function dosCols(c, corte, clase) {
+    if (!corte || corte.parentNode !== c) return;
+    var izq = el("div", { clase: "col-a" }), der = el("div", { clase: "col-b" }), a = true;
+    Array.prototype.slice.call(c.childNodes).forEach(function (n) { if (n === corte) a = false; (a ? izq : der).appendChild(n); });
+    c.appendChild(el("div", { clase: "dos-cols" + (clase ? " " + clase : "") }, [izq, der]));
+  }
   function fichaFila(capEl, hijosCol, id) {
     return el("div", { clase: "ficha-fila", id: id || null }, [el("div", { clase: "ficha-cap" }, [capEl]), el("div", { clase: "ficha-col" }, hijosCol)]);
   }
@@ -1504,7 +1514,7 @@
     colaErrores = items.filter(function (x) { return x.tipo === "error"; }).map(function (x) { return Number(x.id); }); guardarCola();
     empezarAbrir = items.length ? function () { var v = items.filter(function (x) { return !x.ok; }); (v[v.length - 1] || items[items.length - 1]).abrir(); } : null;
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
-    c.appendChild(el("h2", { clase: "grupo-h" }, [el("span", { texto: migas }), el("span", { texto: items.length + (items.length === 1 ? " caso" : " casos") })]));
+    var corteRev = el("h2", { clase: "grupo-h" }, [el("span", { texto: migas }), el("span", { texto: items.length + (items.length === 1 ? " caso" : " casos") })]); c.appendChild(corteRev);
     var lista = el("div", { clase: "lista-v", id: "lista-v" }), dia = null;
     if (!items.length) lista.appendChild(el("div", { clase: "vacio-v" }, [el("b", { texto: kpi === "pend" && !lin ? "Nada pendiente" : "Sin casos con estos filtros" }),
       el("span", { texto: kpi === "pend" && !lin ? "Todo lo que llegó ya está revisado." : "Prueba quitando un filtro." }),
@@ -1517,6 +1527,7 @@
     var cuenta = {}; items.forEach(function (it) { var k = etiquetaDia(it.creado); cuenta[k] = (cuenta[k] || 0) + 1; });
     lista.querySelectorAll(".dia-n").forEach(function (n) { n.textContent = String(cuenta[n.getAttribute("data-dia")] || ""); });
     c.appendChild(lista);
+    dosCols(c, corteRev, "rev-cols");
   }
 
   // ---------- 04 Versiones ----------
@@ -1715,7 +1726,7 @@
       return el("div", { clase: "lista-acc" }, ks.map(function (k) { return el("div", { clase: "fila-cfg" }, [el("span", { clase: "acc-t" }, [el("b", { texto: legible(k) })]), el("span", { clase: "der mono" + (tono ? " " + tono(k) : ""), texto: String(obj[k]) })]); }));
     }
     var totD = Object.keys(d.discrepancias || {}).reduce(function (s2, k) { return s2 + d.discrepancias[k]; }, 0);
-    c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Dónde no coinciden" }), el("span", { clase: "detalle", texto: totD + " casos" })]));
+    var corteIA; c.appendChild(corteIA = el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Dónde no coinciden" }), el("span", { clase: "detalle", texto: totD + " casos" })]));
     c.appendChild(listaV3(d.discrepancias, "Sin diferencias en el periodo."));
     var esSaldo = function (k) { return /402|saldo|credit/i.test(k); };
     var totF = Object.keys(d.fallas || {}).reduce(function (s2, k) { return s2 + d.fallas[k]; }, 0);
@@ -1732,6 +1743,7 @@
         el("span", { clase: "der", texto: ie ? (ie.vision ? "Encendida" : "Apagada") : "—" }), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })])]));
     c.appendChild(el("a", { href: "#errores", clase: "boton-enlace", id: "ia-revisar", texto: "Revisar los casos", onclick: function (ev) { ev.preventDefault(); ir("errores"); } }));
     if (d.nota) c.appendChild(el("div", { clase: "detalle nota-v", texto: d.nota }));
+    dosCols(c, corteIA);
   }
 
   // ---------- 07 Configuración ----------
