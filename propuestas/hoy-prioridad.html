@@ -1,0 +1,43 @@
+<!doctype html><html lang="es" data-theme="dark"><head><meta charset="utf-8"><title>Hoy con prioridad</title>
+<link rel="stylesheet" href="../admin-checa-7e3a91/estilo.css">
+<style>
+body{padding:24px;display:flex;gap:28px;justify-content:center;align-items:flex-start;background:#000;min-height:0}
+.tel{width:380px;background:var(--fondo);border-radius:26px;padding:16px;border:1px solid var(--borde)}
+.rot{font:700 11px "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin:0 4px 10px}
+h3.t{text-align:center;color:#F4F4EF;font:700 16px system-ui;margin-bottom:12px}
+.meta{background:var(--texto);color:var(--fondo);border-radius:24px;padding:18px}
+.meta .fila{display:flex;align-items:center;gap:14px}.meta .n{font:800 52px/1 "Bricolage Grotesque",system-ui;letter-spacing:-.03em}
+.meta .tx{flex:1}.meta .tx b{display:block;font-size:16px}.meta .tx small{opacity:.75;font-size:13px}
+.meta .ir{background:var(--fondo);color:var(--texto);border-radius:999px;padding:10px 16px;font-weight:800;font-size:14px}
+.barra{height:8px;border-radius:9px;background:#0C0C1022;margin:14px 0 6px;overflow:hidden}.barra i{display:block;height:100%;width:0%;background:var(--luz-v)}
+.meta .pie{display:flex;justify-content:space-between;font:12px "JetBrains Mono",monospace;opacity:.75}
+.orden{margin-top:12px;background:var(--tablero);border:1px solid var(--borde);border-radius:20px;overflow:hidden}
+.orden a{display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid var(--borde);color:var(--texto);text-decoration:none}
+.orden a:first-child{border-top:0}
+.orden .paso{width:26px;height:26px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font:800 13px system-ui}
+.orden .pt{width:11px;height:11px;border-radius:50%}
+.orden .nm{flex:1}.orden .nm b{display:block;font-size:15px}.orden .nm small{color:var(--tenue);font-size:12px}
+.orden .num{font:800 22px "Bricolage Grotesque",system-ui}
+.orden .hoy{font:700 11px "JetBrains Mono",monospace;background:var(--panel);border-radius:999px;padding:3px 8px}
+.nota{margin:10px 4px 0;font-size:12px;color:var(--tenue)}
+.ant .meta-pie{display:flex}
+</style></head><body>
+<div><h3 class="t">Antes</h3><div class="tel">
+ <div class="rot">Atención</div>
+ <div class="atn-bloque"><a class="urgente" href="#"><b class="urgente-n">200</b><span class="urgente-t"><strong>Errores sin veredicto</strong><small>De la 10.82 en adelante</small></span><span class="urgente-ir">Revisar</span></a>
+ <a class="meta-pie" href="#"><span>Meta de etiquetado</span><span class="medidor"><i style="width:14%"></i></span><b class="mono">101 de 732</b></a></div>
+</div></div>
+<div><h3 class="t">Después</h3><div class="tel">
+ <div class="rot">Tu meta de hoy</div>
+ <div class="meta"><div class="fila"><b class="n">100</b><span class="tx"><b>revisiones</b><small>Unos 27 min · 0 hechas</small></span><span class="ir">Empezar</span></div>
+  <div class="barra"><i style="width:2%"></i></div><div class="pie"><span>0 de 100</span><span>Avisos primero</span></div></div>
+ <div class="rot" style="margin-top:16px">En este orden</div>
+ <div class="orden">
+  <a href="#"><span class="paso">1</span><i class="pt" style="background:var(--luz-v)"></i><span class="nm"><b>Verdes</b><small>Dicen «Aceptar»: revísalos todos</small></span><span class="hoy">hoy 43</span><span class="num">43</span></a>
+  <a href="#"><span class="paso">2</span><i class="pt" style="background:var(--luz-a)"></i><span class="nm"><b>Amarillos</b><small>Revísalos todos</small></span><span class="hoy">hoy 44</span><span class="num">44</span></a>
+  <a href="#"><span class="paso">3</span><i class="pt" style="background:var(--luz-r)"></i><span class="nm"><b>Rojos</b><small>Con unos 40 al día alcanza</small></span><span class="hoy">hoy 13</span><span class="num">344</span></a>
+  <a href="#"><span class="paso">4</span><i class="pt" style="background:var(--gris)"></i><span class="nm"><b>Errores</b><small>Para la lista de arreglos</small></span><span class="hoy">hoy 0</span><span class="num">200</span></a>
+ </div>
+ <div class="nota">«Hoy» es cuántos te tocan hoy para llegar a 100. Mañana se reparte distinto.</div>
+</div></div>
+</body></html>
