@@ -479,23 +479,49 @@
   }
 
   // ---------- Calidad › Resumen: qué tan bien lee la app, con todos sus números ----------
+  // Calidad con lo que se revisa de verdad (admin_calidad, SQL 012): avisos normales y errores decididos por una persona.
+  function sumaCal(filas, ver, f) { return (filas || []).filter(function (x) { return !ver || x.version === ver; }).reduce(function (t, x) { return t + Number(f(x) || 0); }, 0); }
+  function totalesCal(filas, ver) {
+    var g = function (k) { return sumaCal(filas, ver, function (x) { return x.avisos[k]; }); }, e = function (k) { return sumaCal(filas, ver, function (x) { return x.errores[k]; }); };
+    var dec = e("lector") + e("ia") + e("otro_valor");
+    return { rev: g("revisados"), ok: g("correctas"), mal: g("valores_mal"), fp: g("falsos_positivos"), pend: g("pendientes"), conIa: g("con_ia"), iaOk: g("ia_acerto"),
+             eLector: e("lector"), eIa: e("ia"), eDec: dec, ePend: e("pendientes") };
+  }
+  // Margen de error al 95 % (Wilson): «entre a y b de cada 100».
+  function rangoWilson(k, n) {
+    if (!n) return null; var z = 1.96, p = k / n, d = 1 + z * z / n, c0 = (p + z * z / (2 * n)) / d, m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d;
+    return [Math.round(Math.max(0, c0 - m) * 100), Math.round(Math.min(1, c0 + m) * 100)];
+  }
+  // Lector contra IA con imagen, sobre todo lo revisado: avisos normales y errores donde no coincidían.
+  function compsCal(T) {
+    var nL = T.rev + T.eDec, nI = T.conIa + T.eDec;
+    return [{ componente: "lector", n: nL, coinciden: T.ok + T.eLector }, { componente: "vision", n: nI, coinciden: T.iaOk + T.eIa }];
+  }
+  async function cargarCalidad(r) { var x = await llamar("admin_calidad", { desde: r.desde, hasta: r.hasta }); return x && !x.error ? x.filas || [] : null; }
+  function conCalidad(versiones, filas) {
+    if (!filas) return versiones;
+    return versiones.map(function (v) { var t = totalesCal(filas, v.version); return Object.assign({}, v, { con_referencia: t.rev, coinciden: t.ok }); });
+  }
   async function resumen(c) {
     skeleton(c);
     var r = rango();
     var res = await Promise.all([llamar("admin_metricas", { desde: r.desde, hasta: r.hasta, app: null, version: null }), llamar("admin_salud", { desde: r.desde, hasta: r.hasta }),
-      llamar("admin_versiones", { desde: r.desde, hasta: r.hasta }), llamar("admin_ia", { desde: r.desde, hasta: r.hasta })]);
-    var m = res[0], d = res[1], dv = res[2], di = res[3];
+      llamar("admin_versiones", { desde: r.desde, hasta: r.hasta }), llamar("admin_ia", { desde: r.desde, hasta: r.hasta }), cargarCalidad(r)]);
+    var m = res[0], d = res[1], dv = res[2], di = res[3], cal = res[4], T = cal ? totalesCal(cal) : null;
+    if (dv && cal) dv = Object.assign({}, dv, { versiones: conCalidad(dv.versiones || [], cal) });
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     // 1 · Acierto contra una persona, en grande
     var ms = m ? (m.metricas || []) : [], ph = ms.filter(function (x) { return x.clave === "precision_humana"; })[0];
-    var pv = ph ? (ph.valor !== null && ph.valor !== undefined ? Number(ph.valor) : ph.n ? ph.k / ph.n : null) : null;
+    var pv = T && T.rev ? T.ok / T.rev : ph ? (ph.valor !== null && ph.valor !== undefined ? Number(ph.valor) : ph.n ? ph.k / ph.n : null) : null;
+    if (T && T.rev) ph = { n: T.rev, k: T.ok };
+    var rg = T && T.rev ? rangoWilson(T.ok, T.rev) : null;
     var ind = {}; (d ? d.indicadores : []).forEach(function (i) { ind[i.clave] = i; });
     var te = ind.tasa_errores, lecI = ind.lecturas, p50 = d && d.procesamiento ? d.procesamiento.ms_lectura_p50 : null;
     var teV = te ? (te.valor !== null && te.valor !== undefined ? Number(te.valor) : te.n ? te.k / te.n : null) : null;
     c.appendChild(el("div", { clase: "caja-v3", id: "calidad" }, [
       el("div", { clase: "aro-caja" }, [aro(pv), el("div", { clase: "aro-tx" }, [
         el("b", { texto: pv === null ? "Aún no se puede medir" : "La app acierta " + Math.round(pv * 100) + " de cada 100" }),
-        el("small", { texto: ph && ph.n ? "Comparado con " + ph.n + " capturas revisadas por una persona" + (ph.n < 30 ? ". Son pocos casos para opinar." : ".") : "Falta que una persona revise capturas." })])]),
+        el("small", { texto: ph && ph.n ? "Comparado con " + ph.n + " avisos revisados por una persona" + (rg ? ". Lo más probable: entre " + rg[0] + " y " + rg[1] + " de cada 100" : "") + (ph.n < 30 ? ". Son pocos casos para opinar." : ".") : "Falta que una persona revise avisos." })])]),
       el("div", { clase: "trio" }, [["Errores", teV === null ? "—" : pct(teV)], ["Tiempo", p50 ? (p50 / 1000).toFixed(1) + " s" : "—"], ["Lecturas", lecI && lecI.valor !== undefined && lecI.valor !== null ? Number(lecI.valor).toLocaleString("en-US") : "—"]].map(function (x) {
         return el("div", {}, [el("small", { texto: x[0] }), el("b", { texto: x[1] })]); }))]));
     // 2 · Por versión
@@ -508,7 +534,7 @@
           el("b", { texto: q === null ? "—" : pct(q) })]); }).concat([el("div", { clase: "detalle nota-v", texto: "Acierto contra una persona. En gris, versiones con menos de 30 casos revisados." })])));
     }
     // 3 · La IA contra una persona
-    var comps = di ? (di.componentes || []) : [];
+    var comps = T && T.rev ? compsCal(T) : di ? (di.componentes || []) : [];
     if (comps.length) {
       c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Quién acierta contra una persona" }), enlace("Detalle ›", "calidad", "ia")]));
       c.appendChild(el("div", { clase: "caja-v3" }, comps.map(function (x) {
@@ -1576,10 +1602,10 @@
   }
   async function versiones(c) {
     skeleton(c);
-    var r = rango(), d = await llamar("admin_versiones", { desde: r.desde, hasta: r.hasta });
+    var r = rango(), rs = await Promise.all([llamar("admin_versiones", { desde: r.desde, hasta: r.hasta }), cargarCalidad(r)]), d = rs[0];
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
-    var vs = (d.versiones || []).slice().sort(function (x, y) { return String(y.primera || "").localeCompare(String(x.primera || "")); });
+    var vs = conCalidad(d.versiones || [], rs[1]).slice().sort(function (x, y) { return String(y.primera || "").localeCompare(String(x.primera || "")); });
     if (!vs.length) { c.appendChild(el("div", { clase: "vacio", texto: "Sin versiones en este periodo." })); return; }
     var panel = el("section", { id: "comparacion", clase: "panel-cmp", "aria-live": "polite" });
     var lista = el("div", { clase: "error-lista", id: "versiones-lista" });
@@ -1702,14 +1728,14 @@
   }
   async function ia(c) {
     skeleton(c);
-    var r = rango(), d = await llamar("admin_ia", { desde: r.desde, hasta: r.hasta });
+    var r = rango(), rs = await Promise.all([llamar("admin_ia", { desde: r.desde, hasta: r.hasta }), cargarCalidad(r)]), d = rs[0], T = rs[1] ? totalesCal(rs[1]) : null;
     var ie = null; try { var rr = await cli.rpc("admin_ia_estado"); ie = rr && rr.data && !rr.data.error ? rr.data : null; } catch (x) { ie = null; }
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
     var NOM = { lector: "Lector", revision_ia: "IA de revisión", vision: "IA con imagen", texto: "IA de texto" };
     // 1 · Quién acierta contra una persona
-    var comps = d.componentes || [], cortas = comps.filter(function (x) { return x.n < 30; });
-    c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Quién acierta contra una persona" }), el("span", { clase: "detalle", texto: txt(d.con_referencia_humana) + " revisadas" })]));
+    var comps = T && T.rev + T.eDec ? compsCal(T) : d.componentes || [], cortas = comps.filter(function (x) { return x.n < 30; });
+    c.appendChild(el("div", { clase: "h-fila sec-v3" }, [el("h2", { texto: "Quién acierta contra una persona" }), el("span", { clase: "detalle", texto: T && T.rev + T.eDec ? (T.rev + T.eDec) + " revisadas" : txt(d.con_referencia_humana) + " revisadas" })]));
     c.appendChild(el("div", { clase: "caja-v3", id: "ia-componentes" }, comps.length ? comps.map(function (x) {
       var q = x.n ? x.coinciden / x.n : null, b = el("i"); b.style.width = (q === null ? 0 : q * 100) + "%";
       return el("div", { clase: "vbar ancha" + (x.n < 30 ? " poca" : " ok") }, [el("span", { texto: (NOM[x.componente] || legible(x.componente)) + (x.modelo ? " · " + x.modelo : "") }), el("div", { clase: "p" }, [b]), el("b", { texto: q === null ? "—" : pct(q) })]);
