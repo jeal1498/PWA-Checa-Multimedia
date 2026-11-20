@@ -1313,3 +1313,22 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
   .rev-cols > .col-b > .grupo-h:first-child { margin-top:4px; }
   .col-b .kpis, .col-a .kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); }
 }
+
+/* Hoy › Tu meta de hoy y En este orden */
+.meta-hoy { background:var(--texto); color:var(--fondo); border-radius:24px; padding:18px; }
+.meta-fila { display:flex; align-items:center; gap:14px; }
+.meta-n { font:800 52px/1 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing:-.03em; }
+.meta-tx { flex:1; min-width:0; } .meta-tx b { display:block; font-size:16px; } .meta-tx small { opacity:.75; font-size:13px; }
+.meta-ir { flex:none; background:var(--fondo); color:var(--texto); border-radius:999px; padding:11px 18px; font-weight:800; font-size:14px; text-decoration:none; }
+.meta-barra { display:block; height:8px; border-radius:9px; background:color-mix(in srgb, var(--fondo) 22%, transparent); margin:14px 0 6px; overflow:hidden; }
+.meta-barra i { display:block; height:100%; min-width:6px; background:var(--luz-v); border-radius:9px; }
+.meta-pie2 { display:flex; justify-content:space-between; font:12px "JetBrains Mono", ui-monospace, monospace; opacity:.75; }
+.orden-hoy { background:var(--tablero); border:1px solid var(--borde); border-radius:20px; overflow:hidden; margin-bottom:6px; }
+.orden-fila { display:flex; align-items:center; gap:12px; padding:13px 14px; border-top:1px solid var(--borde); color:var(--texto); text-decoration:none; min-height:56px; }
+.orden-fila:first-child { border-top:0; }
+.orden-paso { width:26px; height:26px; flex:none; border-radius:50%; background:var(--panel); display:grid; place-items:center; font:800 13px system-ui, sans-serif; }
+.orden-pt { width:11px; height:11px; flex:none; border-radius:50%; }
+.orden-nm { flex:1; min-width:0; } .orden-nm b { display:block; font-size:15px; } .orden-nm small { color:var(--tenue); font-size:12px; }
+.orden-hoy-n { font:700 11px "JetBrains Mono", ui-monospace, monospace; background:var(--panel); border-radius:999px; padding:3px 8px; white-space:nowrap; }
+.orden-n { font:800 22px "Bricolage Grotesque", system-ui, sans-serif; min-width:40px; text-align:right; }
+.meta-hoy small, .meta-hoy .meta-tx small { color:inherit; }
