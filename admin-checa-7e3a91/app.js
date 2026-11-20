@@ -1769,7 +1769,8 @@
     var mv = ie && ie.modos ? ie.modos.vision : null, seg = function (ms) { return ms === null || ms === undefined ? "—" : (ms / 1000).toFixed(1) + " s"; };
     c.appendChild(el("h2", { texto: "Velocidad" }));
     c.appendChild(el("div", { clase: "lista-acc" }, [
-      el("div", { clase: "fila-cfg" }, [el("span", { clase: "acc-t" }, [el("b", { texto: "Tiempo por captura" }), el("small", { texto: mv ? "Típico · los más lentos " + seg(mv.ms_ia_p90) + " (7 días)" : "Sin consultas en los últimos 7 días" })]), el("span", { clase: "der mono", texto: mv ? seg(mv.ms_ia_p50) : "—" })]),
+      el("div", { clase: "fila-cfg", id: "espera-real" }, [el("span", { clase: "acc-t" }, [el("b", { texto: "Espera real del conductor" }), el("small", { texto: mv && mv.ms_total_p50 ? "Típico · los más lentos " + seg(mv.ms_total_p90) + " (7 días). Del teléfono al servidor, la IA y de vuelta." : "Sin mediciones desde el teléfono en los últimos 7 días" })]), el("span", { clase: "der mono", texto: mv ? seg(mv.ms_total_p50) : "—" })]),
+      el("div", { clase: "fila-cfg" }, [el("span", { clase: "acc-t" }, [el("b", { texto: "Solo lo que tarda la IA" }), el("small", { texto: mv ? "Típico · los más lentos " + seg(mv.ms_ia_p90) + " (7 días). Dentro del servidor." : "Sin consultas en los últimos 7 días" })]), el("span", { clase: "der mono", texto: mv ? seg(mv.ms_ia_p50) : "—" })]),
       el("a", { href: "#ajustes", clase: "fila-cfg", onclick: function (ev) { ev.preventDefault(); ir("ajustes"); } }, [el("span", { clase: "acc-t" }, [el("b", { texto: "IA con imagen" }), el("small", { texto: "Encender o apagar en Ajustes" })]),
         el("span", { clase: "der", texto: ie ? (ie.vision ? "Encendida" : "Apagada") : "—" }), el("span", { clase: "chev", "aria-hidden": "true", texto: "›" })])]));
     c.appendChild(el("a", { href: "#errores", clase: "boton-enlace", id: "ia-revisar", texto: "Revisar los casos", onclick: function (ev) { ev.preventDefault(); ir("errores"); } }));
