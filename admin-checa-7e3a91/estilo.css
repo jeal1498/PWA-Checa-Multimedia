@@ -1275,3 +1275,18 @@ header .tit { flex:1; margin-left:2px; } header .tit strong { font:800 18px/1.1 
 .vtc2 .vq-b .chk { margin-top:3px; padding:2px 6px; font-size:11.5px; }
 /* Sin líneas punteadas bajo los valores: lo distinto solo se marca con «≠» junto al título */
 .vtc2 .vq-fila .vq-v.ne b.nn, .vtc2 .vq-fila .vq-v.ne b { text-decoration:none; }
+
+/* Tablet u otra pantalla en horizontal: el caso cabe entero sin bajar. Captura a la altura disponible, valores al lado
+   y los botones en una sola fila abajo. Lo de «Más sobre…» queda debajo, para quien quiera bajar. */
+@media (orientation:landscape) and (min-width:900px) and (min-height:560px) {
+  .modo-ficha .ficha-top { min-height:48px; }
+  .modo-ficha .ficha-meta { margin-top:4px; }
+  .modo-ficha .ficha-fila { --sobra:224px; height:calc(100dvh - var(--sobra)); min-height:340px; margin-top:10px;
+    grid-template-columns:auto minmax(0, 640px); justify-content:center; gap:16px; }
+  .modo-ficha #rev-actual { --sobra:286px; }
+  .modo-ficha .ficha-cap { height:100%; width:auto; aspect-ratio:9 / 20; }
+  .modo-ficha .ficha-col { height:100%; }
+  .modo-ficha .ficha-bar { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); padding-top:8px; padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+  .modo-ficha .ficha-bar button.ancho { grid-column:span 2; }
+  .modo-ficha .ficha-bar button, .modo-ficha .ficha-bar button.p, .modo-ficha .ficha-bar button:not(.p) { min-height:54px; }
+}
