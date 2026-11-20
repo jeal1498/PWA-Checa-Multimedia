@@ -759,6 +759,29 @@
   var CLASES_V = [["oferta", "Oferta"], ["no_oferta", "No es oferta"], ["varias", "Varias ofertas"], ["ilegible", "Ilegible"], ["cambio_pantalla", "Cambió la pantalla"]];
   var CONFIANZAS_V = [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]];
   // Tras guardar un veredicto: pasa solo al siguiente error de la lista (en el panel de escritorio solo se refresca).
+  // La cola de casos sobrevive a recargar y a abrir un caso por enlace: se guarda y, si falta, se reconstruye con los pendientes.
+  function guardarCola() { try { sessionStorage.setItem("checa-cola", JSON.stringify(colaErrores)); } catch (x) { /* sin almacenamiento */ } }
+  async function asegurarCola(id) {
+    var n = Number(id);
+    if (colaErrores.indexOf(n) < 0) { try { var g = JSON.parse(sessionStorage.getItem("checa-cola") || "null"); if (Array.isArray(g) && g.indexOf(n) >= 0) colaErrores = g; } catch (x) { /* ignorar */ } }
+    if (colaErrores.indexOf(n) < 0) {
+      var d = await llamar("admin_errores_lista", { p_estado: "pend", p_quien: null, p_limite: 100 });
+      var ids = d && d.filas ? d.filas.map(function (f) { return Number(f.id); }) : [];
+      if (ids.indexOf(n) < 0) ids.unshift(n);
+      colaErrores = ids;
+    }
+    guardarCola();
+  }
+  // Deslizar el dedo hacia la izquierda pasa al siguiente caso; hacia la derecha, al anterior.
+  function deslizar(nodo, atras, adelante) {
+    var x0 = 0, y0 = 0, t0 = 0;
+    nodo.addEventListener("touchstart", function (ev) { var t = ev.changedTouches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, { passive: true });
+    nodo.addEventListener("touchend", function (ev) {
+      var t = ev.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Date.now() - t0 > 700 || Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      if (dx < 0) { if (adelante) adelante(); } else if (atras) atras();
+    }, { passive: true });
+  }
   function vecinoError(id, d) { var i = colaErrores.indexOf(Number(id)); return i < 0 ? null : (colaErrores[i + d] || null); }
   // El veredicto se envía 7 segundos después de dar «Guardar», para poder deshacerlo. Se envía antes si cambias de pantalla,
   // si das otro veredicto o si sales de la pestaña.
@@ -896,6 +919,7 @@
   }
   async function expediente(c, id) {
     var enLado = c.id === "lado";
+    await asegurarCola(id);
     var iCola = colaErrores.indexOf(Number(id));
     var antE = vecinoError(id, -1), sigE = vecinoError(id, 1);
     c.appendChild(el("div", { clase: "ficha-top" }, [
@@ -962,7 +986,8 @@
     }
     if (colNota) tablaV.appendChild(colNota);
     if (checkBtn) tablaV.appendChild(checkBtn);
-    c.appendChild(fichaFila(marcoCaptura(e), [tablaV]));
+    var filaE = fichaFila(marcoCaptura(e), [tablaV]); c.appendChild(filaE);
+    deslizar(filaE.querySelector(".ficha-col"), antE ? function () { ir("errores", String(antE)); } : null, sigE ? function () { ir("errores", String(sigE)); } : null);
     // Más sobre este caso: plegado, para quien quiera investigar.
     function acc(titulo, meta, cuerpo, abierto, idA) {
       var d = el("details", { clase: "ficha-acc", id: idA || null }, [el("summary", {}, [el("span", { texto: titulo }), meta ? el("span", { clase: "ficha-m", texto: meta }) : null, el("span", { clase: "ficha-ch", "aria-hidden": "true" })]), el("div", { clase: "ficha-ab" }, cuerpo)]);
@@ -1075,7 +1100,7 @@
       el("button", { id: "volver", type: "button", clase: "ficha-volver", "aria-label": "Volver a la lista", onclick: function () { ir("revisar"); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" }), "Revisar"]), slot]));
     var esRevisor = !!(yo && yo.rol === "revisor");
     var cuerpo = el("div", { id: "rev-cuerpo" }); c.appendChild(cuerpo);
-    var estado = { items: [], pend: {}, rev: {}, actual: null, url: null, blob: null, ultima: null, ocupado: false, sug: null, pidiendo: false, prec: null };
+    var estado = { items: [], hist: [], pend: {}, rev: {}, actual: null, url: null, blob: null, ultima: null, ocupado: false, sug: null, pidiendo: false, prec: null };
     function soltar() { if (estado.url) { URL.revokeObjectURL(estado.url); estado.url = null; } estado.blob = null; estado.sug = null; estado.pidiendo = false; }
 
     async function cargarCola() {
@@ -1101,14 +1126,23 @@
       }
       pintarRev();
     }
+    async function cargarImagen() {
+      if (!estado.actual || !estado.actual.nombre) return;
+      var r = await cli.storage.from("capturas").download(estado.actual.nombre).catch(function () { return { error: true }; });
+      if (r && r.data) { estado.blob = r.data; estado.url = URL.createObjectURL(r.data); }
+    }
     async function siguiente() {
       soltar(); estado.actual = estado.items.shift() || null;
       if (!estado.actual) { await cargarCola(); estado.actual = estado.items.shift() || null; }
-      if (estado.actual) {
-        var r = await cli.storage.from("capturas").download(estado.actual.nombre).catch(function () { return { error: true }; });
-        if (r && r.data) { estado.blob = r.data; estado.url = URL.createObjectURL(r.data); }
-      }
+      await cargarImagen();
       pintarRev();
+    }
+    // Saltar sin calificar: › pasa al siguiente de la cola, ‹ vuelve al anterior que viste.
+    async function saltar(d) {
+      if (estado.ocupado || !estado.actual) return;
+      if (d > 0) { if (!estado.items.length) return; soltar(); estado.hist.push(estado.actual); estado.actual = estado.items.shift(); }
+      else { if (!estado.hist.length) return; soltar(); estado.items.unshift(estado.actual); estado.actual = estado.hist.pop(); }
+      await cargarImagen(); pintarRev();
     }
     async function guardar(args, borrarUltima) {
       if (estado.ocupado || !estado.actual) return; estado.ocupado = true; pintarRev();
@@ -1157,8 +1191,10 @@
       var pendTot = REV_COLORES.reduce(function (t, k) { return t + (estado.pend[k[0]] || 0); }, 0);
       slot.appendChild(el("span", { clase: "ficha-pos", id: "rev-pos", texto: pendTot + " por revisar" }));
       slot.appendChild(el("button", { type: "button", id: "rev-deshacer", clase: "ficha-nv deshacer", "aria-label": "Deshacer la última", disabled: estado.ultima && !estado.ocupado ? null : "", onclick: deshacer }, [sv("svg", { viewBox: "0 0 24 24", width: "18", height: "18", fill: "none", stroke: "currentColor", "stroke-width": "2.4", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" }, [sv("path", { d: "M9 14L4 9l5-5" }), sv("path", { d: "M4 9h10a6 6 0 0 1 0 12h-3" })])]));
+      slot.appendChild(el("button", { type: "button", id: "rev-anterior", clase: "ficha-nv", "aria-label": "Pop-up anterior", disabled: estado.hist.length && !estado.ocupado ? null : "", onclick: function () { saltar(-1); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]));
+      slot.appendChild(el("button", { type: "button", id: "rev-siguiente", clase: "ficha-nv sig", "aria-label": "Pop-up siguiente", disabled: estado.items.length && !estado.ocupado ? null : "", onclick: function () { saltar(1); } }, [el("span", { clase: "ficha-flecha", "aria-hidden": "true" })]));
       cuerpo.appendChild(el("div", { clase: "rev-colores", role: "group", "aria-label": "Color del pop-up" }, REV_COLORES.map(function (k) {
-        return el("button", { type: "button", clase: "rev-color", "aria-pressed": String(revNivel === k[0]), onclick: async function () { revNivel = k[0]; soltar(); estado.items = []; estado.ultima = null; await cargarCola(); await siguiente(); } },
+        return el("button", { type: "button", clase: "rev-color", "aria-pressed": String(revNivel === k[0]), onclick: async function () { revNivel = k[0]; soltar(); estado.items = []; estado.hist = []; estado.ultima = null; await cargarCola(); await siguiente(); } },
           [(function () { var p = el("i", { "aria-hidden": "true" }); p.style.background = k[2]; return p; })(), el("span", { texto: k[1] }), el("b", { texto: String(estado.pend[k[0]] || 0) })]); })));
       var it = estado.actual;
       if (!it) {
@@ -1197,7 +1233,8 @@
       if (!S) colSug.appendChild(el("button", { type: "button", id: "rev-ia", clase: "ia-btn", disabled: estado.pidiendo || !esRevisor ? "" : null, texto: estado.pidiendo ? "Leyendo la imagen…" : "Verificar", onclick: pedirIA }));
       else colSug.appendChild(el("button", { type: "button", id: "rev-ia-listo", clase: "ia-btn ok", disabled: "" }, [icoOkV(), "Verificado"]));
       tablaV.appendChild(colSug);
-      cuerpo.appendChild(fichaFila(marco, [tablaV], "rev-actual"));
+      var filaP = fichaFila(marco, [tablaV], "rev-actual"); cuerpo.appendChild(filaP);
+      deslizar(filaP.querySelector(".ficha-col"), estado.hist.length ? function () { saltar(-1); } : null, estado.items.length ? function () { saltar(1); } : null);
       cuerpo.appendChild(el("h2", { clase: "ficha-h", texto: "Más sobre esta revisión" }));
       var barra = el("i"); barra.style.width = (tot ? Math.round(hechas / tot * 100) : 0) + "%";
       var P = estado.prec;
@@ -1456,7 +1493,7 @@
     items.sort(function (x, y) { return String(y.creado).localeCompare(String(x.creado)); });
     var desdeF = F.desde ? new Date(F.desde).getTime() : null, hastaF = F.hasta ? new Date(F.hasta).getTime() + 864e5 : null;
     if (desdeF || hastaF) items = items.filter(function (it) { var t = new Date(it.creado).getTime(); return (!desdeF || t >= desdeF) && (!hastaF || t < hastaF); });
-    colaErrores = items.filter(function (x) { return x.tipo === "error" && !x.ok; }).map(function (x) { return Number(x.id); });
+    colaErrores = items.filter(function (x) { return x.tipo === "error"; }).map(function (x) { return Number(x.id); }); guardarCola();
     empezarAbrir = items.length ? function () { var v = items.filter(function (x) { return !x.ok; }); (v[v.length - 1] || items[items.length - 1]).abrir(); } : null;
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     c.appendChild(el("h2", { clase: "grupo-h" }, [el("span", { texto: migas }), el("span", { texto: items.length + (items.length === 1 ? " caso" : " casos") })]));
