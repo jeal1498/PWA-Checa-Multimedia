@@ -1614,7 +1614,7 @@
   }
   async function versiones(c) {
     skeleton(c);
-    var r = rango(), rs = await Promise.all([llamar("admin_versiones", { desde: r.desde, hasta: r.hasta }), cargarCalidad(r)]), d = rs[0];
+    var r = rango(), rs = await Promise.all([llamar("admin_versiones", { desde: r.desde, hasta: r.hasta }), cargarCalidad(r), cli.rpc("admin_dispositivos_version").then(function (x) { return x && x.data && !x.data.error ? x.data : null; }, function () { return null; })]), d = rs[0], dd = rs[2];
     var sk = c.querySelector(".skeleton"); if (sk) sk.remove();
     if (!d) return;
     var vs = conCalidad(d.versiones || [], rs[1]).slice().sort(function (x, y) { return String(y.primera || "").localeCompare(String(x.primera || "")); });
@@ -1642,6 +1642,21 @@
     pintarTodo();
     c.appendChild(el("div", { clase: "ver-layout" }, [el("div", {}, [el("div", { clase: "h-fila" }, [el("h2", { texto: "Marca hasta 3 para comparar" }), el("span", { clase: "detalle", texto: vs.length + " versiones" })]), lista]), panel]));
     if (d.nota_comparacion) c.appendChild(el("div", { clase: "detalle", texto: d.nota_comparacion }));
+    seccionDispositivos(c, dd);
+  }
+  // Dispositivos por versión (SQL 014): la versión más reciente que mandó cada teléfono en los últimos 14 días.
+  function seccionDispositivos(c, dd) {
+    if (!dd || !(dd.filas || []).length) return;
+    var filas = dd.filas, maxV = filas.reduce(function (m, x) { return versionNum(x.version) > versionNum(m) ? x.version : m; }, filas[0].version);
+    var nuevos = filas.filter(function (x) { return x.version === maxV; }), viejos = filas.filter(function (x) { return x.version !== maxV; });
+    var activos = viejos.filter(function (x) { return Date.now() - new Date(x.ultima).getTime() < 864e5; });
+    c.appendChild(el("h2", { texto: "Dispositivos por versión" }));
+    c.appendChild(el("div", { clase: "tarjetas", id: "disp-version" }, [["En la " + maxV, nuevos.length], ["Con una anterior", viejos.length], ["Anteriores activos hoy", activos.length]].map(function (x) {
+      return el("div", { clase: "tarjeta" }, [el("div", { clase: "detalle", texto: x[0] }), el("div", { clase: "valor", texto: String(x[1]) })]); })));
+    if (viejos.length) c.appendChild(el("div", { clase: "lista-acc", id: "disp-viejos" }, viejos.map(function (x) {
+      var h = haceCuanto(x.ultima);
+      return el("div", { clase: "fila-cfg" }, [el("span", { clase: "acc-t" }, [el("b", { texto: x.telefono + (x.android ? " · Android " + x.android : "") }), el("small", { texto: "Código " + x.codigo + " · " + h[0] })]), el("span", { clase: "der mono", texto: x.version })]); })));
+    c.appendChild(el("div", { clase: "detalle", texto: "Últimos " + (dd.dias || 14) + " días, un renglón por teléfono. Solo cuenta teléfonos que han mandado lecturas; el número exacto de instalaciones está en Google Play Console." }));
   }
 
   // ---------- 05 Conductores y dispositivos ----------
